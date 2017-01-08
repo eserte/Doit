@@ -475,6 +475,8 @@ use strict;
     $r->system("hostname", "-f");
     $r->run(["hostname", "-f"]);
     $r->cond_run(cmd => [qw(echo unconditional cond_run)]);
+    $r->cond_run(if => sub { 1 }, cmd => [qw(echo always true)]);
+    $r->cond_run(if => sub { 0 }, cmd => [qw(echo), 'never true, should never happen!!!']);
     $r->cond_run(if => sub { rand(1) < 0.5 }, cmd => [qw(echo yes)]);
 }
 
