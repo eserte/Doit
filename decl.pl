@@ -394,14 +394,8 @@ use strict;
 	my($class, $X, $dryrun) = @_;
 	bless { X => $X, dryrun => $dryrun }, $class;
     }
-    for my $cmd (
-		 qw(chmod chown mkdir rename rmdir symlink system unlink utime),
-		 qw(make_path remove_tree), # File::Path
-		 qw(run), # IPC::Run
-		 qw(cond_run), # conditional run
-		 qw(touch), # like unix touch
-		 qw(write_binary), # like File::Slurper
-		) {
+    sub install_cmd ($) {
+	my $cmd = shift;
 	my $meth = 'cmd_' . $cmd;
 	my $code = sub {
 	    my($self, @args) = @_;
@@ -413,6 +407,17 @@ use strict;
 	};
 	no strict 'refs';
 	*{$cmd} = $code;
+    }
+
+    for my $cmd (
+		 qw(chmod chown mkdir rename rmdir symlink system unlink utime),
+		 qw(make_path remove_tree), # File::Path
+		 qw(run), # IPC::Run
+		 qw(cond_run), # conditional run
+		 qw(touch), # like unix touch
+		 qw(write_binary), # like File::Slurper
+		) {
+	install_cmd $cmd;
     }
 }
 
