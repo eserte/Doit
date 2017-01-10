@@ -27,6 +27,27 @@ use strict;
     sub runner    { shift->{runner} }
     sub dryrunner { shift->{dryrunner} }
 
+    sub install_generic_cmd {
+	my($self, $name, $check, $code, $msg) = @_;
+	if (!$msg) {
+	    $msg = sub { my($self, $args) = @_; $name . ($args ? " @$args" : '') };
+	}
+	my $cmd = sub {
+	    my($self, @args) = @_;
+	    my @commands;
+	    my $addinfo = {};
+	    if ($check->($self, \@args, $addinfo)) {
+		push @commands, {
+				 code => sub { $code->($self, \@args, $addinfo) },
+				 msg  => $msg->($self, \@args, $addinfo),
+				};
+	    }
+	    XCommands->new(@commands);
+	};
+	no strict 'refs';
+	*{"cmd_$name"} = $cmd;
+    }
+
     sub cmd_chmod {
 	my($self, $mode, @files) = @_;
 	my @files_to_change;
@@ -394,6 +415,12 @@ use strict;
 	my($class, $X, $dryrun) = @_;
 	bless { X => $X, dryrun => $dryrun }, $class;
     }
+    sub install_generic_cmd {
+	my($self, $name, @args) = @_;
+	$self->{X}->install_generic_cmd($name, @args);
+	install_cmd($name); # XXX hmmmm
+    }
+
     sub install_cmd ($) {
 	my $cmd = shift;
 	my $meth = 'cmd_' . $cmd;
@@ -426,7 +453,8 @@ use strict;
     use Test::More 'no_plan';
     use Getopt::Long;
     GetOptions("dry-run|n" => \my $dry_run) or die "usage?";
-    my $r = ($dry_run ? X->new->dryrunner : X->new->runner);
+    my $x = X->new;
+    my $r = ($dry_run ? $x->dryrunner : $x->runner);
     $r->touch("/tmp/decl-test");
     ok -f "/tmp/decl-test";
     $r->touch("/tmp/decl-test");
@@ -478,6 +506,18 @@ use strict;
     $r->cond_run(if => sub { 1 }, cmd => [qw(echo always true)]);
     $r->cond_run(if => sub { 0 }, cmd => [qw(echo), 'never true, should never happen!!!']);
     $r->cond_run(if => sub { rand(1) < 0.5 }, cmd => [qw(echo yes)]);
+
+    $r->install_generic_cmd('never_executed', sub { 0 }, sub { die "never executed" });
+    $r->never_executed();
+    $r->install_generic_cmd('mytest', sub {
+				my($self, $args) = @_;
+				@$args;
+			    }, sub {
+				my($self, $args) = @_;
+				warn "args is @$args";
+			    });
+    $r->mytest(1);
+    $r->mytest(0);
 }
 
 __END__
