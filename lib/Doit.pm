@@ -33,7 +33,7 @@ use strict;
 	require Getopt::Long;
 	Getopt::Long::Configure('pass_through');
 	Getopt::Long::GetOptions('dry-run|n' => \my $dry_run);
-	Getopt::Long::Configure('nopass_through'); # XXX or restore old value?
+	Getopt::Long::Configure('no_pass_through'); # XXX or restore old value?
 	my $doit = $class->new;
 	if ($dry_run) {
 	    $doit->dryrunner;
@@ -430,6 +430,8 @@ use strict;
 	my($class, $X, $dryrun) = @_;
 	bless { X => $X, dryrun => $dryrun }, $class;
     }
+    sub is_dry_run { shift->{dryrun} }
+
     sub install_generic_cmd {
 	my($self, $name, @args) = @_;
 	$self->{X}->install_generic_cmd($name, @args);
@@ -460,6 +462,117 @@ use strict;
 		 qw(write_binary), # like File::Slurper
 		) {
 	install_cmd $cmd;
+    }
+
+    sub call {
+	my($self, $method, @args) = @_;
+	$self->$method(@args);
+    }
+
+    # XXX does this belong here?
+    sub do_ssh_connect {
+	my($self, $host, %opts) = @_;
+	my $remote = Doit::SSH->do_connect($host, dry_run => $self->is_dry_run, %opts);
+	$remote;
+    }
+}
+
+{
+    package Doit::RPC;
+
+    require Storable;
+    require IO::Handle;
+
+    sub new {
+	my($class, $runner, $infh, $outfh) = @_;
+	$infh  ||= \*STDIN;
+	$outfh ||= \*STDOUT;
+	$outfh->autoflush(1);
+	bless {
+	       runner => $runner,
+	       infh   => $infh,
+	       outfh  => $outfh,
+	      }, $class;
+    }
+
+    sub run {
+	my $self = shift;
+	while() {
+	    my @data = $self->receive_data;
+	    if ($data[0] =~ m{^exit$}) {
+		return;
+	    }
+	    open my $oldout, ">&STDOUT" or die $!;
+	    open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
+	    my @ret = $self->{runner}->call(@data);
+	    open STDOUT, ">&", $oldout or die $!;
+	    $self->send_data(@ret);
+	}
+    }
+
+    sub receive_data {
+	my($self) = @_;
+	my $fh = $self->{infh};
+	my $buf;
+	read $fh, $buf, 4 or die "receive_data failed (getting length): $!";
+	my $length = unpack("N", $buf);
+	read $fh, $buf, $length or die "receive_data failed (getting data): $!";
+	@{ Storable::thaw($buf) };
+    }
+
+    sub send_data {
+	my($self, @cmd) = @_;
+	my $fh = $self->{outfh};
+	my $data = Storable::nfreeze(\@cmd);
+	print $fh pack("N", length($data)) . $data;
+    }
+}
+
+{
+    package Doit::SSH;
+
+    require File::Basename;
+    require Net::OpenSSH;
+
+    sub do_connect {
+	my($class, $host, %opts) = @_;
+	my $dry_run = delete $opts{dry_run};
+	my $debug = delete $opts{debug};
+	die "Unhandled options: " . join(" ", %opts) if %opts;
+
+	my $self = bless { host => $host }, $class;
+	my $ssh = Net::OpenSSH->new($host);
+	$ssh->error and die "Connection error to $host: " . $ssh->error;
+	$self->{ssh} = $ssh;
+	$ssh->system("[ ! -d .doit/lib ] && mkdir -p .doit/lib");
+	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
+	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
+	my @cmd = ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	warn "remote perl cmd: @cmd\n" if $debug;
+	my($out, $in, $pid) = $ssh->open2(@cmd);
+	$self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	$self;
+    }
+
+    sub call {
+	my($self, @args) = @_;
+	$self->{rpc}->send_data(@args);
+	my @ret = $self->{rpc}->receive_data(@args);
+	@ret; # XXX context!!!
+    }
+
+    use vars '$AUTOLOAD';
+    sub AUTOLOAD {
+	(my $method = $AUTOLOAD) =~ s{.*::}{};
+	my $self = shift;
+	$self->call($method, @_); # XXX or use goto?
+    }
+
+    sub DESTROY {
+	my $self = shift;
+	if ($self->{ssh}) {
+	    delete $self->{ssh};
+	}
     }
 }
 
