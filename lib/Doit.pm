@@ -464,9 +464,16 @@ use strict;
 	install_cmd $cmd;
     }
 
-    sub call {
+    sub call_method {
 	my($self, $method, @args) = @_;
 	$self->$method(@args);
+    }
+
+    sub call {
+	my($self, $sub, @args) = @_;
+	$sub = 'main::' . $sub if $sub !~ /::/;
+	no strict 'refs';
+	&$sub(@args);
     }
 
     # XXX does this belong here?
@@ -504,7 +511,7 @@ use strict;
 	    }
 	    open my $oldout, ">&STDOUT" or die $!;
 	    open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
-	    my @ret = $self->{runner}->call(@data);
+	    my @ret = $self->{runner}->call_method(@data);
 	    open STDOUT, ">&", $oldout or die $!;
 	    $self->send_data(@ret);
 	}
@@ -531,13 +538,13 @@ use strict;
 {
     package Doit::SSH;
 
-    require File::Basename;
-    require Net::OpenSSH;
-
     sub do_connect {
+	require File::Basename;
+	require Net::OpenSSH;
 	my($class, $host, %opts) = @_;
 	my $dry_run = delete $opts{dry_run};
 	my $debug = delete $opts{debug};
+	my $as = delete $opts{as};
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { host => $host }, $class;
@@ -548,13 +555,20 @@ use strict;
 	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
 	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
 	my @cmd = ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	if (defined $as) {
+	    if ($as eq 'root') {
+		unshift @cmd, 'sudo';
+	    } else {
+		unshift @cmd, 'sudo', '-u', $as;
+	    }
+	} # XXX add ssh option -t? for password input?
 	warn "remote perl cmd: @cmd\n" if $debug;
 	my($out, $in, $pid) = $ssh->open2(@cmd);
 	$self->{rpc} = Doit::RPC->new(undef, $in, $out);
 	$self;
     }
 
-    sub call {
+    sub call_remote {
 	my($self, @args) = @_;
 	$self->{rpc}->send_data(@args);
 	my @ret = $self->{rpc}->receive_data(@args);
@@ -565,7 +579,7 @@ use strict;
     sub AUTOLOAD {
 	(my $method = $AUTOLOAD) =~ s{.*::}{};
 	my $self = shift;
-	$self->call($method, @_); # XXX or use goto?
+	$self->call_remote($method, @_); # XXX or use goto?
     }
 
     sub DESTROY {
