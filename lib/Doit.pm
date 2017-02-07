@@ -15,17 +15,32 @@
 use strict;
 
 {
-    package X;
+    package Doit;
+
     sub new {
 	my $class = shift;
 	my $self = bless { }, $class;
 	# XXX hmmm, creating now self-refential data structures ...
-	$self->{runner}    = XRunner->new($self);
-	$self->{dryrunner} = XRunner->new($self, 1);
+	$self->{runner}    = Doit::Runner->new($self);
+	$self->{dryrunner} = Doit::Runner->new($self, 1);
 	$self;
     }
     sub runner    { shift->{runner} }
     sub dryrunner { shift->{dryrunner} }
+
+    sub init {
+	my($class) = @_;
+	require Getopt::Long;
+	Getopt::Long::Configure('pass_through');
+	Getopt::Long::GetOptions('dry-run|n' => \my $dry_run);
+	Getopt::Long::Configure('nopass_through'); # XXX or restore old value?
+	my $doit = $class->new;
+	if ($dry_run) {
+	    $doit->dryrunner;
+	} else {
+	    $doit->runner;
+	}
+    }
 
     sub install_generic_cmd {
 	my($self, $name, $check, $code, $msg) = @_;
@@ -42,7 +57,7 @@ use strict;
 				 msg  => $msg->($self, \@args, $addinfo),
 				};
 	    }
-	    XCommands->new(@commands);
+	    Doit::Commands->new(@commands);
 	};
 	no strict 'refs';
 	*{"cmd_$name"} = $cmd;
@@ -66,7 +81,7 @@ use strict;
 			     msg  => sprintf "chmod 0%o %s", $mode, join(" ", @files_to_change), # shellquote?
 			    };
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_chown {
@@ -119,7 +134,7 @@ use strict;
 			    };
 	}
 	
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_cond_run {
@@ -144,7 +159,7 @@ use strict;
 	if ($doit) {
 	    $self->cmd_run(@$cmd);
 	} else {
-	    XCommands->new();
+	    Doit::Commands->new();
 	}
     }
 
@@ -163,7 +178,7 @@ use strict;
 			     msg => "make_path @directories",
 			    };
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_mkdir {
@@ -182,7 +197,7 @@ use strict;
 				};
 	    }
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_remove_tree {
@@ -200,7 +215,7 @@ use strict;
 			     msg => "remove_tree @directories_to_remove",
 			    };
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_rename {
@@ -210,7 +225,7 @@ use strict;
 			 code => sub { rename $from, $to or die $! },
 			 msg  => "rename $from, $to",
 			};
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_rmdir {
@@ -222,7 +237,7 @@ use strict;
 			     msg  => "rmdir $directory",
 			    };
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_run {
@@ -246,7 +261,7 @@ use strict;
 			     join " ", @print_cmd;
 			 },
 			};
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_symlink {
@@ -270,7 +285,7 @@ use strict;
 			     msg  => "symlink $oldfile $newfile",
 			    };
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_system {
@@ -280,7 +295,7 @@ use strict;
 			 code => sub { system @args; die if $? != 0; },
 			 msg  => "@args",
 			};
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_touch {
@@ -299,7 +314,7 @@ use strict;
 				};
 	    }
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_unlink {
@@ -317,7 +332,7 @@ use strict;
 			     msg  => "unlink @files_to_remove", # shellquote?
 			    };
 	}
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_utime {
@@ -334,7 +349,7 @@ use strict;
 			 code => sub { utime $atime, $mtime, @files or die $! },
 			 msg  => "utime $atime, $mtime, @files",
 			};
-	XCommands->new(@commands);
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_write_binary {
@@ -382,12 +397,12 @@ use strict;
 			     },
 			    };
 	}
-	XCommands->new(@commands);  
+	Doit::Commands->new(@commands);  
     }
 }
 
 {
-    package XCommands;
+    package Doit::Commands;
     sub new {
 	my($class, @commands) = @_;
 	my $self = bless \@commands, $class;
@@ -410,7 +425,7 @@ use strict;
 }
 
 {
-    package XRunner;
+    package Doit::Runner;
     sub new {
 	my($class, $X, $dryrun) = @_;
 	bless { X => $X, dryrun => $dryrun }, $class;
