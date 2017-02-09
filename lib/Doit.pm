@@ -469,11 +469,19 @@ use strict;
 	$self->$method(@args);
     }
 
+    # XXX call vs. call_with_runner ???
     sub call {
 	my($self, $sub, @args) = @_;
 	$sub = 'main::' . $sub if $sub !~ /::/;
 	no strict 'refs';
 	&$sub(@args);
+    }
+
+    sub call_with_runner {
+	my($self, $sub, @args) = @_;
+	$sub = 'main::' . $sub if $sub !~ /::/;
+	no strict 'refs';
+	&$sub($self, @args);
     }
 
     # XXX does this belong here?
