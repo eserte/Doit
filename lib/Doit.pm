@@ -15,6 +15,28 @@
 use strict;
 
 {
+    package Doit::Log;
+
+    BEGIN {
+	if (eval { require Term::ANSIColor; 1 }) {
+	    *colored_error = sub ($) { Term::ANSIColor::colored($_[0], 'red on_black')};
+	    *colored_info  = sub ($) { Term::ANSIColor::colored($_[0], 'green on_black')};
+	    *colored_note  = sub ($) { Term::ANSIColor::colored($_[0], 'yellow on_black')};
+	} else {
+	    *colored_error = *colored_info = *colored_note = sub ($) { $_[0] };
+	}
+    }
+
+    use Exporter 'import';
+    our @EXPORT = qw(info note warning error);
+
+    sub info ($)    { print STDERR colored_info("INFO:"), " ", $_[0], "\n" }
+    sub note ($)    { print STDERR colored_note("NOTE:"), " ", $_[0], "\n" }
+    sub warning ($) { print STDERR colored_error("WARN:"), " ", $_[0], "\n" }
+    sub error ($)   { require Carp; Carp::croak(colored_error("ERROR:"), " ", $_[0]) }
+}
+
+{
     package Doit;
 
     sub new {
