@@ -63,6 +63,27 @@ use strict;
 	*{"cmd_$name"} = $cmd;
     }
 
+    sub _copy_stat {
+	my($src, $dest) = @_;
+	my @stat = ref $src eq 'ARRAY' ? @$src : stat($src);
+	die "Can't stat $src: $!" if !@stat;
+
+	chmod $stat[2], $dest
+	    or warn "Can't chmod $dest to " . sprintf("0%o", $stat[2]) . ": $!";
+	chown $stat[4], $stat[5], $dest
+	    or do {
+		my $save_err = $!; # otherwise it's lost in the get... calls
+		warn "Can't chown $dest to " .
+		    (getpwuid($stat[4]))[0] . "/" .
+		    (getgrgid($stat[5]))[0] . ": $save_err";
+	    };
+	utime $stat[8], $stat[9], $dest
+	    or warn "Can't utime $dest to " .
+	    scalar(localtime $stat[8]) . "/" .
+	    scalar(localtime $stat[9]) .
+	    ": $!";
+    }
+
     sub cmd_chmod {
 	my($self, $mode, @files) = @_;
 	my @files_to_change;
@@ -399,6 +420,144 @@ use strict;
 	}
 	Doit::Commands->new(@commands);  
     }
+
+    sub cmd_change_file {
+	my($self, $file, @changes) = @_;
+	if (!-e $file) {
+	    die "$file does not exist";
+	}
+	if (!-f $file) {
+	    die "$file is not a file";
+	}
+
+	my @commands;
+
+	for (@changes) {
+	    if ($_->{add_if_missing}) {
+		my $line = delete $_->{add_if_missing};
+		$_->{unless_match} = $line;
+		if ($_->{add_after}) {
+		    my $add_after = delete $_->{add_after};
+		    qr{$add_after}; # must be a regexp
+		    $_->{action} = sub {
+			my $arrayref = $_[0];
+			my $found = 0;
+			for my $i (0 .. $#$arrayref) {
+			    if ($arrayref->[$i] =~ $add_after) {
+				splice @$arrayref, $i+1, 0, $line;
+				$found = 1;
+				last;
+			    }
+			}
+			if (!$found) {
+			    die "Cannot find '$add_after' in file";
+			}
+		    };
+		    delete $_->{add_after};
+		} else {
+		    $_->{action} = sub { my $arrayref = $_[0]; push @$arrayref, $line };
+		}
+	    }
+	}
+
+	my @match_actions;
+	my @unless_match_actions;
+	for (@changes) {
+	    if ($_->{unless_match}) {
+		if (ref $_->{unless_match} ne 'Regexp') {
+		    my $rx = '^' . quotemeta($_->{unless_match}) . '$';
+		    $_->{unless_match} = qr{$rx};
+		}
+		if (!$_->{action}) {
+		    die "action is missing";
+		}
+		if (ref $_->{action} ne 'CODE') {
+		    die "action must be a sub reference";
+		}
+		push @unless_match_actions, $_;
+	    } elsif ($_->{match}) {
+		if (ref $_->{match} ne 'Regexp') {
+		    die "match must be a regexp";
+		}
+		if ($_->{action}) {
+		    if (ref $_->{action} ne 'CODE') {
+			die "action must be a sub reference";
+		    }
+		} elsif ($_->{replace}) {
+		    # accept
+		} else {
+		    die "action or replace is missing";
+		}
+		push @match_actions, $_;
+	    } else {
+		die "match or unless_match is missing";
+	    }
+	}
+
+	require File::Temp;
+	require File::Basename;
+	require File::Copy;
+	my($tmfh,$tmpfile) = File::Temp::tempfile('doittemp_XXXXXXXX', UNLINK => 1, DIR => File::Basename::dirname($file));
+	File::Copy::copy($file, $tmpfile)
+		or die "failed to copy $file to temporary file $tmpfile: $!";
+	_copy_stat $file, $tmpfile;
+
+	require Tie::File;
+	tie my @lines, 'Tie::File', $tmpfile
+	    or die "cannot tie file $file: $!";
+
+	my $no_of_changes = 0;
+	for my $match_action (@match_actions) {
+	    my $match  = $match_action->{match};
+	    for my $line (@lines) {
+		if ($line =~ $match) {
+		    if (exists $match_action->{replace}) {
+			my $replace = $match_action->{replace};
+			if ($line ne $replace) {
+			    push @commands, { msg => "replace '$line' with '$replace' in '$file'" };
+			    $line = $replace;
+			    $no_of_changes++;
+			}
+		    } else {
+			push @commands, { msg => "matched '$match' on line '$line' in '$file' -> execute action" };
+			my $action = $match_action->{action};
+			$action->($line);
+			$no_of_changes++;
+		    }
+		}
+	    }
+	}
+    ITER: for my $unless_match_action (@unless_match_actions) {
+	    my $match  = $unless_match_action->{unless_match};
+	    for my $line (@lines) {
+		if ($line =~ $match) {
+		    next ITER;
+		}
+	    }
+	    push @commands, { msg => "did not find '$match' in '$file' -> execute action" };
+	    my $action = $unless_match_action->{action};
+	    $action->(\@lines);
+	    $no_of_changes++;
+	}
+
+	if ($no_of_changes) {
+	    push @commands, {
+			     code => sub {
+				 rename $tmpfile, $file
+				     or die "Can't rename $tmpfile to $file: $!";
+			     },
+			     msg => do {
+				 require IPC::Run;
+				 my $diff;
+				 IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff);
+				 "Final changes as diff:\n$diff";
+			     }
+			    };
+	}
+
+	Doit::Commands->new(@commands);
+    }
+
 }
 
 {
@@ -412,14 +571,20 @@ use strict;
     sub doit {
 	my($self) = @_;
 	for my $command ($self->commands) {
-	    print STDERR "INFO: " . $command->{msg} . "\n";
-	    $command->{code}->();
+	    if (exists $command->{msg}) {
+		print STDERR "INFO: " . $command->{msg} . "\n";
+	    }
+	    if (exists $command->{code}) {
+		$command->{code}->();
+	    }
 	}
     }
     sub show {
 	my($self) = @_;
 	for my $command ($self->commands) {
-	    print STDERR "INFO: " . $command->{msg} . " (dry-run)\n";
+	    if (exists $command->{msg}) {
+		print STDERR "INFO: " . $command->{msg} . " (dry-run)\n";
+	    }
 	}
     }
 }
@@ -460,6 +625,7 @@ use strict;
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
 		 qw(write_binary), # like File::Slurper
+		 qw(change_file), # own invention
 		) {
 	install_cmd $cmd;
     }
