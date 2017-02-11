@@ -630,9 +630,19 @@ use strict;
 	install_cmd $cmd;
     }
 
-    sub call_method {
-	my($self, $method, @args) = @_;
-	$self->$method(@args);
+    sub call_wrapped_method {
+	my($self, $context, $method, @args) = @_;
+	my @ret;
+	if ($context eq 'a') {
+	    @ret    = eval { $self->$method(@args) };
+	} else {
+	    $ret[0] = eval { $self->$method(@args) };
+	}
+	if ($@) {
+	    ('e', $@);
+	} else {
+	    ('r', @ret);
+	}
     }
 
     # XXX call vs. call_with_runner ???
@@ -681,25 +691,36 @@ use strict;
     sub run {
 	my $self = shift;
 	while() {
-	    my @data = $self->receive_data;
+	    my($context, @data) = $self->receive_data;
 	    if ($data[0] =~ m{^exit$}) {
-		$self->send_data('bye-bye');
+		$self->send_data('r', 'bye-bye');
 		return;
 	    }
 	    open my $oldout, ">&STDOUT" or die $!;
 	    open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
-	    my @ret = $self->{runner}->call_method(@data);
+	    my($rettype, @ret) = $self->{runner}->call_wrapped_method($context, @data);
 	    open STDOUT, ">&", $oldout or die $!;
-	    $self->send_data(@ret);
+	    $self->send_data($rettype, @ret);
 	}
     }
 
     # Call for every command on client
     sub call_remote {
 	my($self, @args) = @_;
-	$self->send_data(@args);
-	my @ret = $self->receive_data(@args);
-	@ret; # XXX context!!!
+	my $context = wantarray ? 'a' : 's'; # XXX more possible context (void...)?
+	$self->send_data($context, @args);
+	my($rettype, @ret) = $self->receive_data(@args);
+	if ($rettype eq 'e') {
+	    die $ret[0];
+	} elsif ($rettype eq 'r') {
+	    if ($context eq 'a') {
+		return @ret;
+	    } else {
+		return $ret[0];
+	    }
+	} else {
+	    die "Unexpected return type '$rettype' (should be 'e' or 'r')";
+	}
     }
 
     sub receive_data {
