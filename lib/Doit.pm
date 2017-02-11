@@ -664,6 +664,7 @@ use strict;
     require Storable;
     require IO::Handle;
 
+    # $runner is typically undef on the client, and Doit->init on the server
     sub new {
 	my($class, $runner, $infh, $outfh) = @_;
 	$infh  ||= \*STDIN;
@@ -676,11 +677,13 @@ use strict;
 	      }, $class;
     }
 
+    # Call on "server"
     sub run {
 	my $self = shift;
 	while() {
 	    my @data = $self->receive_data;
 	    if ($data[0] =~ m{^exit$}) {
+		$self->send_data('bye-bye');
 		return;
 	    }
 	    open my $oldout, ">&STDOUT" or die $!;
@@ -689,6 +692,14 @@ use strict;
 	    open STDOUT, ">&", $oldout or die $!;
 	    $self->send_data(@ret);
 	}
+    }
+
+    # Call for every command on client
+    sub call_remote {
+	my($self, @args) = @_;
+	$self->send_data(@args);
+	my @ret = $self->receive_data(@args);
+	@ret; # XXX context!!!
     }
 
     sub receive_data {
@@ -744,9 +755,7 @@ use strict;
 
     sub call_remote {
 	my($self, @args) = @_;
-	$self->{rpc}->send_data(@args);
-	my @ret = $self->{rpc}->receive_data(@args);
-	@ret; # XXX context!!!
+	$self->{rpc}->call_remote(@args);
     }
 
     use vars '$AUTOLOAD';
