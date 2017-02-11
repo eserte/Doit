@@ -32,7 +32,19 @@ my $action = shift || 'build';
 }
 
 sub build {
-    die "NYI";
+    $doit->make_path('blib/lib');
+    require File::Glob;
+    for my $file (File::Glob::bsd_glob('lib/*.pm')) { # deeper pms?
+	my $dest = 'blib/'.$file;
+	if (!-e $dest || -M $dest > -M $file) {
+	    $doit->make_path(dirname($dest));
+	    $doit->system('cp', $file, $dest);
+	}
+    }
+}
+
+sub clean {
+    $doit->remove_tree('blib');
 }
 
 sub test {

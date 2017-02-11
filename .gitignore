@@ -1,3 +1,4 @@
 /.prove
 /Build
+/blib
 /cover_db
