@@ -696,6 +696,13 @@ use strict;
 	my $remote = Doit::SSH->do_connect($host, dry_run => $self->is_dry_run, %opts);
 	$remote;
     }
+
+    # XXX does this belong here?
+    sub do_sudo {
+	my($self, %opts) = @_;
+	my $sudo = Doit::Sudo->do_connect(dry_run => $self->is_dry_run, %opts);
+	$sudo;
+    }
 }
 
 {
@@ -772,7 +779,52 @@ use strict;
 }
 
 {
+    package Doit::_AnyRPCImpl;
+    sub call_remote {
+	my($self, @args) = @_;
+	$self->{rpc}->call_remote(@args);
+    }
+
+    use vars '$AUTOLOAD';
+    sub AUTOLOAD {
+	(my $method = $AUTOLOAD) =~ s{.*::}{};
+	my $self = shift;
+	$self->call_remote($method, @_); # XXX or use goto?
+    }
+
+}
+
+{
+    package Doit::Sudo;
+
+    use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
+
+    sub do_connect {
+	my($class, %opts) = @_;
+	my @sudo_opts = @{ delete $opts{sudo_opts} || [] };
+	my $dry_run = delete $opts{dry_run};
+	die "Unhandled options: " . join(" ", %opts) if %opts;
+
+	my $self = bless { }, $class;
+
+	require File::Basename;
+	require IPC::Open2;
+	require Symbol;
+	my @cmd = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	my($in, $out) = (Symbol::gensym(), Symbol::gensym());
+	my $pid = IPC::Open2::open2($in, $out, @cmd);
+	$self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	$self;
+    }
+
+    sub DESTROY { }
+
+}
+
+{
     package Doit::SSH;
+
+    use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
 
     sub do_connect {
 	require File::Basename;
@@ -804,24 +856,13 @@ use strict;
 	$self;
     }
 
-    sub call_remote {
-	my($self, @args) = @_;
-	$self->{rpc}->call_remote(@args);
-    }
-
-    use vars '$AUTOLOAD';
-    sub AUTOLOAD {
-	(my $method = $AUTOLOAD) =~ s{.*::}{};
-	my $self = shift;
-	$self->call_remote($method, @_); # XXX or use goto?
-    }
-
     sub DESTROY {
 	my $self = shift;
 	if ($self->{ssh}) {
 	    delete $self->{ssh};
 	}
     }
+
 }
 
 1;
