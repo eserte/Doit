@@ -38,8 +38,14 @@ $r->chown($>, undef, "decl-test");
 $r->chown($>, undef, "decl-test");
 $r->chown(undef, (split / /, $))[1], "decl-test");
 $r->chown(undef, (split / /, $))[1], "decl-test");
-$r->rename("decl-test", "decl-test2");
+$r->rename("decl-test", "decl-test3");
+$r->move("decl-test3", "decl-test2");
 $r->rename("decl-test2", "decl-test");
+$r->copy("decl-test", "decl-copy");
+ok -e "decl-copy"
+    or diag qx(ls -al);
+$r->copy("decl-test", "decl-copy"); # no action
+$r->unlink("decl-copy");
 $r->symlink("tmp/decl-test", "decl-test-symlink");
 ok -l "decl-test-symlink";
 $r->symlink("tmp/decl-test", "decl-test-symlink");

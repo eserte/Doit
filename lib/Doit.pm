@@ -249,6 +249,35 @@ use strict;
 	Doit::Commands->new(@commands);
     }
 
+    sub cmd_copy {
+	my($self, $from, $to) = @_;
+	my @commands;
+	if (!-e $to || do { require File::Compare; File::Compare::compare($from, $to) != 0 }) {
+	    push @commands, {
+			     code => sub {
+				 require File::Copy;
+				 File::Copy::copy($from, $to)
+					 or die "Copy failed: $!";
+			     },
+			     msg => "copy $from $to",
+			    };
+	}
+	Doit::Commands->new(@commands);
+    }
+
+    sub cmd_move {
+	my($self, $from, $to) = @_;
+	my @commands = {
+			code => sub {
+			    require File::Copy;
+			    File::Copy::move($from, $to)
+				    or die "Move failed: $!";
+			},
+			msg => "move $from $to",
+		       };
+	Doit::Commands->new(@commands);
+    }
+
     sub cmd_rmdir {
 	my($self, $directory) = @_;
 	my @commands;
@@ -621,6 +650,7 @@ use strict;
     for my $cmd (
 		 qw(chmod chown mkdir rename rmdir symlink system unlink utime),
 		 qw(make_path remove_tree), # File::Path
+		 qw(copy move), # File::Copy
 		 qw(run), # IPC::Run
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
