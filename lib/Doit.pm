@@ -833,13 +833,15 @@ use strict;
 	my $dry_run = delete $opts{dry_run};
 	my $debug = delete $opts{debug};
 	my $as = delete $opts{as};
+	my $forward_agent = delete $opts{forward_agent};
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { host => $host }, $class;
-	my $ssh = Net::OpenSSH->new($host);
+	my %ssh_new_run_opts = (($forward_agent ? (forward_agent => $forward_agent) : ()));
+	my $ssh = Net::OpenSSH->new($host, %ssh_new_run_opts);
 	$ssh->error and die "Connection error to $host: " . $ssh->error;
 	$self->{ssh} = $ssh;
-	$ssh->system("[ ! -d .doit/lib ] && mkdir -p .doit/lib");
+	$ssh->system(\%ssh_new_run_opts, "[ ! -d .doit/lib ] && mkdir -p .doit/lib");
 	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
 	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
 	my @cmd = ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
@@ -851,10 +853,12 @@ use strict;
 	    }
 	} # XXX add ssh option -t? for password input?
 	warn "remote perl cmd: @cmd\n" if $debug;
-	my($out, $in, $pid) = $ssh->open2(@cmd);
+	my($out, $in, $pid) = $ssh->open2(\%ssh_new_run_opts, @cmd);
 	$self->{rpc} = Doit::RPC->new(undef, $in, $out);
 	$self;
     }
+
+    sub ssh { $_[0]->{ssh} }
 
     sub DESTROY {
 	my $self = shift;
