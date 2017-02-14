@@ -733,42 +733,76 @@ use strict;
     require Storable;
     require IO::Handle;
 
-    # $runner is typically undef on the client, and Doit->init on the server
     sub new {
-	my($class, $runner, $infh, $outfh) = @_;
-	$infh  ||= \*STDIN;
-	$outfh ||= \*STDOUT;
-	$outfh->autoflush(1);
-	bless {
-	       runner => $runner,
-	       infh   => $infh,
-	       outfh  => $outfh,
-	      }, $class;
+	die "Please use either Doit::RPC::Client, Doit::RPC::Server or Doit::RPC::SimpleServer";
     }
 
-    # Call on "server"
-    sub run {
-	my $self = shift;
-	while() {
-	    my($context, @data) = $self->receive_data;
-	    if ($data[0] =~ m{^exit$}) {
-		$self->send_data('r', 'bye-bye');
-		return;
+    sub receive_data {
+	my($self) = @_;
+	my $fh = $self->{infh};
+	my $buf;
+	read $fh, $buf, 4 or die "receive_data failed (getting length): $!";
+	my $length = unpack("N", $buf);
+	read $fh, $buf, $length or die "receive_data failed (getting data): $!";
+	@{ Storable::thaw($buf) };
+    }
+
+    sub send_data {
+	my($self, @cmd) = @_;
+	my $fh = $self->{outfh};
+	my $data = Storable::nfreeze(\@cmd);
+	print $fh pack("N", length($data)) . $data;
+    }
+}
+
+{
+    package Doit::RPC::Client;
+    use vars '@ISA'; @ISA = ('Doit::RPC');
+
+    sub new {
+	my($class, $infh, $outfh) = @_;
+	bless { infh => $infh, outfh => $outfh }, $class;
+    }
+
+    # Call for every command on client
+    sub call_remote {
+	my($self, @args) = @_;
+	my $context = wantarray ? 'a' : 's'; # XXX more possible context (void...)?
+	$self->send_data($context, @args);
+	my($rettype, @ret) = $self->receive_data(@args);
+	if ($rettype eq 'e') {
+	    die $ret[0];
+	} elsif ($rettype eq 'r') {
+	    if ($context eq 'a') {
+		return @ret;
+	    } else {
+		return $ret[0];
 	    }
-	    open my $oldout, ">&STDOUT" or die $!;
-	    open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
-	    my($rettype, @ret) = $self->{runner}->call_wrapped_method($context, @data);
-	    open STDOUT, ">&", $oldout or die $!;
-	    $self->send_data($rettype, @ret);
+	} else {
+	    die "Unexpected return type '$rettype' (should be 'e' or 'r')";
 	}
     }
+}
 
-    sub run_server {
+{
+    package Doit::RPC::Server;
+    use vars '@ISA'; @ISA = ('Doit::RPC');
+
+    sub new {
 	my($class, $runner, $sockpath, %options) = @_;
+
 	my $debug = delete $options{debug};
 	die "Unhandled options: " . join(" ", %options) if %options;
 
-	my $self = bless { runner => $runner }, $class;
+	bless {
+	       runner   => $runner,
+	       sockpath => $sockpath,
+	       debug    => $debug,
+	      }, $class;
+    }
+
+    sub run {
+	my($self) = @_;
 
 	require IO::Socket::UNIX;
 	IO::Socket::UNIX->VERSION('1.18'); # autoflush
@@ -776,7 +810,7 @@ use strict;
 	use IO::Select;
 
 	my $d;
-	if ($debug) {
+	if ($self->{debug}) {
 	    $d = sub ($) {
 		Doit::Log::info("WORKER: $_[0]");
 	    };
@@ -785,6 +819,7 @@ use strict;
 	}
 
 	$d->("Start worker ($$)...");
+	my $sockpath = $self->{sockpath};
 	if (-e $sockpath) {
 	    $d->("unlink socket $sockpath");
 	    unlink $sockpath;
@@ -819,40 +854,38 @@ use strict;
 	}
     }
 
-    # Call for every command on client
-    sub call_remote {
-	my($self, @args) = @_;
-	my $context = wantarray ? 'a' : 's'; # XXX more possible context (void...)?
-	$self->send_data($context, @args);
-	my($rettype, @ret) = $self->receive_data(@args);
-	if ($rettype eq 'e') {
-	    die $ret[0];
-	} elsif ($rettype eq 'r') {
-	    if ($context eq 'a') {
-		return @ret;
-	    } else {
-		return $ret[0];
+}
+
+{
+    package Doit::RPC::SimpleServer;
+    use vars '@ISA'; @ISA = ('Doit::RPC');
+    
+    sub new {
+	my($class, $runner) = @_;
+	my $infh  = \*STDIN;
+	my $outfh = \*STDOUT;
+	$outfh->autoflush(1);
+	bless {
+	       runner => $runner,
+	       infh   => $infh,
+	       outfh  => $outfh,
+	      }, $class;
+    }
+
+    sub run {
+	my $self = shift;
+	while() {
+	    my($context, @data) = $self->receive_data;
+	    if ($data[0] =~ m{^exit$}) {
+		$self->send_data('r', 'bye-bye');
+		return;
 	    }
-	} else {
-	    die "Unexpected return type '$rettype' (should be 'e' or 'r')";
+	    open my $oldout, ">&STDOUT" or die $!;
+	    open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
+	    my($rettype, @ret) = $self->{runner}->call_wrapped_method($context, @data);
+	    open STDOUT, ">&", $oldout or die $!;
+	    $self->send_data($rettype, @ret);
 	}
-    }
-
-    sub receive_data {
-	my($self) = @_;
-	my $fh = $self->{infh};
-	my $buf;
-	read $fh, $buf, 4 or die "receive_data failed (getting length): $!";
-	my $length = unpack("N", $buf);
-	read $fh, $buf, $length or die "receive_data failed (getting data): $!";
-	@{ Storable::thaw($buf) };
-    }
-
-    sub send_data {
-	my($self, @cmd) = @_;
-	my $fh = $self->{outfh};
-	my $data = Storable::nfreeze(\@cmd);
-	print $fh pack("N", length($data)) . $data;
     }
 }
 
@@ -888,10 +921,10 @@ use strict;
 	require File::Basename;
 	require IPC::Open2;
 	require Symbol;
-	my @cmd = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	my @cmd = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
 	my($in, $out) = (Symbol::gensym(), Symbol::gensym());
 	my $pid = IPC::Open2::open2($in, $out, @cmd);
-	$self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	$self->{rpc} = Doit::RPC::Client->new($in, $out);
 	$self;
     }
 
@@ -931,20 +964,20 @@ use strict;
 	    }
 	} # XXX add ssh option -t? for password input?
 	if (0) {
-	    push @cmd, ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	    push @cmd, ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
 	    warn "remote perl cmd: @cmd\n" if $debug;
 	    my($out, $in, $pid) = $ssh->open2(\%ssh_new_run_opts, @cmd);
-	    $self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
 	} else {
 	    # XXX better path for sock!
-	    my @cmd_worker = (@cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->run_server(Doit->init, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	    my @cmd_worker = (@cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::Server->new(Doit->init, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();}, "--", ($dry_run? "--dry-run" : ()));
 	    warn "remote perl cmd: @cmd_worker\n" if $debug;
 	    my $worker_pid = $ssh->spawn(\%ssh_new_run_opts, @cmd_worker); # XXX what to do with worker pid?
 	    my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.$<.sock", debug => shift)}, !!$debug);
 	    warn "comm perl cmd: @cmd_comm\n" if $debug;
 	    my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
 	    $out->autoflush(1); # XXX needed?
-	    $self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
 	}
 	$self;
     }
