@@ -281,7 +281,19 @@ use strict;
 				 File::Copy::copy($from, $to)
 					 or die "Copy failed: $!";
 			     },
-			     msg => "copy $from $to",
+			     msg => do {
+				 if (-e $to) {
+				     my $diff;
+				     if (eval { require IPC::Run; 1 }) {
+					 IPC::Run::run(['diff', '-u', $to, $from], '>', \$diff);
+					 "copy $from $to\ndiff:\n$diff";
+				     } else {
+					 "copy $from $to (replace destination; no diff available)\n";
+				     }
+				 } else {
+				     "copy $from $to (destination does not exist)\n";
+				 }
+			     },
 			    };
 	}
 	Doit::Commands->new(@commands);
