@@ -763,6 +763,62 @@ use strict;
 	}
     }
 
+    sub run_server {
+	my($class, $runner, $sockpath, %options) = @_;
+	my $debug = delete $options{debug};
+	die "Unhandled options: " . join(" ", %options) if %options;
+
+	my $self = bless { runner => $runner }, $class;
+
+	require IO::Socket::UNIX;
+	IO::Socket::UNIX->VERSION('1.18'); # autoflush
+	IO::Socket::UNIX->import(qw(SOCK_STREAM));
+	use IO::Select;
+
+	my $d;
+	if ($debug) {
+	    $d = sub ($) {
+		Doit::Log::info("WORKER: $_[0]");
+	    };
+	} else {
+	    $d = sub ($) { };
+	}
+
+	$d->("Start worker ($$)...");
+	if (-e $sockpath) {
+	    $d->("unlink socket $sockpath");
+	    unlink $sockpath;
+	}
+	my $sock = IO::Socket::UNIX->new(
+					 Type  => SOCK_STREAM(),
+					 Local => $sockpath,
+					 Listen => 1,
+					) or die "WORKER: Can't create socket: $!";
+	$d->("socket was created");
+
+	my $sel = IO::Select->new($sock);
+	$d->("waiting for client");
+	my @ready = $sel->can_read();
+	die "WORKER: unexpected filehandle @ready" if $ready[0] != $sock;
+	$d->("accept socket");
+	my $fh = $sock->accept;
+	$self->{infh} = $self->{outfh} = $fh;
+	while () {
+	    $d->(" waiting for line from comm");
+	    my($context, @data) = $self->receive_data;
+	    if ($data[0] =~ m{^exit$}) {
+		$d->(" got exit command");
+		$self->send_data('r', 'bye-bye');
+		$fh->close;
+		return;
+	    }
+	    $d->(" calling method $data[0]");
+	    my($rettype, @ret) = $self->{runner}->call_wrapped_method($context, @data);
+	    $d->(" sending result back");
+	    $self->send_data($rettype, @ret);
+	}
+    }
+
     # Call for every command on client
     sub call_remote {
 	my($self, @args) = @_;
@@ -866,17 +922,30 @@ use strict;
 	$ssh->system(\%ssh_new_run_opts, "[ ! -d .doit/lib ] && mkdir -p .doit/lib");
 	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
 	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
-	my @cmd = ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	my @cmd;
 	if (defined $as) {
 	    if ($as eq 'root') {
-		unshift @cmd, 'sudo';
+		@cmd = ('sudo');
 	    } else {
-		unshift @cmd, 'sudo', '-u', $as;
+		@cmd = ('sudo', '-u', $as);
 	    }
 	} # XXX add ssh option -t? for password input?
-	warn "remote perl cmd: @cmd\n" if $debug;
-	my($out, $in, $pid) = $ssh->open2(\%ssh_new_run_opts, @cmd);
-	$self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	if (0) {
+	    push @cmd, ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	    warn "remote perl cmd: @cmd\n" if $debug;
+	    my($out, $in, $pid) = $ssh->open2(\%ssh_new_run_opts, @cmd);
+	    $self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	} else {
+	    # XXX better path for sock!
+	    my @cmd_worker = (@cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC->run_server(Doit->init, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	    warn "remote perl cmd: @cmd_worker\n" if $debug;
+	    my $worker_pid = $ssh->spawn(\%ssh_new_run_opts, @cmd_worker); # XXX what to do with worker pid?
+	    my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.$<.sock", debug => shift)}, !!$debug);
+	    warn "comm perl cmd: @cmd_comm\n" if $debug;
+	    my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
+	    $out->autoflush(1); # XXX needed?
+	    $self->{rpc} = Doit::RPC->new(undef, $in, $out);
+	}
 	$self;
     }
 
@@ -886,6 +955,90 @@ use strict;
 	my $self = shift;
 	if ($self->{ssh}) {
 	    delete $self->{ssh};
+	}
+    }
+
+}
+
+{
+    package Doit::Comm;
+
+    sub comm_to_sock {
+	my(undef, $peer, %options) = @_;
+	die "Please specify path to unix domain socket" if !defined $peer;
+	my $debug = delete $options{debug};
+	die "Unhandled options: " . join(" ", %options) if %options;
+
+	my $infh = \*STDIN;
+	my $outfh = \*STDOUT;
+
+	require IO::Socket::UNIX;
+	IO::Socket::UNIX->VERSION('1.18'); # autoflush
+	IO::Socket::UNIX->import(qw(SOCK_STREAM));
+
+	my $d;
+	if ($debug) {
+	    $d = sub ($) {
+		Doit::Log::info("COMM: $_[0]");
+	    };
+	} else {
+	    $d = sub ($) { };
+	}
+
+	$d->("Start communication process (pid $$)...");
+
+	my $tries = 20;
+	my $sock;
+	{
+	    my $sleep;
+	    for my $try (1..$tries) {
+		$sock = IO::Socket::UNIX->new(
+					      Type => SOCK_STREAM(),
+					      Peer => $peer,
+					     );
+		last if $sock;
+		if (eval { require Time::HiRes; 1 }) {
+		    $sleep = \&Time::HiRes::sleep;
+		} else {
+		    $sleep = sub { sleep $_[0] };
+		}
+		my $seconds = $try < 10 && defined &Time::HiRes::sleep ? 0.1 : 1;
+		$d->("can't connect, sleep for $seconds seconds");
+		$sleep->($seconds);
+	    }
+	}
+	if (!$sock) {
+	    die "COMM: Can't connect to socket (after $tries retries): $!";
+	}
+	$d->("socket to worker was created");
+
+	my $get_and_send = sub ($$$$) {
+	    my($infh, $outfh, $inname, $outname) = @_;
+
+	    my $length_buf;
+	    read $infh, $length_buf, 4 or die "COMM: reading data from $inname failed (getting length): $!";
+	    my $length = unpack("N", $length_buf);
+	    $d->("starting getting data from $inname, length is $length");
+	    my $buf;
+	    while (1) {
+		my $got = read($infh, $buf, $length, length($buf));
+		last if $got == $length;
+		die "COMM: Unexpected error $got > $length" if $got > $length;
+		$length -= $got;
+	    }
+	    $d->("finished reading data from $inname");
+
+	    print $outfh $length_buf;
+	    print $outfh $buf;
+	    $d->("finished sending data to $outname");
+	};
+
+	$outfh->autoflush(1);
+	$d->("about to enter loop");
+	while () {
+	    $d->("seen eof from local"), last if eof($infh);
+	    $get_and_send->($infh, $sock, "local", "worker");
+	    $get_and_send->($sock, $outfh, "worker", "local");
 	}
     }
 
