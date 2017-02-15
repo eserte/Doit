@@ -957,10 +957,17 @@ use strict;
 	my $debug = delete $opts{debug};
 	my $as = delete $opts{as};
 	my $forward_agent = delete $opts{forward_agent};
+	my $tty = delete $opts{tty};
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { host => $host }, $class;
-	my %ssh_new_run_opts = (($forward_agent ? (forward_agent => $forward_agent) : ()));
+	my %ssh_new_run_opts = (
+	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
+	);
+	my %ssh_run_opts = (
+	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
+	    ($tty           ? (tty           => $tty)           : ()),
+	);
 	my $ssh = Net::OpenSSH->new($host, %ssh_new_run_opts);
 	$ssh->error and die "Connection error to $host: " . $ssh->error;
 	$self->{ssh} = $ssh;
@@ -984,7 +991,7 @@ use strict;
 	    # XXX better path for sock!
 	    my @cmd_worker = (@cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::Server->new(Doit->init, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();}, "--", ($dry_run? "--dry-run" : ()));
 	    warn "remote perl cmd: @cmd_worker\n" if $debug;
-	    my $worker_pid = $ssh->spawn(\%ssh_new_run_opts, @cmd_worker); # XXX what to do with worker pid?
+	    my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
 	    my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.$<.sock", debug => shift)}, !!$debug);
 	    warn "comm perl cmd: @cmd_comm\n" if $debug;
 	    my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
