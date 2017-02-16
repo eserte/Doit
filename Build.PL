@@ -21,6 +21,9 @@ use Doit;
 my $doit = Doit->init;
 
 if (basename($0) eq 'Build.PL') {
+    if (@ARGV) {
+	die "Build.PL does not support any arguments\n";
+    }
     $doit->symlink('Build.PL', 'Build');
     exit;
 }
