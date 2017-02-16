@@ -814,6 +814,7 @@ use strict;
 
     sub new {
 	my($class, $infh, $outfh) = @_;
+	$outfh->autoflush(1);
 	bless { infh => $infh, outfh => $outfh }, $class;
     }
 
@@ -914,9 +915,9 @@ use strict;
     use vars '@ISA'; @ISA = ('Doit::RPC');
     
     sub new {
-	my($class, $runner) = @_;
-	my $infh  = \*STDIN;
-	my $outfh = \*STDOUT;
+	my($class, $runner, $infh, $outfh) = @_;
+	$infh  = \*STDIN if !$infh;
+	$outfh = \*STDOUT if !$outfh;
 	$outfh->autoflush(1);
 	bless {
 	       runner => $runner,
@@ -1036,7 +1037,6 @@ use strict;
 	    my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.$<.sock", debug => shift)}, !!$debug);
 	    warn "comm perl cmd: @cmd_comm\n" if $debug;
 	    my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
-	    $out->autoflush(1); # XXX needed?
 	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
 	}
 	$self;

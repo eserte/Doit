@@ -26,12 +26,12 @@ die $! if !defined $pid;
 if ($pid == 0) {
     $to_remote_pipe->reader;
     $from_remote_pipe->writer;
-    Doit::RPC->new(Doit->init, $to_remote_pipe, $from_remote_pipe)->run;
+    Doit::RPC::SimpleServer->new(Doit->init, $to_remote_pipe, $from_remote_pipe)->run;
     exit;
 }
 $to_remote_pipe->writer;
 $from_remote_pipe->reader;
-my $rpc = Doit::RPC->new(undef, $from_remote_pipe, $to_remote_pipe);
+my $rpc = Doit::RPC::Client->new($from_remote_pipe, $to_remote_pipe);
 isa_ok $rpc, 'Doit::RPC';
 
 my $got_pid = $rpc->call_remote(qw(call get_pid)); # XXX context not right yet
