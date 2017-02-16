@@ -376,7 +376,17 @@ use strict;
 	my($self, @args) = @_;
 	my @commands;
 	push @commands, {
-			 code => sub { system @args; die if $? != 0; },
+			 code => sub {
+			     system @args;
+			     if ($? != 0) {
+				 if ($? & 127) {
+				     my $signalNum = $? & 127;
+				     die sprintf "Command died with signal %d, %s coredump", $signalNum, ($? & 128) ? 'with' : 'without';
+				 } else {
+				     die "Command exited with exit code " . ($?>>8);
+				 }
+			     }
+			 },
 			 msg  => "@args",
 			};
 	Doit::Commands->new(@commands);
