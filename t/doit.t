@@ -94,4 +94,6 @@ $r->install_generic_cmd('mytest', sub {
 $r->mytest(1);
 $r->mytest(0);
 
+chdir '/'; # for File::Temp
+
 __END__
