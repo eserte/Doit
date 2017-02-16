@@ -37,6 +37,35 @@ use strict;
 }
 
 {
+    package Doit::Exception;
+    use overload '""' => 'stringify';
+    use Exporter 'import';
+    our @EXPORT_OK = qw(throw);
+    $INC{'Doit/Exception.pm'} = __FILE__; # XXX hack
+
+    sub new {
+	my($class, $msg, %opts) = @_;
+	my $level = delete $opts{__level} || 1;
+	($opts{__package}, $opts{__filename}, $opts{__line}) = caller($level);
+	bless {
+	       __msg  => $msg,
+	       %opts,
+	      }, $class;
+    }
+    sub stringify {
+	my $self = shift;
+	my $msg = $self->{__msg};
+	$msg = 'Died' if !defined $msg;
+	if ($msg !~ /\n\z/) {
+	    $msg .= ' at ' . $self->{__filename} . ' line ' . $self->{__line} . ".\n";
+	}
+	$msg;
+    }
+
+    sub throw { die Doit::Exception->new(@_) }
+}
+
+{
     package Doit;
 
     sub new {
