@@ -655,7 +655,8 @@ use strict;
 				 my $diff;
 				 IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff);
 				 "Final changes as diff:\n$diff";
-			     }
+			     },
+			     rv => $no_of_changes,
 			    };
 	}
 
@@ -674,14 +675,21 @@ use strict;
     sub commands { @{$_[0]} }
     sub doit {
 	my($self) = @_;
+	my $rv;
 	for my $command ($self->commands) {
 	    if (exists $command->{msg}) {
 		print STDERR "INFO: " . $command->{msg} . "\n";
 	    }
 	    if (exists $command->{code}) {
-		$command->{code}->();
+		my $this_rv = $command->{code}->();
+		if ($command->{rv}) {
+		    $rv = $command->{rv};
+		} else {
+		    $rv = $this_rv;
+		}
 	    }
 	}
+	$rv;
     }
     sub show {
 	my($self) = @_;

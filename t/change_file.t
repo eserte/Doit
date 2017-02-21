@@ -18,6 +18,8 @@ chdir $tempdir or die "Can't chdir to $tempdir: $!";
 
 my $r = Doit->init;
 
+my $changes;
+
 eval { $r->change_file("blubber") };
 like $@, qr{blubber does not exist};
 
@@ -26,31 +28,39 @@ like $@, qr{\. is not a file};
 
 $r->touch("work-file");
 $r->chmod(0600, "work-file");
-$r->change_file("work-file");
+$changes = $r->change_file("work-file");
 ok -z "work-file", "still empty";
+ok !$changes, 'no changes';
 
 for my $iter (1..2) {
-    $r->change_file("work-file",
-		    {add_if_missing => "a new line"},
-		   );
+    $changes = $r->change_file("work-file",
+			       {add_if_missing => "a new line"},
+			      );
     is slurp("work-file"), "a new line\n", ($iter == 1 ? "first iteration: add new line" : "second iteration: do nothing");
+    if ($iter == 1) {
+	is $changes, 1;
+    } else {
+	ok !$changes;
+    }
 }
 
-$r->change_file("work-file",
-		{add_if_missing => "another new line"});
+$changes = $r->change_file("work-file",
+			   {add_if_missing => "another new line"});
 is slurp("work-file"), "a new line\nanother new line\n";
+is $changes, 1;
 
-$r->change_file("work-file",
-		{add_if_missing => "add_after test",
-		 add_after => qr{^a new line},
-		});
+$changes = $r->change_file("work-file",
+			   {add_if_missing => "add_after test",
+			    add_after => qr{^a new line},
+			   });
 is slurp("work-file"), "a new line\nadd_after test\nanother new line\n";
+is $changes, 1;
 
 eval { $r->change_file("work-file",
 		       {add_if_missing => "second add_after test",
 			add_after => qr{^non-existent file},
 		       }) };
-like $@, qr{Cannot find .* in file};		       
+like $@, qr{Cannot find .* in file};
 
 $r->change_file("work-file",
 		{match => qr{^add_after test},
@@ -67,6 +77,14 @@ $r->change_file("work-file",
 		 action => sub { unshift @{$_[0]}, "add something on top" }});
 is slurp("work-file"), "add something on top\na new line\nreplace test adding something\nanother new line\n";
 
+$changes = $r->change_file("work-file",
+			   {add_if_missing => "add first line of two"},
+			   {add_if_missing => "add second line of two"},
+		          );
+is $changes, 2, 'two changes';
+
+######################################################################
+# Error checks
 eval { $r->change_file("work-file",
 		       {match => "this is not a Regexp",
 			action => sub { "dummy" }}) };
