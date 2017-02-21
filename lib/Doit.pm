@@ -693,11 +693,16 @@ use strict;
     }
     sub show {
 	my($self) = @_;
+	my $rv;
 	for my $command ($self->commands) {
 	    if (exists $command->{msg}) {
 		print STDERR "INFO: " . $command->{msg} . " (dry-run)\n";
 	    }
+	    if (exists $command->{code} && $command->{rv}) {
+		$rv = $command->{rv};
+	    }
 	}
+	$rv;
     }
 }
 
