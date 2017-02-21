@@ -1013,20 +1013,22 @@ use strict;
 	my $as = delete $opts{as};
 	my $forward_agent = delete $opts{forward_agent};
 	my $tty = delete $opts{tty};
+	my $master_opts = delete $opts{master_opts};
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { host => $host }, $class;
-	my %ssh_new_run_opts = (
-	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
-	);
 	my %ssh_run_opts = (
 	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
 	    ($tty           ? (tty           => $tty)           : ()),
 	);
-	my $ssh = Net::OpenSSH->new($host, %ssh_new_run_opts);
+	my %ssh_new_opts = (
+	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
+	    ($master_opts   ? (master_opts   => $master_opts)   : ()),
+	);
+	my $ssh = Net::OpenSSH->new($host, %ssh_new_opts);
 	$ssh->error and die "Connection error to $host: " . $ssh->error;
 	$self->{ssh} = $ssh;
-	$ssh->system(\%ssh_new_run_opts, "[ ! -d .doit/lib ] && mkdir -p .doit/lib");
+	$ssh->system(\%ssh_run_opts, "[ ! -d .doit/lib ] && mkdir -p .doit/lib");
 	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
 	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
 	my @cmd;
@@ -1040,7 +1042,7 @@ use strict;
 	if (0) {
 	    push @cmd, ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
 	    warn "remote perl cmd: @cmd\n" if $debug;
-	    my($out, $in, $pid) = $ssh->open2(\%ssh_new_run_opts, @cmd);
+	    my($out, $in, $pid) = $ssh->open2(\%ssh_run_opts, @cmd);
 	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
 	} else {
 	    # XXX better path for sock!
