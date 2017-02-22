@@ -1,0 +1,47 @@
+language: perl
+
+matrix:
+  include:
+# First five
+    - perl: "5.22"
+      env: WITH_IPC_RUN=1
+    - perl: "5.20"
+    - perl: "5.18"
+      env: WITH_IPC_RUN=1
+    - perl: "5.16"
+    # The perl does not matter here, system perl will be used
+    - perl: "5.18"
+      os: osx
+# Second five
+    - perl: "5.12"
+      env: WITH_IPC_RUN=1
+    - perl: "5.10"
+    - perl: "5.8"
+      env: WITH_IPC_RUN=1
+    # Actually the perl here does not matter
+    - perl: "5.14"
+      env: USE_SYSTEM_PERL=1
+    # Actually the perl here does not matter
+    - perl: "5.18"
+      env: USE_SYSTEM_PERL=1
+      dist: trusty
+
+before_install:
+ - if [ "$USE_SYSTEM_PERL" = 1 ]; then perlbrew off; fi
+
+install:
+ # cpanm is not available on MacOSX, so don't do anything here
+ # see https://github.com/travis-ci/travis-ci/issues/2314
+ # This works because this module has only optional dependencies
+ #
+ # On Linux run the normal travis-ci install command.
+ - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cpanm --quiet --installdeps --notest .; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_IPC_RUN" = 1 ]; then cpanm --quiet --notest IPC::Run; fi
+
+script:
+ - perl Build.PL && ./Build && ./Build test
+
+branches:
+  except:
+    - /appveyor/
+sudo: true
