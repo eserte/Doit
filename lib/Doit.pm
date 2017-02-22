@@ -512,10 +512,13 @@ use strict;
 			     },
 			     msg => do {
 				 if ($need_diff) {
-				     require IPC::Run;
-				     my $diff;
-				     IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff);
-				     "Replace existing file $filename with diff:\n$diff";
+				     if (eval { require IPC::Run; 1 }) {
+					 my $diff;
+					 IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff);
+					 "Replace existing file $filename with diff:\n$diff";
+				     } else {
+					 "Replace existing file $filename with computed content (no diff available, no IPC::Run)";
+				     }
 				 } else {
 				     "Create new file $filename with content:\n$content";
 				 }
@@ -651,10 +654,13 @@ use strict;
 				     or die "Can't rename $tmpfile to $file: $!";
 			     },
 			     msg => do {
-				 require IPC::Run;
-				 my $diff;
-				 IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff);
-				 "Final changes as diff:\n$diff";
+				 if (eval { require IPC::Run; 1 }) {
+				     my $diff;
+				     IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff);
+				     "Final changes as diff:\n$diff";
+				 } else {
+				     "No diff available, no IPC::Run";
+				 }
 			     },
 			     rv => $no_of_changes,
 			    };
