@@ -18,6 +18,8 @@ use Test::More 'no_plan';
 
 use Doit;
 
+my $has_ipc_run = eval { require IPC::Run; 1 };
+
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 chdir $tempdir or die "Can't chdir to $tempdir: $!";
 
@@ -74,13 +76,17 @@ $r->remove_tree("decl-test", "decl-deep/test");
 ok ! -d "decl-deep/test";
 $r->remove_tree("decl-test", "decl-deep/test");
 $r->system("date");
-$r->run(["date"]);
+if ($has_ipc_run) {
+    $r->run(["date"]);
+}
 $r->system("hostname", "-f");
-$r->run(["hostname", "-f"]);
-$r->cond_run(cmd => [qw(echo unconditional cond_run)]);
-$r->cond_run(if => sub { 1 }, cmd => [qw(echo always true)]);
-$r->cond_run(if => sub { 0 }, cmd => [qw(echo), 'never true, should never happen!!!']);
-$r->cond_run(if => sub { rand(1) < 0.5 }, cmd => [qw(echo yes)]);
+if ($has_ipc_run) {
+    $r->run(["hostname", "-f"]);
+    $r->cond_run(cmd => [qw(echo unconditional cond_run)]);
+    $r->cond_run(if => sub { 1 }, cmd => [qw(echo always true)]);
+    $r->cond_run(if => sub { 0 }, cmd => [qw(echo), 'never true, should never happen!!!']);
+    $r->cond_run(if => sub { rand(1) < 0.5 }, cmd => [qw(echo yes)]);
+}
 
 $r->install_generic_cmd('never_executed', sub { 0 }, sub { die "never executed" });
 $r->never_executed();
