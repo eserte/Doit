@@ -24,7 +24,11 @@ if (basename($0) eq 'Build.PL') {
     if (@ARGV) {
 	die "Build.PL does not support any arguments\n";
     }
-    $doit->symlink('Build.PL', 'Build');
+    if ($^O eq 'MSWin32') {
+	$doit->copy('Build.PL', 'Build');
+    } else {
+	$doit->symlink('Build.PL', 'Build');
+    }
     exit;
 }
 
