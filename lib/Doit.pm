@@ -741,6 +741,25 @@ use strict;
 	*{$cmd} = $code;
     }
 
+    sub add_component {
+	my($self, $component) = @_;
+	my $module = 'Doit::' . ucfirst($component);
+	if (!eval qq{ require $module; 1 }) {
+	    die "Cannot load $module: $@";
+	}
+	my $o = $module->new
+	    or die "Error while calling $module->new";
+	for my $function ($o->functions) {
+	    my $fullqual = $module.'::'.$function;
+	    my $code = sub {
+		my($self, @args) = @_;
+		$self->$fullqual(@args);
+	    };
+	    no strict 'refs';
+	    *{$function} = $code;
+	}
+    }
+
     for my $cmd (
 		 qw(chmod chown mkdir rename rmdir symlink system unlink utime),
 		 qw(make_path remove_tree), # File::Path
