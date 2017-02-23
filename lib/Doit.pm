@@ -716,7 +716,7 @@ use strict;
     package Doit::Runner;
     sub new {
 	my($class, $X, $dryrun) = @_;
-	bless { X => $X, dryrun => $dryrun }, $class;
+	bless { X => $X, dryrun => $dryrun, components => [] }, $class;
     }
     sub is_dry_run { shift->{dryrun} }
 
@@ -758,6 +758,11 @@ use strict;
 	    no strict 'refs';
 	    *{$function} = $code;
 	}
+	my $mod_file = do {
+	    (my $relpath = $module) =~ s{::}{/};
+	    $relpath .= '.pm';
+	};
+	push @{ $self->{components} }, { component => $component, module => $module, path => $INC{$mod_file}, relpath => $mod_file };
     }
 
     for my $cmd (
@@ -806,14 +811,14 @@ use strict;
     # XXX does this belong here?
     sub do_ssh_connect {
 	my($self, $host, %opts) = @_;
-	my $remote = Doit::SSH->do_connect($host, dry_run => $self->is_dry_run, %opts);
+	my $remote = Doit::SSH->do_connect($host, dry_run => $self->is_dry_run, components => $self->{components}, %opts);
 	$remote;
     }
 
     # XXX does this belong here?
     sub do_sudo {
 	my($self, %opts) = @_;
-	my $sudo = Doit::Sudo->do_connect(dry_run => $self->is_dry_run, %opts);
+	my $sudo = Doit::Sudo->do_connect(dry_run => $self->is_dry_run, components => $self->{components}, %opts);
 	$sudo;
     }
 }
@@ -1034,6 +1039,7 @@ use strict;
 	require Net::OpenSSH;
 	my($class, $host, %opts) = @_;
 	my $dry_run = delete $opts{dry_run};
+	my @components = @{ delete $opts{components} || [] };
 	my $debug = delete $opts{debug};
 	my $as = delete $opts{as};
 	my $forward_agent = delete $opts{forward_agent};
@@ -1056,6 +1062,20 @@ use strict;
 	$ssh->system(\%ssh_run_opts, "[ ! -d .doit/lib ] && mkdir -p .doit/lib");
 	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
 	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
+	{
+	    my %seen_dir;
+	    for my $component (@components) {
+		my $from = $component->{path};
+		my $to = $component->{relpath};
+		my $full_target = ".doit/lib/$to";
+		my $target_dir = File::Basename::dirname($full_target);
+		if (!$seen_dir{$target_dir}) {
+		    $ssh->system(\%ssh_run_opts, "[ ! -d $target_dir ] && mkdir -p $target_dir");
+		    $seen_dir{$target_dir} = 1;
+		}
+		$ssh->rsync_put({verbose => $debug}, $from, $full_target);
+	    }
+	}
 	my @cmd;
 	if (defined $as) {
 	    if ($as eq 'root') {
@@ -1071,7 +1091,14 @@ use strict;
 	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
 	} else {
 	    # XXX better path for sock!
-	    my @cmd_worker = (@cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::Server->new(Doit->init, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	    my @cmd_worker =
+		(
+		 @cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; } .
+		 q|my $d = Doit->init; for my $component (qw(| .
+		 join(", ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } | .
+		 q{Doit::RPC::Server->new(Doit->init, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();},
+		 "--", ($dry_run? "--dry-run" : ())
+		);
 	    warn "remote perl cmd: @cmd_worker\n" if $debug;
 	    my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
 	    my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.$<.sock", debug => shift)}, !!$debug);
