@@ -16,26 +16,41 @@ use strict;
 use FindBin;
 use lib ("$FindBin::RealBin/../lib");
 
-use Test::More 'no_plan';
-
 use Doit;
+
+return 1 if caller();
+
+require Test::More;
+Test::More->import();
+plan('no_plan');
 
 my $d = Doit->init;
 $d->add_component('deb');
 
 {
+    my @components = @{ $d->{components} };
+    is($components[0]->{relpath}, 'Doit/Deb.pm');
+}
+
+{
     my @missing_packages = $d->deb_missing_packages('this-does-not-exist');
-    is_deeply \@missing_packages, ['this-does-not-exist'];
+    is_deeply(\@missing_packages, ['this-does-not-exist']);
 }
 
 {
     my @missing_packages = $d->deb_missing_packages('perl');
-    is_deeply \@missing_packages, [];
+    is_deeply(\@missing_packages, []);
 }
 
 {
     my @installed_packages = $d->deb_install_packages('perl');
-    is_deeply \@installed_packages, [];
+    is_deeply(\@installed_packages, []);
+}
+
+if (0) { # XXX remote does not work
+    my $r = $d->do_ssh_connect('localhost', debug=>0);
+    my @missing_packages = $r->deb_missing_packages('perl');
+    is_deeply(\@missing_packages, []);
 }
 
 __END__
