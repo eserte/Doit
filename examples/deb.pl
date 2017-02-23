@@ -47,7 +47,7 @@ $d->add_component('deb');
     is_deeply(\@installed_packages, []);
 }
 
-if (0) { # XXX remote does not work
+{
     my $r = $d->do_ssh_connect('localhost', debug=>0);
     my @missing_packages = $r->deb_missing_packages('perl');
     is_deeply(\@missing_packages, []);

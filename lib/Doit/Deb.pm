@@ -51,7 +51,6 @@ sub deb_missing_packages {
 	my @cmd = ('dpkg-query', '-W', '-f=${Package}\t${Status}\t${Version}\n', @packages);
 	my $err = Symbol::gensym();
 	my $fh;
-	# XXX how to run on remote? should $self->run be optionally used?
 	my $pid = IPC::Open3::open3(undef, $fh, $err, @cmd)
 	    or die "Error running '@cmd': $!";
 	while(<$fh>) {
