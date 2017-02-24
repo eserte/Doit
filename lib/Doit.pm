@@ -1011,6 +1011,7 @@ use strict;
 	my($class, %opts) = @_;
 	my @sudo_opts = @{ delete $opts{sudo_opts} || [] };
 	my $dry_run = delete $opts{dry_run};
+	delete $opts{components}; # XXX not used here, only for ssh
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { }, $class;
