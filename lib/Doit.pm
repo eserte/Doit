@@ -13,6 +13,7 @@
 #
 
 use strict;
+use warnings;
 
 {
     package Doit::Log;
@@ -70,6 +71,16 @@ use strict;
 {
     package Doit;
 
+    sub import {
+	warnings->import;
+	strict->import;
+    }
+
+    sub unimport {
+	warnings->unimport;
+	strict->unimport;
+    }
+ 
     sub new {
 	my $class = shift;
 	my $self = bless { }, $class;
