@@ -1097,7 +1097,7 @@ use strict;
 		 @cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; } .
 		 q|my $d = Doit->init; for my $component (qw(| .
 		 join(", ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } | .
-		 q{Doit::RPC::Server->new(Doit->init, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();},
+		 q{Doit::RPC::Server->new($d, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();},
 		 "--", ($dry_run? "--dry-run" : ())
 		);
 	    warn "remote perl cmd: @cmd_worker\n" if $debug;
