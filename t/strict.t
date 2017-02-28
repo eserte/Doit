@@ -41,7 +41,7 @@ is $@, '', 'unimport strict works';
         my $warnings_violation;
         $warnings_violation == 0;
     };
-    like "@warnings", qr{\QUse of uninitialized value \E\$\Qwarnings_violation in numeric eq}, 'import warnings works';
+    like "@warnings", qr{\QUse of uninitialized value\E( \$warnings_violation)?\Q in numeric eq}, 'import warnings works';
 }
 
 {
