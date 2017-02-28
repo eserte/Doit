@@ -17,6 +17,8 @@ use Doit::Log qw(info warning error); # "note" unfortunately collides with Test:
 
 plan 'no_plan';
 
+is Doit::Log::_can_coloring(), 1; # as Term::ANSIColor is a prereq for this test, _can_coloring has to be true
+
 my($stdout, $stderr);
 
 ($stdout, $stderr) = capture {
@@ -24,6 +26,7 @@ my($stdout, $stderr);
 };
 is $stdout, '';
 is colorstrip($stderr), "INFO: info message\n";
+isnt $stderr, colorstrip($stderr), 'message is colored';
 
 ($stdout, $stderr) = capture {
     Doit::Log::note "note message";
@@ -41,5 +44,13 @@ eval {
     error "error message";
 };
 like colorstrip($@), qr{^ERROR: error message at .* line \d+\.\n\z};
+
+# Non-colored
+Doit::Log::_no_coloring(); # XXX hmmm, should there be a public function for this?
+
+(undef, $stderr) = capture {
+    info "info message";
+};
+is $stderr, "INFO: info message\n", 'message without color';
 
 __END__

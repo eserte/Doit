@@ -18,13 +18,27 @@ use warnings;
 {
     package Doit::Log;
 
+    sub _use_coloring {
+	*colored_error = sub ($) { Term::ANSIColor::colored($_[0], 'red on_black')};
+	*colored_info  = sub ($) { Term::ANSIColor::colored($_[0], 'green on_black')};
+	*colored_note  = sub ($) { Term::ANSIColor::colored($_[0], 'yellow on_black')};
+    }
+    sub _no_coloring {
+	*colored_error = *colored_info = *colored_note = sub ($) { $_[0] };
+    }
+    {
+	my $can_coloring;
+	sub _can_coloring {
+	    return $can_coloring if defined $can_coloring;
+	    $can_coloring = eval { require Term::ANSIColor; 1 } ? 1 : 0;
+	}
+    }
+
     BEGIN {
-	if (eval { require Term::ANSIColor; 1 }) {
-	    *colored_error = sub ($) { Term::ANSIColor::colored($_[0], 'red on_black')};
-	    *colored_info  = sub ($) { Term::ANSIColor::colored($_[0], 'green on_black')};
-	    *colored_note  = sub ($) { Term::ANSIColor::colored($_[0], 'yellow on_black')};
+	if (_can_coloring()) {
+	    _use_coloring();
 	} else {
-	    *colored_error = *colored_info = *colored_note = sub ($) { $_[0] };
+	    _no_coloring();
 	}
     }
 
