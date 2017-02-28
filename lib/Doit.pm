@@ -1205,7 +1205,7 @@ use warnings;
 	    read $infh, $length_buf, 4 or die "COMM: reading data from $inname failed (getting length): $!";
 	    my $length = unpack("N", $length_buf);
 	    $d->("starting getting data from $inname, length is $length");
-	    my $buf;
+	    my $buf = '';
 	    while (1) {
 		my $got = read($infh, $buf, $length, length($buf));
 		last if $got == $length;
