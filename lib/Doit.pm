@@ -19,11 +19,13 @@ use warnings;
     package Doit::Log;
 
     sub _use_coloring {
+	no warnings 'redefine';
 	*colored_error = sub ($) { Term::ANSIColor::colored($_[0], 'red on_black')};
 	*colored_info  = sub ($) { Term::ANSIColor::colored($_[0], 'green on_black')};
 	*colored_note  = sub ($) { Term::ANSIColor::colored($_[0], 'yellow on_black')};
     }
     sub _no_coloring {
+	no warnings 'redefine';
 	*colored_error = *colored_info = *colored_note = sub ($) { $_[0] };
     }
     {
