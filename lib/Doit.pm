@@ -96,7 +96,9 @@ use warnings;
 	warnings->unimport;
 	strict->unimport;
     }
- 
+
+    use Doit::Log;
+
     sub new {
 	my $class = shift;
 	my $self = bless { }, $class;
@@ -578,6 +580,12 @@ use warnings;
 	    die "$file is not a file";
 	}
 
+	my $debug;
+	if (@changes && $changes[0]->{debug}) {
+	    $debug = $changes[0]->{debug};
+	    shift @changes;
+	}
+
 	my @commands;
 
 	for (@changes) {
@@ -658,6 +666,7 @@ use warnings;
 	for my $match_action (@match_actions) {
 	    my $match  = $match_action->{match};
 	    for my $line (@lines) {
+		if ($debug) { info "change_file check '$line' =~ '$match'" }
 		if ($line =~ $match) {
 		    if (exists $match_action->{replace}) {
 			my $replace = $match_action->{replace};
