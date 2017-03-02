@@ -45,9 +45,9 @@ use warnings;
     }
 
     use Exporter 'import';
-    our @EXPORT = qw(info note warning error);
+    our @EXPORT; BEGIN { @EXPORT = qw(info note warning error) }
 
-    $INC{'Doit/Log.pm'} = __FILE__; # XXX hack
+    BEGIN { $INC{'Doit/Log.pm'} = __FILE__ } # XXX hack
 
     sub info ($)    { print STDERR colored_info("INFO:"), " ", $_[0], "\n" }
     sub note ($)    { print STDERR colored_note("NOTE:"), " ", $_[0], "\n" }
