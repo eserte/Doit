@@ -1076,6 +1076,8 @@ use warnings;
 
     use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
 
+    use Doit::Log;
+
     sub do_connect {
 	require File::Basename;
 	require Net::OpenSSH;
@@ -1101,7 +1103,13 @@ use warnings;
 	my $ssh = Net::OpenSSH->new($host, %ssh_new_opts);
 	$ssh->error and die "Connection error to $host: " . $ssh->error;
 	$self->{ssh} = $ssh;
-	$ssh->system(\%ssh_run_opts, "[ ! -d .doit/lib ] && mkdir -p .doit/lib");
+	{
+	    my $remote_cmd = "[ ! -d .doit/lib ] && mkdir -p .doit/lib";
+	    if ($debug) {
+		info "Running '$remote_cmd' on remote";
+	    }
+	    $ssh->system(\%ssh_run_opts, $remote_cmd);
+	}
 	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
 	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
 	{
