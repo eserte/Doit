@@ -346,7 +346,8 @@ use warnings;
 					 IPC::Run::run(['diff', '-u', $to, $from], '>', \$diff);
 					 "copy $from $to\ndiff:\n$diff";
 				     } else {
-					 "copy $from $to (replace destination; no diff available)\n";
+					 $diff = `diff -u '$to' '$from'`;
+					 "copy $from $to\ndiff:\n$diff";
 				     }
 				 } else {
 				     "copy $from $to (destination does not exist)\n";
@@ -544,7 +545,20 @@ use warnings;
 					 IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff);
 					 "Replace existing file $filename with diff:\n$diff";
 				     } else {
-					 "Replace existing file $filename with computed content (no diff available, no IPC::Run)";
+					 my $diff;
+					 if (eval { require File::Temp; 1 }) {
+					     my($tempfh,$tempfile) = File::Temp::tempfile(UNLINK => 1);
+					     print $tempfh $content;
+					     if (close $tempfh) {
+						 $diff = `diff -u '$filename' '$tempfile'`;
+						 unlink $tempfile;
+					     } else {
+						 $diff = "(diff not available, error in tempfile creation ($!))";
+					     }
+					 } else {
+					     $diff = "(diff not available, neither IPC::Run nor File::Temp available)";
+					 }
+					 "Replace existing file $filename with diff:\n$diff";
 				     }
 				 } else {
 				     "Create new file $filename with content:\n$content";
@@ -552,7 +566,7 @@ use warnings;
 			     },
 			    };
 	}
-	Doit::Commands->new(@commands);  
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_change_file {
@@ -681,13 +695,13 @@ use warnings;
 				     or die "Can't rename $tmpfile to $file: $!";
 			     },
 			     msg => do {
+				 my $diff;
 				 if (eval { require IPC::Run; 1 }) {
-				     my $diff;
 				     IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff);
-				     "Final changes as diff:\n$diff";
 				 } else {
-				     "No diff available, no IPC::Run";
+				     $diff = `diff -u '$file' '$tmpfile'`;
 				 }
+				 "Final changes as diff:\n$diff";
 			     },
 			     rv => $no_of_changes,
 			    };
