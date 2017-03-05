@@ -94,33 +94,41 @@ is $changes, 2, 'two changes';
 	is slurp('work-file-2'), "a new line\na new line 2\nthis is the last line\n";
     }
 
-    $changes = $r->change_file('work-file-2',
-			       {add_if_missing => 'middle line',
-				add_after => qr{^a new line},
-			       });
-    is $changes, 1;
-    is slurp('work-file-2'), "a new line\na new line 2\nmiddle line\nthis is the last line\n";
+    for my $iter (1..2) {
+	$changes = $r->change_file('work-file-2',
+				   {add_if_missing => 'middle line',
+				    add_after => qr{^a new line},
+				   });
+	is $changes, ($iter==1 ? 1 : 0), "changes in iteration $iter";
+	is slurp('work-file-2'), "a new line\na new line 2\nmiddle line\nthis is the last line\n";
+    }
 
-    $changes = $r->change_file('work-file-2',
-			       {add_if_missing => 'the add_after_first test',
-				add_after_first => qr{^a new line},
-			       });
-    is $changes, 1;
-    is slurp('work-file-2'), "a new line\nthe add_after_first test\na new line 2\nmiddle line\nthis is the last line\n";
+    for my $iter (1..2) {
+	$changes = $r->change_file('work-file-2',
+				   {add_if_missing => 'the add_after_first test',
+				    add_after_first => qr{^a new line},
+				   });
+	is $changes, ($iter==1 ? 1 : 0), "changes in iteration $iter";
+	is slurp('work-file-2'), "a new line\nthe add_after_first test\na new line 2\nmiddle line\nthis is the last line\n";
+    }
 
-    $changes = $r->change_file('work-file-2',
-			       {add_if_missing => 'the add_before test',
-				add_before => qr{^a new line},
-			       });
-    is $changes, 1;
-    is slurp('work-file-2'), "the add_before test\na new line\nthe add_after_first test\na new line 2\nmiddle line\nthis is the last line\n";
+    for my $iter (1..2) {
+	$changes = $r->change_file('work-file-2',
+				   {add_if_missing => 'the add_before test',
+				    add_before => qr{^a new line},
+				   });
+	is $changes, ($iter==1 ? 1 : 0), "changes in iteration $iter";
+	is slurp('work-file-2'), "the add_before test\na new line\nthe add_after_first test\na new line 2\nmiddle line\nthis is the last line\n";
+    }
 
-    $changes = $r->change_file('work-file-2',
-			       {add_if_missing => 'the add_before_last test',
-				add_before_last => qr{^a new line},
-			       });
-    is $changes, 1;
-    is slurp('work-file-2'), "the add_before test\na new line\nthe add_after_first test\nthe add_before_last test\na new line 2\nmiddle line\nthis is the last line\n";
+    for my $iter (1..2) {
+	$changes = $r->change_file('work-file-2',
+				   {add_if_missing => 'the add_before_last test',
+				    add_before_last => qr{^a new line},
+				   });
+	is $changes, ($iter==1 ? 1 : 0), "changes in iteration $iter";
+	is slurp('work-file-2'), "the add_before test\na new line\nthe add_after_first test\nthe add_before_last test\na new line 2\nmiddle line\nthis is the last line\n";
+    }
 }
 
 ######################################################################
