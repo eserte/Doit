@@ -801,8 +801,12 @@ use warnings;
 	    if (exists $command->{msg}) {
 		print STDERR "INFO: " . $command->{msg} . " (dry-run)\n";
 	    }
-	    if (exists $command->{code} && $command->{rv}) {
-		$rv = $command->{rv};
+	    if (exists $command->{code}) {
+		if (exists $command->{rv}) {
+		    $rv = $command->{rv};
+		} else {
+		    # Well, in dry-run mode we have no real return value...
+		}
 	    }
 	}
 	$rv;
