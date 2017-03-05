@@ -99,7 +99,7 @@ use warnings;
 
     use Doit::Log;
 
-    sub new {
+    sub _new {
 	my $class = shift;
 	my $self = bless { }, $class;
 	# XXX hmmm, creating now self-refential data structures ...
@@ -116,7 +116,7 @@ use warnings;
 	Getopt::Long::Configure('pass_through');
 	Getopt::Long::GetOptions('dry-run|n' => \my $dry_run);
 	Getopt::Long::Configure('no_pass_through'); # XXX or restore old value?
-	my $doit = $class->new;
+	my $doit = $class->_new;
 	if ($dry_run) {
 	    $doit->dryrunner;
 	} else {
