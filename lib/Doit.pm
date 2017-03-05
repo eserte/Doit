@@ -755,6 +755,12 @@ use warnings;
 			     },
 			     rv => $no_of_changes,
 			    };
+	} else {
+	    # Dummy command, just to set return value to 0 (otherwise it would be undef)
+	    push @commands, {
+			     code => sub {},
+			     rv => 0,
+			    };
 	}
 
 	Doit::Commands->new(@commands);
@@ -779,7 +785,7 @@ use warnings;
 	    }
 	    if (exists $command->{code}) {
 		my $this_rv = $command->{code}->();
-		if ($command->{rv}) {
+		if (exists $command->{rv}) {
 		    $rv = $command->{rv};
 		} else {
 		    $rv = $this_rv;

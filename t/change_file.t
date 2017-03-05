@@ -31,17 +31,14 @@ $r->chmod(0600, "work-file");
 $changes = $r->change_file("work-file");
 ok -z "work-file", "still empty";
 ok !$changes, 'no changes';
+is $changes, 0, 'no changes == zero changes';
 
 for my $iter (1..2) {
     $changes = $r->change_file("work-file",
 			       {add_if_missing => "a new line"},
 			      );
     is slurp("work-file"), "a new line\n", ($iter == 1 ? "first iteration: add new line" : "second iteration: do nothing");
-    if ($iter == 1) {
-	is $changes, 1;
-    } else {
-	ok !$changes;
-    }
+    is $changes, $iter==1 ? 1 : 0;
 }
 
 $changes = $r->change_file("work-file",
@@ -93,7 +90,7 @@ is $changes, 2, 'two changes';
 				   {add_if_missing => 'a new line 2'},
 				   {add_if_missing => 'this is the last line'},
 				  );
-	is $changes, ($iter==1 ? 3 : undef), "changes in iteration $iter";
+	is $changes, ($iter==1 ? 3 : 0), "changes in iteration $iter";
 	is slurp('work-file-2'), "a new line\na new line 2\nthis is the last line\n";
     }
 
