@@ -355,6 +355,7 @@ use warnings;
 				     "copy $from $to (destination does not exist)\n";
 				 }
 			     },
+			     rv => 1,
 			    };
 	}
 	Doit::Commands->new(@commands);
@@ -592,24 +593,64 @@ use warnings;
 	    if ($_->{add_if_missing}) {
 		my $line = delete $_->{add_if_missing};
 		$_->{unless_match} = $line;
-		if ($_->{add_after}) {
-		    my $add_after = delete $_->{add_after};
-		    qr{$add_after}; # must be a regexp
+		if (defined $_->{add_after}       ||
+		    defined $_->{add_after_first} ||
+		    defined $_->{add_before}      ||
+		    defined $_->{add_before_last}
+		   ) {
+		    my $defines =
+			(defined $_->{add_after}       || 0) +
+			(defined $_->{add_after_first} || 0) +
+			(defined $_->{add_before}      || 0) +
+			(defined $_->{add_before_last} || 0)
+			;
+		    if ($defines != 1) {
+			die "Can specify only one of the following: 'add_after', 'add_after_first', 'add_before', 'add_before_last' (change for $file)\n";
+		    }
+		    my $add;
+		    my $do_after;
+		    my $reverse;
+		    if (defined $_->{add_after}) {
+			$add = delete $_->{add_after};
+			$reverse = 1;
+			$do_after = 1;
+		    } elsif (defined $_->{add_after_first}) {
+			$add = delete $_->{add_after_first};
+			$reverse = 0;
+			$do_after = 1;
+		    } elsif (defined $_->{add_before}) {
+			$add = delete $_->{add_before};
+			$reverse = 0;
+			$do_after = 0;
+		    } elsif (defined $_->{add_before_last}) {
+			$add = delete $_->{add_before_last};
+			$reverse = 1;
+			$do_after = 0;
+		    } else {
+			die "Can never happen";
+		    }
+		    qr{$add}; # must be a regexp
 		    $_->{action} = sub {
 			my $arrayref = $_[0];
 			my $found = 0;
-			for my $i (0 .. $#$arrayref) {
-			    if ($arrayref->[$i] =~ $add_after) {
-				splice @$arrayref, $i+1, 0, $line;
+			my $from = $reverse ? $#$arrayref : 0;
+			my $to   = $reverse ? 0 : $#$arrayref;
+			my $inc  = $reverse ? -1 : +1;
+			for(my $i=$from; ($reverse ? $i>=$to : $i<=$to); $i+=$inc) {
+			    if ($arrayref->[$i] =~ $add) {
+				if ($do_after) {
+				    splice @$arrayref, $i+1, 0, $line;
+				} else {
+				    splice @$arrayref, $i, 0, $line;
+				}
 				$found = 1;
 				last;
 			    }
 			}
 			if (!$found) {
-			    die "Cannot find '$add_after' in file";
+			    die "Cannot find '$add' in file";
 			}
 		    };
-		    delete $_->{add_after};
 		} else {
 		    $_->{action} = sub { my $arrayref = $_[0]; push @$arrayref, $line };
 		}
