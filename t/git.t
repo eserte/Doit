@@ -26,6 +26,7 @@ my $dir = tempdir('doit-git-XXXXXXXX', CLEANUP => 1, TMPDIR => 1);
 SKIP: {
     my $self_git = $d->git_root;
     skip "Not a git checkout", 1 if !$self_git;
+    skip "shallow repositories cannot be cloned", 1 if $d->git_is_shallow;
 
     my $workdir = "$dir/doit";
 
