@@ -1124,6 +1124,7 @@ use warnings;
 	my($class, %opts) = @_;
 	my @sudo_opts = @{ delete $opts{sudo_opts} || [] };
 	my $dry_run = delete $opts{dry_run};
+	my $debug = delete $opts{debug};
 	delete $opts{components}; # XXX not used here, only for ssh
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
@@ -1132,10 +1133,22 @@ use warnings;
 	require File::Basename;
 	require IPC::Open2;
 	require Symbol;
-	my @cmd = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
-	my($in, $out) = (Symbol::gensym(), Symbol::gensym());
-	my $pid = IPC::Open2::open2($in, $out, @cmd);
-	$self->{rpc} = Doit::RPC::Client->new($in, $out);
+	#my @cmd = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	#my($in, $out) = (Symbol::gensym(), Symbol::gensym());
+	my @cmd_worker = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::Server->new(Doit->init, "/tmp/.doit.sudo.$<.sock", debug => } . ($debug?1:0) . q{)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	my $worker_pid = fork;
+	if (!defined $worker_pid) {
+	    die "fork failed: $!";
+	} elsif ($worker_pid == 0) {
+	    warn "worker perl cmd: @cmd_worker\n" if $debug;
+	    exec @cmd_worker;
+	    die "Failed to run '@cmd_worker': $!";
+	}
+	my($in, $out);
+	my @cmd_comm = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.sudo.$<.sock", debug => shift)}, !!$debug);
+	warn "comm perl cmd: @cmd_comm\n" if $debug;
+	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
+	$self->{rpc} = Doit::RPC::Client->new($out, $in);
 	$self;
     }
 
@@ -1160,6 +1173,7 @@ use warnings;
 	my $as = delete $opts{as};
 	my $forward_agent = delete $opts{forward_agent};
 	my $tty = delete $opts{tty};
+	my $port = delete $opts{port};
 	my $master_opts = delete $opts{master_opts};
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
