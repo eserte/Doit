@@ -65,7 +65,8 @@ sub cover {
 
 sub show_cover {
     cover();
-    $doit->system('firefox', "$FindBin::RealBin/cover_db/coverage.html");
+    my $browser = $^O eq 'darwin' ? 'open' : 'firefox';
+    $doit->system($browser, "$FindBin::RealBin/cover_db/coverage.html");
 }
 
 __END__
