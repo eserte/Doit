@@ -48,11 +48,15 @@ ok -e "decl-copy"
     or diag qx(ls -al);
 $r->copy("decl-test", "decl-copy"); # no action
 $r->unlink("decl-copy");
-$r->symlink("tmp/decl-test", "decl-test-symlink");
-ok -l "decl-test-symlink";
-$r->symlink("tmp/decl-test", "decl-test-symlink");
-$r->unlink("decl-test-symlink");
-ok ! -e "decl-test-symlink";
+TODO: {
+    todo_skip "symlinks not working on Windows", 2
+	if $^O eq 'MSWin32';
+    $r->symlink("tmp/decl-test", "decl-test-symlink");
+    ok -l "decl-test-symlink";
+    $r->symlink("tmp/decl-test", "decl-test-symlink");
+    $r->unlink("decl-test-symlink");
+    ok ! -e "decl-test-symlink";
+}
 $r->write_binary("decl-test", "some content\n");
 $r->write_binary("decl-test", "some content\n");
 $r->write_binary("decl-test", "different content\n");
