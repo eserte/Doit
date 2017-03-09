@@ -6,7 +6,10 @@
 #
 
 use strict;
-use Test::More 'no_plan';
+use Test::More;
+
+plan skip_all => "Signals are problematic on Windows" if $^O eq 'MSWin32';
+plan 'no_plan';
 
 use Doit;
 
