@@ -9,6 +9,7 @@ use strict;
 use Test::More;
 
 use Doit;
+use Doit::Extcmd qw(is_in_path);
 
 sub run {
     my $d = shift;
@@ -21,6 +22,10 @@ sub pwinfo {
 }
 
 return 1 if caller;
+
+if (!is_in_path('sudo')) {
+    plan skip_all => 'git not in PATH';
+}
 
 my $d = Doit->init;
 my $sudo = $d->do_sudo(sudo_opts => ['-n']);
