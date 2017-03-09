@@ -844,6 +844,10 @@ use warnings;
 
     sub add_component {
 	my($self, $component) = @_;
+	for (@{ $self->{components} }) {
+	    return if $_->{component} eq $component;
+	}
+
 	my $module = 'Doit::' . ucfirst($component);
 	if (!eval qq{ require $module; 1 }) {
 	    die "Cannot load $module: $@";
@@ -864,6 +868,12 @@ use warnings;
 	    $relpath .= '.pm';
 	};
 	push @{ $self->{components} }, { component => $component, module => $module, path => $INC{$mod_file}, relpath => $mod_file };
+
+	if ($o->can('add_components')) {
+	    for my $sub_component ($o->add_components) {
+		$self->add_component($sub_component);
+	    }
+	}
     }
 
     for my $cmd (
