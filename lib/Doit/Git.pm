@@ -37,6 +37,7 @@ sub git_repo_update {
     my $repository = delete $opts{repository};
     my $directory = delete $opts{directory};
     my $origin = delete $opts{origin} || 'origin';
+    my $clone_opts = delete $opts{clone_opts};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
     my $save_pwd = save_pwd2();
@@ -62,7 +63,12 @@ sub git_repo_update {
 	    $has_changes = 1;
 	} # else: ahead, diverged, or something else
     } else {
-	$self->system(qw(git clone --origin), $origin, $repository, $directory);
+	my @cmd = (qw(git clone --origin), $origin);
+	if ($clone_opts) {
+	    push @cmd, @$clone_opts;
+	}
+	push @cmd, $repository, $directory;
+	$self->system(@cmd);
 	$has_changes = 1;
     }
     $has_changes;
