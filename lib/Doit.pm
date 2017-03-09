@@ -738,6 +738,8 @@ use warnings;
 	    $no_of_changes++;
 	}
 
+	untie @lines;
+
 	if ($no_of_changes) {
 	    push @commands, {
 			     code => sub {
