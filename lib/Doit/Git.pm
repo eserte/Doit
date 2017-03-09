@@ -20,7 +20,7 @@ use vars qw($VERSION);
 $VERSION = '0.01';
 
 sub new { bless {}, shift }
-sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash) }
+sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash git_is_shallow) }
 
 sub _in_directory (&$) {
     my($code, $dir) = @_;
@@ -118,6 +118,15 @@ sub git_get_commit_hash {
 	chomp(my $commit = `git log -1 --format=%H`);
 	$commit;
     } $directory;
+}
+
+sub git_is_shallow {
+    my($self, %opts) = @_;
+    my $directory = delete $opts{directory};
+    die "Unhandled options: " . join(" ", %opts) if %opts;
+
+    my $git_root = $self->git_root(directory => $directory);
+    -f "$git_root/.git/shallow" ? 1 : 0;
 }
 
 # REPO BEGIN
