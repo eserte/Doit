@@ -32,6 +32,19 @@ $r->utime(undef, undef, "decl-test");
 {
     my @s = stat "decl-test"; cmp_ok $s[9], ">", 0;
 }
+{
+    my @s_before = stat "decl-test";
+    $r->create_file_if_nonexisting("decl-test"), 'create_file_if_nonexisting on an existent file';
+    my @s_after = stat "decl-test";
+    # unfortunately perl has integer timestamps, so this test is
+    # unlikely to fail, even if we had a problem:
+    is $s_after[9], $s_before[9], 'mtime should not change';
+}
+
+$r->create_file_if_nonexisting('decl-test2');
+ok -f 'decl-test2', 'create_file_if_nonexisting on a non-existent file';
+$r->unlink('decl-test2');
+
 $r->chmod(0755, "decl-test");
 $r->chmod(0755, "decl-test");
 $r->chmod(0644, "decl-test");

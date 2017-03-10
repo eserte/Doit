@@ -473,6 +473,20 @@ use warnings;
 	Doit::Commands->new(@commands);
     }
 
+    sub cmd_create_file_if_nonexisting {
+	my($self, @files) = @_;
+	my @commands;
+	for my $file (@files) {
+	    if (!-e $file) {
+		push @commands, {
+		    code => sub { open my $fh, '>>', $file or die $! },
+		    msg  => "create empty file $file",
+		};
+	    }
+	}
+	Doit::Commands->new(@commands);
+    }
+
     sub cmd_unlink {
 	my($self, @files) = @_;
 	my @files_to_remove;
@@ -885,6 +899,7 @@ use warnings;
 		 qw(run), # IPC::Run
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
+		 qw(create_file_if_nonexisting), # does the half of touch
 		 qw(write_binary), # like File::Slurper
 		 qw(change_file), # own invention
 		) {
