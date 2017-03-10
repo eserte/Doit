@@ -65,6 +65,15 @@ $r->change_file("work-file",
 is slurp("work-file"), "a new line\nreplace test\nanother new line\n";
 
 $r->change_file("work-file",
+		{match => qr{^another new line},
+		 replace => ""});
+is slurp("work-file"), "a new line\nreplace test\n\n", 'replace with empty string generated empty line';
+
+$r->change_file("work-file",
+		{match => qr{^$}, replace => "another new line"});
+is slurp("work-file"), "a new line\nreplace test\nanother new line\n";
+
+$r->change_file("work-file",
 		{match => qr{^replace test},
 		 action => sub { $_[0] .= " adding something" }});
 is slurp("work-file"), "a new line\nreplace test adding something\nanother new line\n";
