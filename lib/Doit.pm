@@ -694,7 +694,7 @@ use warnings;
 		    if (ref $_->{action} ne 'CODE') {
 			die "action must be a sub reference";
 		    }
-		} elsif ($_->{replace}) {
+		} elsif (defined $_->{replace}) {
 		    # accept
 		} else {
 		    die "action or replace is missing";
