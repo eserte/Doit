@@ -86,15 +86,12 @@ sub deb_install_key {
     my $found_key;
     {
 	local $ENV{LC_ALL} = 'C';
-	open my $fh, '-|', 'gpg', '--keyring', '/etc/apt/trusted.gpg', '--list-keys', '--fingerprint'
+	open my $fh, '-|', 'gpg', '--keyring', '/etc/apt/trusted.gpg', '--list-keys', '--fingerprint', '--with-colons'
 	    or die "Running gpg failed: $!";
 	while(<$fh>) {
-	    if (/^\s+Key fingerprint = (.*)/) {
-		(my $got_fingerprint = $1) =~ s{\s}{}g;
-		if ($got_fingerprint eq $key) {
-		    $found_key = 1;
-		    last;
-		}
+	    if (m{^fpr:::::::::\Q$key\E:$}) {
+		$found_key = 1;
+		last;
 	    }
 	}
 	close $fh
