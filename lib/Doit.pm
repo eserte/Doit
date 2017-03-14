@@ -1237,7 +1237,9 @@ use warnings;
 	    }
 	    $ssh->system(\%ssh_run_opts, $remote_cmd);
 	}
-	$ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
+	if ($0 ne '-e') {
+	    $ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
+	}
 	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
 	{
 	    my %seen_dir;
@@ -1270,7 +1272,8 @@ use warnings;
 	    # XXX better path for sock!
 	    my @cmd_worker =
 		(
-		 @cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; } .
+		 @cmd, "perl", "-I.doit", "-I.doit/lib", "-e",
+		 Doit::_ScriptTools::self_require() .
 		 q{my $d = Doit->init; } .
 		 Doit::_ScriptTools::add_components(@components) .
 		 q{Doit::RPC::Server->new($d, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();},
