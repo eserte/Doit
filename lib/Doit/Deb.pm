@@ -18,7 +18,7 @@ use vars qw($VERSION);
 $VERSION = '0.01';
 
 sub new { bless {}, shift }
-sub functions { qw(deb_install_packages deb_missing_packages) }
+sub functions { qw(deb_install_packages deb_missing_packages deb_install_key) }
 
 sub deb_install_packages {
     my($self, @packages) = @_;
@@ -76,6 +76,39 @@ sub deb_missing_packages {
     }
     @missing_packages;
 }
+
+sub deb_install_key {
+    my($self, %opts) = @_;
+    my $keyserver = delete $opts{keyserver} || die "keyserver is missing";
+    my $key = delete $opts{key} || "key is missing";
+    die "Unhandled options: " . join(" ", %opts) if %opts;
+
+    my $found_key;
+    {
+	local $ENV{LC_ALL} = 'C';
+	open my $fh, '-|', 'gpg', '--keyring', '/etc/apt/trusted.gpg', '--list-keys', '--fingerprint'
+	    or die "Running gpg failed: $!";
+	while(<$fh>) {
+	    if (/^\s+Key fingerprint = (.*)/) {
+		(my $got_fingerprint = $1) =~ s{\s}{}g;
+		if ($got_fingerprint eq $key) {
+		    $found_key = 1;
+		    last;
+		}
+	    }
+	}
+	close $fh
+	    or die "Running gpg failed: $!";
+    }
+
+    my $changed = 0;
+    if (!$found_key) {
+	$self->run('apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
+	$changed = 1;
+    }
+    $changed;
+}
+
 
 1;
 
