@@ -66,6 +66,13 @@ is $sudo->call('stderr_test'), 314;
 #    is $stderr, 'STDERR without newline';
 #}
 
+# not needed anymore, but try it anyway
 $sudo->exit;
+
+{
+    my $sudo2 = $d->do_sudo(sudo_opts => ['-n'], debug => 0);
+    isa_ok $sudo2, 'Doit::Sudo';
+    # hopefully no warnings on destroy
+}
 
 __END__

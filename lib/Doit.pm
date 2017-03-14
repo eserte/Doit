@@ -965,7 +965,12 @@ use warnings;
 	my($self) = @_;
 	my $fh = $self->{infh};
 	my $buf;
-	read $fh, $buf, 4 or die "receive_data failed (getting length): $!";
+	my $ret = read $fh, $buf, 4;
+	if (!defined $ret) {
+	    die "receive_data failed (getting length): $!";
+	} elsif (!$ret) {
+	    return; # eof
+	}
 	my $length = unpack("N", $buf);
 	read $fh, $buf, $length or die "receive_data failed (getting data): $!";
 	@{ Storable::thaw($buf) };
@@ -1066,7 +1071,11 @@ use warnings;
 	while () {
 	    $d->(" waiting for line from comm");
 	    my($context, @data) = $self->receive_data;
-	    if ($data[0] =~ m{^exit$}) {
+	    if (!defined $context) {
+		$d->(" got eof");
+		$fh->close;
+		return;
+	    } elsif ($data[0] =~ m{^exit$}) {
 		$d->(" got exit command");
 		$self->send_data('r', 'bye-bye');
 		$fh->close;
@@ -1101,7 +1110,9 @@ use warnings;
 	my $self = shift;
 	while() {
 	    my($context, @data) = $self->receive_data;
-	    if ($data[0] =~ m{^exit$}) {
+	    if (!defined $context) {
+		return;
+	    } elsif ($data[0] =~ m{^exit$}) {
 		$self->send_data('r', 'bye-bye');
 		return;
 	    }
@@ -1380,6 +1391,7 @@ use warnings;
 	    $get_and_send->($infh, $sock, "local", "worker");
 	    $get_and_send->($sock, $outfh, "worker", "local");
 	}
+	$d->("exited loop");
     }
 
 }

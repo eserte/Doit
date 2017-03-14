@@ -47,6 +47,7 @@ $res = $sudo->call('run');
 is $res->{uname}, $res->{SUDO_USER};
 is $res->{homedir}, $ENV{HOME};
 
-$sudo->exit;
+## not needed anymore
+#$sudo->exit;
 
 __END__
