@@ -1131,6 +1131,23 @@ use warnings;
 }
 
 {
+    package Doit::_ScriptTools;
+
+    sub add_components {
+	my(@components) = @_;
+	q|for my $component (qw(| . join(", ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } |;
+    }
+
+    sub self_require {
+	if ($0 ne '-e') { # not a oneliner
+	    q{require "} . File::Basename::basename($0) . q{"; };
+	} else {
+	    q{use Doit; };
+	}
+    }
+}
+
+{
     package Doit::Sudo;
 
     use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
@@ -1140,6 +1157,7 @@ use warnings;
 	my @sudo_opts = @{ delete $opts{sudo_opts} || [] };
 	my $dry_run = delete $opts{dry_run};
 	my $debug = delete $opts{debug};
+	my @components = @{ delete $opts{components} || [] };
 	delete $opts{components}; # XXX not used here, only for ssh
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
@@ -1150,7 +1168,15 @@ use warnings;
 	require Symbol;
 	#my @cmd = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
 	#my($in, $out) = (Symbol::gensym(), Symbol::gensym());
-	my @cmd_worker = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::Server->new(Doit->init, "/tmp/.doit.sudo.$<.sock", debug => } . ($debug?1:0) . q{)->run();}, "--", ($dry_run? "--dry-run" : ()));
+	my @cmd_worker =
+	    (
+	     'sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e",
+	     Doit::_ScriptTools::self_require() .
+	     q{my $d = Doit->init; } .
+	     Doit::_ScriptTools::add_components(@components) .
+	     q{Doit::RPC::Server->new($d, "/tmp/.doit.sudo.$<.sock", debug => } . ($debug?1:0) . q{)->run();},
+	     "--", ($dry_run? "--dry-run" : ())
+	    );
 	my $worker_pid = fork;
 	if (!defined $worker_pid) {
 	    die "fork failed: $!";
@@ -1245,8 +1271,8 @@ use warnings;
 	    my @cmd_worker =
 		(
 		 @cmd, "perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; } .
-		 q|my $d = Doit->init; for my $component (qw(| .
-		 join(", ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } | .
+		 q{my $d = Doit->init; } .
+		 Doit::_ScriptTools::add_components(@components) .
 		 q{Doit::RPC::Server->new($d, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();},
 		 "--", ($dry_run? "--dry-run" : ())
 		);
