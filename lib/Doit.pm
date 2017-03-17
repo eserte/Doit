@@ -442,10 +442,19 @@ use warnings;
 			     system @args;
 			     if ($? != 0) {
 				 if ($? & 127) {
-				     my $signalNum = $? & 127;
-				     die sprintf "Command died with signal %d, %s coredump", $signalNum, ($? & 128) ? 'with' : 'without';
+				     my $signalnum = $? & 127;
+				     my $coredump = ($? & 128) ? 'with' : 'without';
+				     Doit::Exception::throw(
+							    sprintf("Command died with signal %d, %s coredump", $signalnum, $coredump),
+							    signalnum => $signalnum,
+							    coredump  => $coredump,
+							   );
 				 } else {
-				     die "Command exited with exit code " . ($?>>8);
+				     my $exitcode = $?>>8;
+				     Doit::Exception::throw(
+							    "Command exited with exit code " . $exitcode,
+							    exitcode => $exitcode,
+							   );
 				 }
 			     }
 			 },
