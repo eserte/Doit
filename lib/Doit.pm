@@ -386,6 +386,24 @@ use warnings;
 	Doit::Commands->new(@commands);
     }
 
+    sub _handle_dollar_questionmark () {
+	if ($? & 127) {
+	    my $signalnum = $? & 127;
+	    my $coredump = ($? & 128) ? 'with' : 'without';
+	    Doit::Exception::throw(
+				   sprintf("Command died with signal %d, %s coredump", $signalnum, $coredump),
+				   signalnum => $signalnum,
+				   coredump  => $coredump,
+			          );
+	} else {
+	    my $exitcode = $?>>8;
+	    Doit::Exception::throw(
+				   "Command exited with exit code " . $exitcode,
+				   exitcode => $exitcode,
+			          );
+	}
+    }
+
     sub cmd_run {
 	my($self, @args) = @_;
 	my @commands;
@@ -393,7 +411,9 @@ use warnings;
 			 code => sub {
 			     require IPC::Run;
 			     my $success = IPC::Run::run(@args);
-			     die if !$success;
+			     if (!$success) {
+				 _handle_dollar_questionmark;
+			     }
 			 },
 			 msg  => do {
 			     my @print_cmd;
@@ -441,21 +461,7 @@ use warnings;
 			 code => sub {
 			     system @args;
 			     if ($? != 0) {
-				 if ($? & 127) {
-				     my $signalnum = $? & 127;
-				     my $coredump = ($? & 128) ? 'with' : 'without';
-				     Doit::Exception::throw(
-							    sprintf("Command died with signal %d, %s coredump", $signalnum, $coredump),
-							    signalnum => $signalnum,
-							    coredump  => $coredump,
-							   );
-				 } else {
-				     my $exitcode = $?>>8;
-				     Doit::Exception::throw(
-							    "Command exited with exit code " . $exitcode,
-							    exitcode => $exitcode,
-							   );
-				 }
+				 _handle_dollar_questionmark;
 			     }
 			 },
 			 msg  => "@args",
