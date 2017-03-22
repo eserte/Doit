@@ -79,12 +79,26 @@ sub deb_missing_packages {
 
 sub deb_install_key {
     my($self, %opts) = @_;
-    my $keyserver = delete $opts{keyserver} || die "keyserver is missing";
-    my $key = delete $opts{key} || "key is missing";
+    my $url       = delete $opts{url};
+    my $keyserver = delete $opts{keyserver};
+    my $key       = delete $opts{key};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
+    if (!$url) {
+	if (!$keyserver) {
+	    die "keyserver is missing";
+	}
+	if (!$key) {
+	    die "key is missing";
+	}
+    } else {
+	if ($keyserver) {
+	    die "Don't define both url and keyserver";
+	}
+    }
+
     my $found_key;
-    {
+    if ($key) {
 	local $ENV{LC_ALL} = 'C';
 	open my $fh, '-|', 'gpg', '--keyring', '/etc/apt/trusted.gpg', '--list-keys', '--fingerprint', '--with-colons'
 	    or die "Running gpg failed: $!";
@@ -100,7 +114,13 @@ sub deb_install_key {
 
     my $changed = 0;
     if (!$found_key) {
-	$self->run('apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
+	if ($keyserver) {
+	    $self->run('apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
+	} elsif ($url) {
+	    $self->run(['curl', '-fsSL', $url], '|', ['apt-key', 'add', '-']);
+	} else {
+	    die "Shouldn't happen";
+	}
 	$changed = 1;
     }
     $changed;
