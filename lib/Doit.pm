@@ -972,6 +972,8 @@ use warnings;
     require Storable;
     require IO::Handle;
 
+    use Doit::Log;
+
     sub new {
 	die "Please use either Doit::RPC::Client, Doit::RPC::Server or Doit::RPC::SimpleServer";
     }
@@ -997,6 +999,28 @@ use warnings;
 	my $data = Storable::nfreeze(\@cmd);
 	print $fh pack("N", length($data)) . $data;
     }
+
+    {
+	my $done_POSIX_warning;
+	sub _reap_process {
+	    my($self, $pid) = @_;
+	    return if !defined $pid;
+	    if (eval { require POSIX; defined &POSIX::WNOHANG }) {
+		if ($self->{debug}) {
+		    info "Reaping process $pid...";
+		}
+		my $got_pid = waitpid $pid, &POSIX::WNOHANG;
+		if (!$got_pid) {
+		    warning "Could not reap process $pid...";
+		}
+	    } else {
+		if (!$done_POSIX_warning++) {
+		    warning "Can't require POSIX, cannot reap zombies..."
+		}
+	    }
+	}
+    }
+
 }
 
 {
@@ -1004,9 +1028,17 @@ use warnings;
     use vars '@ISA'; @ISA = ('Doit::RPC');
 
     sub new {
-	my($class, $infh, $outfh) = @_;
+	my($class, $infh, $outfh, %options) = @_;
+
+	my $debug = delete $options{debug};
+	die "Unhandled options: " . join(" ", %options) if %options;
+
 	$outfh->autoflush(1);
-	bless { infh => $infh, outfh => $outfh }, $class;
+	bless {
+	       infh  => $infh,
+	       outfh => $outfh,
+	       debug => $debug,
+	      }, $class;
     }
 
     # Call for every command on client
@@ -1110,7 +1142,10 @@ use warnings;
     use vars '@ISA'; @ISA = ('Doit::RPC');
     
     sub new {
-	my($class, $runner, $infh, $outfh) = @_;
+	my($class, $runner, $infh, $outfh, %options) = @_;
+	my $debug = delete $options{debug};
+	die "Unhandled options: " . join(" ", %options) if %options;
+
 	$infh  = \*STDIN if !$infh;
 	$outfh = \*STDOUT if !$outfh;
 	$outfh->autoflush(1);
@@ -1118,6 +1153,7 @@ use warnings;
 	       runner => $runner,
 	       infh   => $infh,
 	       outfh  => $outfh,
+	       debug  => $debug,
 	      }, $class;
     }
 
@@ -1244,7 +1280,7 @@ use warnings;
 	my $master_opts = delete $opts{master_opts};
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
-	my $self = bless { host => $host }, $class;
+	my $self = bless { host => $host, debug => $debug }, $class;
 	my %ssh_run_opts = (
 	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
 	    ($tty           ? (tty           => $tty)           : ()),
@@ -1307,9 +1343,11 @@ use warnings;
 		);
 	    warn "remote perl cmd: @cmd_worker\n" if $debug;
 	    my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
+	    $self->{worker_pid} = $worker_pid;
 	    my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.$<.sock", debug => shift)}, !!$debug);
 	    warn "comm perl cmd: @cmd_comm\n" if $debug;
 	    my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
+	    $self->{comm_pid} = $comm_pid;
 	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
 	}
 	$self;
@@ -1321,6 +1359,10 @@ use warnings;
 	my $self = shift;
 	if ($self->{ssh}) {
 	    delete $self->{ssh};
+	}
+	if ($self->{rpc}) {
+	    $self->{rpc}->_reap_process($self->{comm_pid});
+	    $self->{rpc}->_reap_process($self->{worker_pid});
 	}
     }
 
