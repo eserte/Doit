@@ -46,10 +46,11 @@ plan 'no_plan';
 }
 
 if ($ENV{TRAVIS}) {
-    $d->brew_install_packages('perl518');
-    my @missing_packages = $d->brew_missing_packages('perl518');
+    my $test_package = 'perl@5.18';
+    $d->brew_install_packages($test_package);
+    my @missing_packages = $d->brew_missing_packages($test_package);
     is_deeply(\@missing_packages, []);
-    ok !$d->brew_install_packages('perl518'), 'no packages to be installed';
+    ok !$d->brew_install_packages($test_package), 'no packages to be installed';
 }
 
 __END__
