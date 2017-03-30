@@ -40,13 +40,18 @@ SKIP: {
     $d->mkdir($workdir);
     chdir $workdir or die "chdir failed: $!";
     $d->system(qw(git init));
+    is_deeply [$d->git_get_changed_files], [], 'no changed files in fresh empty directory';
     $d->touch('testfile');
+    is_deeply [$d->git_get_changed_files], ['testfile'], 'new file detected';
     $d->system(qw(git add testfile));
     local $ENV{GIT_COMMITTER_NAME} = "Some Body";
     local $ENV{GIT_COMMITTER_EMAIL} = 'somebody@example.org';
     local $ENV{GIT_AUTHOR_NAME} = "Some Body";
     local $ENV{GIT_AUTHOR_EMAIL} = 'somebody@example.org';
     $d->system(qw(git commit), '-m', 'test commit');
+    is_deeply [$d->git_get_changed_files], [], 'no changed files after commit';
+    is_deeply [$d->git_get_commit_files], ['testfile'], 'git_get_commit_files';
+    is_deeply [$d->git_get_commit_files(commit => 'HEAD')], ['testfile'], 'git_get_commit_files with explicit commit';
     $d->change_file('testfile', {add_if_missing => 'some content'});
     $d->system(qw(git add testfile));
     $d->system(qw(git commit), '-m', 'actually some content');

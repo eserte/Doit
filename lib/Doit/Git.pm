@@ -20,7 +20,7 @@ use vars qw($VERSION);
 $VERSION = '0.01';
 
 sub new { bless {}, shift }
-sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash git_is_shallow) }
+sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash git_get_commit_files git_get_changed_files git_is_shallow) }
 
 sub _in_directory (&$) {
     my($code, $dir) = @_;
@@ -118,6 +118,47 @@ sub git_get_commit_hash {
 	chomp(my $commit = `git log -1 --format=%H`);
 	$commit;
     } $directory;
+}
+
+sub git_get_commit_files {
+    my($self, %opts) = @_;
+    my $directory = delete $opts{directory};
+    my $commit    = delete $opts{commit}; if (!defined $commit) { $commit = 'HEAD' }
+    die "Unhandled options: " . join(" ", %opts) if %opts;
+
+    my @files;
+    _in_directory {
+	my @cmd = ('git', 'show', $commit, '--pretty=format:', '--name-only');
+	open my $fh, '-|', @cmd
+	    or die "Error running @cmd: $!";
+	scalar <$fh>; # first line is empty
+	while(<$fh>) {
+	    chomp;
+	    push @files, $_;
+	}
+	close $fh
+	    or die "Error while running @cmd: $!";
+    } $directory;
+    @files;
+}
+
+sub git_get_changed_files {
+    my($self, %opts) = @_;
+    my $directory = delete $opts{directory};
+    my @files;
+    _in_directory {
+	my @cmd = qw(git status --porcelain);
+	open my $fh, '-|', @cmd
+	    or die "Error running @cmd: $!";
+	while(<$fh>) {
+	    chomp;
+	    s{^...}{};
+	    push @files, $_;
+	}
+	close $fh
+	    or die "Error while running @cmd: $!";
+    } $directory;
+    @files;
 }
 
 sub git_is_shallow {
