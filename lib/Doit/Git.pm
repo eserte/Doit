@@ -131,7 +131,11 @@ sub git_get_commit_files {
 	my @cmd = ('git', 'show', $commit, '--pretty=format:', '--name-only');
 	open my $fh, '-|', @cmd
 	    or die "Error running @cmd: $!";
-	scalar <$fh>; # first line is empty
+	my $first = <$fh>;
+	if ($first ne "\n") { # first line is empty for older git versions (e.g. 1.7.x)
+	    chomp $first;
+	    push @files, $first;
+	}
 	while(<$fh>) {
 	    chomp;
 	    push @files, $_;
