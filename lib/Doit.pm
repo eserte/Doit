@@ -1058,16 +1058,16 @@ use warnings;
 	my $context = wantarray ? 'a' : 's'; # XXX more possible context (void...)?
 	$self->send_data($context, @args);
 	my($rettype, @ret) = $self->receive_data(@args);
-	if ($rettype eq 'e') {
+	if (defined $rettype && $rettype eq 'e') {
 	    die $ret[0];
-	} elsif ($rettype eq 'r') {
+	} elsif (defined $rettype && $rettype eq 'r') {
 	    if ($context eq 'a') {
 		return @ret;
 	    } else {
 		return $ret[0];
 	    }
 	} else {
-	    die "Unexpected return type '$rettype' (should be 'e' or 'r')";
+	    die "Unexpected return type " . (defined $rettype ? "'$rettype'" : "<undefined>") . " (should be 'e' or 'r')";
 	}
     }
 }
