@@ -45,6 +45,18 @@ eval {
 };
 like colorstrip($@), qr{^ERROR: error message at .* line \d+\.\n\z};
 
+# Labels
+Doit::Log::set_label('label');
+(undef, $stderr) = capture {
+    info "info message with label";
+};
+is colorstrip($stderr), "INFO label: info message with label\n";
+Doit::Log::set_label(undef);
+(undef, $stderr) = capture {
+    info "info message without label";
+};
+is colorstrip($stderr), "INFO: info message without label\n";
+
 # Non-colored
 Doit::Log::_no_coloring(); # XXX hmmm, should there be a public function for this?
 
