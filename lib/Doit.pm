@@ -49,10 +49,21 @@ use warnings;
 
     BEGIN { $INC{'Doit/Log.pm'} = __FILE__ } # XXX hack
 
-    sub info ($)    { print STDERR colored_info("INFO:"), " ", $_[0], "\n" }
-    sub note ($)    { print STDERR colored_note("NOTE:"), " ", $_[0], "\n" }
-    sub warning ($) { print STDERR colored_error("WARN:"), " ", $_[0], "\n" }
-    sub error ($)   { require Carp; Carp::croak(colored_error("ERROR:"), " ", $_[0]) }
+    my $current_label = '';
+
+    sub info ($)    { print STDERR colored_info("INFO$current_label:"), " ", $_[0], "\n" }
+    sub note ($)    { print STDERR colored_note("NOTE$current_label:"), " ", $_[0], "\n" }
+    sub warning ($) { print STDERR colored_error("WARN$current_label:"), " ", $_[0], "\n" }
+    sub error ($)   { require Carp; Carp::croak(colored_error("ERROR$current_label:"), " ", $_[0]) }
+
+    sub set_label ($) {
+	my $label = shift;
+	if (defined $label) {
+	    $current_label = " $label";
+	} else {
+	    $current_label = '';
+	}
+    }
 }
 
 {
@@ -812,7 +823,7 @@ use warnings;
 	my $rv;
 	for my $command ($self->commands) {
 	    if (exists $command->{msg}) {
-		print STDERR "INFO: " . $command->{msg} . "\n";
+		Doit::Log::info($command->{msg});
 	    }
 	    if (exists $command->{code}) {
 		my $this_rv = $command->{code}->();
@@ -830,7 +841,7 @@ use warnings;
 	my $rv;
 	for my $command ($self->commands) {
 	    if (exists $command->{msg}) {
-		print STDERR "INFO: " . $command->{msg} . " (dry-run)\n";
+		Doit::Log::info($command->{msg} . " (dry-run)");
 	    }
 	    if (exists $command->{code}) {
 		if (exists $command->{rv}) {
