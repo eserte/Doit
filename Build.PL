@@ -108,12 +108,12 @@ sub clean {
 }
 
 sub test {
-    $doit->system('prove', '-l', 't'); # use right perl?
+    $doit->system(_prove_path(), '-l', 't'); # use right perl?
 }
 
 sub cover {
-    $doit->system('prove', '--exec', "$^X -Ilib -MDevel::Cover", 't');
-    $doit->system('cover');
+    $doit->system(_prove_path(), '--exec', "$^X -Ilib -MDevel::Cover", 't');
+    $doit->system(_cover_path());
 }
 
 sub show_cover {
@@ -168,6 +168,24 @@ sub install {
 	info "Run ExtUtils::Install::install " . Data::Dumper::Dumper(@euii_args);
 	ExtUtils::Install::install([@euii_args]);
     }
+}
+
+sub _prove_path {
+    for my $candidate ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}") {
+	if (-x $candidate) {
+	    return $candidate;
+	}
+    }
+    error "No 'prove' for the current perl found";
+}
+
+sub _cover_path {
+    for my $candidate ("$Config{bin}/cover") {
+	if (-x $candidate) {
+	    return $candidate;
+	}
+    }
+    error "No 'prove' for the current perl found";
 }
 
 __END__
