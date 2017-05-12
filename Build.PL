@@ -83,6 +83,7 @@ Getopt::Long::GetOptions(
     or error "usage: $0 [options]";
 
 my $action = shift || 'build';
+$action =~ s/-/_/g;
 if (@ARGV) {
     error "No arguments allowed";
 }
