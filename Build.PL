@@ -26,7 +26,7 @@ my $doit = Doit->init;
 
 my $Build_PL_file_contents = do {
     open my $fh, '<', 'Build.PL'
-	or die "Error opening Build.PL: $!";
+	or error "Error opening Build.PL: $!";
     local $/ = undef;
     <$fh>;
 };
@@ -34,7 +34,7 @@ my $Build_PL_md5hex = md5_hex $Build_PL_file_contents;
 
 if (basename($0) eq 'Build.PL') {
     if (@ARGV) {
-	die "Build.PL does not support any arguments (yet)\n";
+	error "Extra arguments found: '@ARGV'";
     }
     {
 	if (-l "Build") { # formerly this used to be a symlink
@@ -52,7 +52,7 @@ EOF
 # Check if Build is up-to-date (md5 check, no timestamp check)
 {
     open my $fh, '<', $0
-	or die "Can't open $0: $!";
+	or error "Can't open $0: $!";
     my $shebang = <$fh>;
     my $md5_line = <$fh>;
     if (my($old_md5hex) = $md5_line =~ m{^# MD5: (\S+)}) {
@@ -71,7 +71,21 @@ EOF
     }
 }
 
+require Getopt::Long;
+my $opt_verbose = 0;
+my $opt_uninst = 0;
+my $opt_destdir = '';
+Getopt::Long::GetOptions(
+    "verbose" => \$opt_verbose,
+    "uninst" => \$opt_uninst,
+    "destdir=s" => \$opt_destdir,
+)
+    or error "usage: $0 [options]";
+
 my $action = shift || 'build';
+if (@ARGV) {
+    error "No arguments allowed";
+}
 {
     no strict 'refs';
     &$action;
@@ -125,7 +139,6 @@ sub install {
 
     require Data::Dumper;
     require ExtUtils::Install;
-    my $DESTDIR = '';
     my $FULLEXT = 'Doit';
     my $INST_LIB = 'blib/lib';
     my $INST_ARCHLIB = 'blib/arch';
@@ -133,22 +146,20 @@ sub install {
     my $INST_SCRIPT = 'blib/script';
     my $INST_MAN1DIR = 'blib/man1';
     my $INST_MAN3DIR = 'blib/man3';
-    my $VERBINST = 0;
-    my $UNINST = 0;
     my $PERM_DIR = '755';
     my @euii_args = (
 	from_to => {
 	    read          => "$Config{archlib}/auto/$FULLEXT/.packlist",
-	    write         => "$DESTDIR$Config{installarchlib}/auto/$FULLEXT/.packlist",
-	    $INST_LIB     => "$DESTDIR$Config{installprivlib}",
-	    $INST_ARCHLIB => "$DESTDIR$Config{installarchlib}",
-	    $INST_BIN     => "$DESTDIR$Config{installbin}",
-	    $INST_SCRIPT  => "$DESTDIR$Config{installscript}",
-	    $INST_MAN1DIR => "$DESTDIR$Config{installman1dir}",
-	    $INST_MAN3DIR => "$DESTDIR$Config{installman3dir}",
+	    write         => "$opt_destdir$Config{installarchlib}/auto/$FULLEXT/.packlist",
+	    $INST_LIB     => "$opt_destdir$Config{installprivlib}",
+	    $INST_ARCHLIB => "$opt_destdir$Config{installarchlib}",
+	    $INST_BIN     => "$opt_destdir$Config{installbin}",
+	    $INST_SCRIPT  => "$opt_destdir$Config{installscript}",
+	    $INST_MAN1DIR => "$opt_destdir$Config{installman1dir}",
+	    $INST_MAN3DIR => "$opt_destdir$Config{installman3dir}",
 	},
-	verbose           => $VERBINST,
-	uninstall_shadows => $UNINST,
+	verbose           => $opt_verbose,
+	uninstall_shadows => $opt_uninst,
 	dir_mode          => $PERM_DIR,
     );
     if ($doit->is_dry_run) {
@@ -158,6 +169,5 @@ sub install {
 	ExtUtils::Install::install([@euii_args]);
     }
 }
-
 
 __END__
