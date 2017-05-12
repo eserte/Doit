@@ -94,8 +94,10 @@ if (@ARGV) {
 
 sub build {
     $doit->make_path('blib/lib');
-    require File::Glob;
-    for my $file (File::Glob::bsd_glob('lib/*.pm')) { # deeper pms?
+    require File::Find;
+    my @pm_files;
+    File::Find::find(sub { no warnings 'once'; push @pm_files, $File::Find::name if /\.pm$/ && -f $_ }, "lib");
+    for my $file (@pm_files) {
 	my $dest = 'blib/'.$file;
 	if (!-e $dest || -M $dest > -M $file) {
 	    $doit->make_path(dirname($dest));
@@ -109,7 +111,7 @@ sub clean {
 }
 
 sub test {
-    $doit->system(_prove_path(), '-l', 't'); # use right perl?
+    $doit->system(_prove_path(), '-b', 't'); # use right perl?
 }
 
 sub cover {
