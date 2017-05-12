@@ -114,6 +114,13 @@ sub test {
     $doit->system(_prove_path(), '-b', 't'); # use right perl?
 }
 
+sub test_installed {
+    my $t_dir = "$FindBin::RealBin/t";
+    chdir "/"
+	or error "Cannot chdir to /: $!";
+    $doit->system(_prove_path(), $t_dir);
+}
+
 sub cover {
     $doit->system(_prove_path(), '--exec', "$^X -Ilib -MDevel::Cover", 't');
     $doit->system(_cover_path());
