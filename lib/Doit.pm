@@ -98,6 +98,8 @@ use warnings;
 {
     package Doit;
 
+    our $VERSION = '0.01';
+
     sub import {
 	warnings->import;
 	strict->import;
