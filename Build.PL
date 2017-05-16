@@ -138,6 +138,8 @@ sub install {
 
     # MOD_INSTALL = $(ABSPERLRUN) -MExtUtils::Install -e 'install([ from_to => {@ARGV}, verbose => '\''$(VERBINST)'\'', uninstall_shadows => '\''$(UNINST)'\'', dir_mode => '\''$(PERM_DIR)'\'' ]);' --
     # $(MOD_INSTALL) \
+
+    # for a perl install:
     # 		read "$(PERL_ARCHLIB)/auto/$(FULLEXT)/.packlist" \
     # 		write "$(DESTINSTALLARCHLIB)/auto/$(FULLEXT)/.packlist" \
     # 		"$(INST_LIB)" "$(DESTINSTALLPRIVLIB)" \
@@ -147,6 +149,16 @@ sub install {
     # 		"$(INST_MAN1DIR)" "$(DESTINSTALLMAN1DIR)" \
     # 		"$(INST_MAN3DIR)" "$(DESTINSTALLMAN3DIR)"
 
+    # for a site install:
+    #           read "$(SITEARCHEXP)/auto/$(FULLEXT)/.packlist" \
+    #           write "$(DESTINSTALLSITEARCH)/auto/$(FULLEXT)/.packlist" \
+    #           "$(INST_LIB)" "$(DESTINSTALLSITELIB)" \
+    #           "$(INST_ARCHLIB)" "$(DESTINSTALLSITEARCH)" \
+    #           "$(INST_BIN)" "$(DESTINSTALLSITEBIN)" \
+    #           "$(INST_SCRIPT)" "$(DESTINSTALLSITESCRIPT)" \
+    #           "$(INST_MAN1DIR)" "$(DESTINSTALLSITEMAN1DIR)" \
+    #           "$(INST_MAN3DIR)" "$(DESTINSTALLSITEMAN3DIR)"
+ 
     require Data::Dumper;
     require ExtUtils::Install;
     my $FULLEXT = 'Doit';
@@ -159,14 +171,29 @@ sub install {
     my $PERM_DIR = '755';
     my @euii_args = (
 	from_to => {
-	    read          => "$Config{archlib}/auto/$FULLEXT/.packlist",
-	    write         => "$opt_destdir$Config{installarchlib}/auto/$FULLEXT/.packlist",
-	    $INST_LIB     => "$opt_destdir$Config{installprivlib}",
-	    $INST_ARCHLIB => "$opt_destdir$Config{installarchlib}",
-	    $INST_BIN     => "$opt_destdir$Config{installbin}",
-	    $INST_SCRIPT  => "$opt_destdir$Config{installscript}",
-	    $INST_MAN1DIR => "$opt_destdir$Config{installman1dir}",
-	    $INST_MAN3DIR => "$opt_destdir$Config{installman3dir}",
+	    (
+		0 # XXX add condition for perl installs
+		? (
+		    read          => "$Config{archlib}/auto/$FULLEXT/.packlist",
+		    write         => "$opt_destdir$Config{installarchlib}/auto/$FULLEXT/.packlist",
+		    $INST_LIB     => "$opt_destdir$Config{installprivlib}",
+		    $INST_ARCHLIB => "$opt_destdir$Config{installarchlib}",
+		    $INST_BIN     => "$opt_destdir$Config{installbin}",
+		    $INST_SCRIPT  => "$opt_destdir$Config{installscript}",
+		    $INST_MAN1DIR => "$opt_destdir$Config{installman1dir}",
+		    $INST_MAN3DIR => "$opt_destdir$Config{installman3dir}",
+		)
+		: (
+		    read          => "$Config{sitearchexp}/auto/$FULLEXT/.packlist",
+		    write         => "$opt_destdir$Config{installarchlib}/auto/$FULLEXT/.packlist",
+		    $INST_LIB     => "$opt_destdir$Config{installsitelib}",
+		    $INST_ARCHLIB => "$opt_destdir$Config{installsitearch}",
+		    $INST_BIN     => "$opt_destdir$Config{installsitebin}",
+		    $INST_SCRIPT  => "$opt_destdir$Config{installsitescript}",
+		    $INST_MAN1DIR => "$opt_destdir$Config{installsiteman1dir}",
+		    $INST_MAN3DIR => "$opt_destdir$Config{installsiteman3dir}",
+		) # XXX need also something for vendor installs
+	    )
 	},
 	verbose           => $opt_verbose,
 	uninstall_shadows => $opt_uninst,
