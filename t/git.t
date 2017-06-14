@@ -40,24 +40,42 @@ SKIP: {
     $d->mkdir($workdir);
     chdir $workdir or die "chdir failed: $!";
     $d->system(qw(git init));
+
+    # after init checks
+    is $d->git_root, $workdir, 'git_root in root directory';
     is_deeply [$d->git_get_changed_files], [], 'no changed files in fresh empty directory';
+    is $d->git_short_status, '', 'empty directory, not dirty';
+
+    # dirty
     $d->touch('testfile');
     is_deeply [$d->git_get_changed_files], ['testfile'], 'new file detected';
+    is $d->git_short_status, '*', 'untracked file detected';
+
+    # git-add
     $d->system(qw(git add testfile));
-    local $ENV{GIT_COMMITTER_NAME} = "Some Body";
-    local $ENV{GIT_COMMITTER_EMAIL} = 'somebody@example.org';
-    local $ENV{GIT_AUTHOR_NAME} = "Some Body";
-    local $ENV{GIT_AUTHOR_EMAIL} = 'somebody@example.org';
-    $d->system(qw(git commit), '-m', 'test commit');
+    is $d->git_short_status, '<<', 'uncommitted file detected';
+
+    # git-commit
+    _git_commit_with_author('test commit');
     is_deeply [$d->git_get_changed_files], [], 'no changed files after commit';
     is_deeply [$d->git_get_commit_files], ['testfile'], 'git_get_commit_files';
     is_deeply [$d->git_get_commit_files(commit => 'HEAD')], ['testfile'], 'git_get_commit_files with explicit commit';
+    is $d->git_short_status, ''; # there's no upstream, so no '<'
+
     $d->change_file('testfile', {add_if_missing => 'some content'});
+    is $d->git_short_status, '<<', 'dirty after change';
+
     $d->system(qw(git add testfile));
     $d->system(qw(git commit), '-m', 'actually some content');
+    is $d->git_short_status, '';
 
     my $workdir2 = "$dir/newworkdir2";
     run_tests($workdir, $workdir2);
+
+    $d->mkdir('subdir');
+    Doit::Git::_in_directory(sub {
+	is $d->git_root, $workdir, 'git_root in subdirectory';
+    }, 'subdir');
 }
 
 chdir "/"; # for File::Temp cleanup
@@ -66,6 +84,7 @@ sub run_tests {
     my($repository, $directory) = @_;
 
     is $d->git_repo_update(repository => $repository, directory => $directory), 1, "first call is a clone of $repository";
+    is $d->git_short_status(directory => $directory), '', 'not dirty after clone';
     my $commit_hash = $d->git_get_commit_hash(directory => $directory);
     like $commit_hash, qr{^[0-9a-f]{40}$}, 'a sha1';
     ok -d $directory;
@@ -73,11 +92,20 @@ sub run_tests {
     is $d->git_repo_update(repository => $repository, directory => $directory), 0, 'second call does nothing';
     is $d->git_get_commit_hash(directory => $directory), $commit_hash, 'unchanged commit hash';
 
-    chdir $directory or die $!;
-    $d->system(qw(git reset --hard HEAD^));
+    Doit::Git::_in_directory(sub {
+	$d->system(qw(git reset --hard HEAD^));
+	is $d->git_short_status, '>', 'remote is now newer';
 
-    is $d->git_repo_update(repository => $repository, directory => $directory), 1, 'doing a fetch';
-    is $d->git_get_commit_hash, $commit_hash, 'again at the old commit hash'; # ... and without specifying $workdir
+	is $d->git_repo_update(repository => $repository, directory => $directory), 1, 'doing a fetch';
+	is $d->git_get_commit_hash, $commit_hash, 'again at the old commit hash'; # ... and without specifying $workdir
+	is $d->git_short_status, '';
+
+	$d->touch('new_file');
+	is $d->git_short_status, '*';
+	$d->system(qw(git add new_file));
+	_git_commit_with_author('test commit in clone');
+	is $d->git_short_status, '<', 'ahead of origin';
+    }, $directory);
 
     $d->mkdir("$dir/exists");
     eval { $d->git_repo_update(repository => $repository, directory => "$dir/exists") };
@@ -86,6 +114,15 @@ sub run_tests {
     $d->touch("$dir/file");
     eval { $d->git_repo_update(repository => $repository, directory => "$dir/file") };
     like $@, qr{exists, but is not a directory};
+}
+
+sub _git_commit_with_author {
+    my $msg = shift;
+    local $ENV{GIT_COMMITTER_NAME} = "Some Body";
+    local $ENV{GIT_COMMITTER_EMAIL} = 'somebody@example.org';
+    local $ENV{GIT_AUTHOR_NAME} = "Some Body";
+    local $ENV{GIT_AUTHOR_EMAIL} = 'somebody@example.org';
+    $d->system(qw(git commit), '-m', $msg);
 }
 
 __END__
