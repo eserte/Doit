@@ -20,7 +20,7 @@ use vars qw($VERSION);
 $VERSION = '0.01';
 
 sub new { bless {}, shift }
-sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash git_get_commit_files git_get_changed_files git_is_shallow) }
+sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash git_get_commit_files git_get_changed_files git_is_shallow git_current_branch) }
 
 sub _in_directory (&$) {
     my($code, $dir) = @_;
@@ -242,6 +242,19 @@ sub git_is_shallow {
 
     my $git_root = $self->git_root(directory => $directory);
     -f "$git_root/.git/shallow" ? 1 : 0;
+}
+
+sub git_current_branch {
+    my($self, %opts) = @_;
+    my $directory = delete $opts{directory};
+    die "Unhandled options: " . join(" ", %opts) if %opts;
+
+    _in_directory {
+	my $git_root = $self->git_root;
+	my $fh;
+	open $fh, "<", "$git_root/.git/HEAD" and $_ = <$fh> and m{refs/heads/(\S+)} and return $1;
+	undef;
+    } $directory;
 }
 
 # REPO BEGIN

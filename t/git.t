@@ -45,6 +45,7 @@ SKIP: {
     is $d->git_root, $workdir, 'git_root in root directory';
     is_deeply [$d->git_get_changed_files], [], 'no changed files in fresh empty directory';
     is $d->git_short_status, '', 'empty directory, not dirty';
+    is $d->git_current_branch, 'master';
 
     # dirty
     $d->touch('testfile');
@@ -105,6 +106,9 @@ sub run_tests {
 	$d->system(qw(git add new_file));
 	_git_commit_with_author('test commit in clone');
 	is $d->git_short_status, '<', 'ahead of origin';
+
+	$d->system(qw(git checkout -b new_branch));
+	is $d->git_current_branch, 'new_branch';
     }, $directory);
 
     $d->mkdir("$dir/exists");
