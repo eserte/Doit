@@ -79,22 +79,92 @@ sub git_short_status {
     my $directory = delete $opts{directory};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
+    my $untracked_files = 'normal'; # XXX or "no"? make it configurable?
+
     _in_directory {
 	local $ENV{LC_ALL} = 'C';
-	open my $fh, "-|", "git", "status", "--untracked-files=no"
-	    or die "Can't run git status: $!";
-	my $l;
-	$l = <$fh>;
-	$l = <$fh>;
-	if      ($l =~ m{^(# )?Your branch is ahead}) {
-	    return '<';
-	} elsif ($l =~ m{^(# )?Your branch is behind}) {
-	    return '>';
-	} elsif ($l =~ m{^(# )?Your branch and .* have diverged}) {
-	    return '<>';
-	} else {
-	    return '?';
+
+	{
+	    my @cmd = ("git", "status", "--untracked-files=$untracked_files", "--porcelain");
+	    open my $fh, "-|", @cmd
+		or die "Can't run '@cmd': $!";
+	    my $has_untracked;
+	    my $has_uncommitted;
+	    while (<$fh>) {
+		if (m{^\?\?}) {
+		    $has_untracked++;
+		} else {
+		    $has_uncommitted++;
+		}
+		# Shortcut, exit as early as possible
+		if ($has_uncommitted) {
+		    if ($has_untracked) {
+			return '<<*';
+		    } elsif ($untracked_files eq 'no') {
+			return '<<';
+		    } # else we have to check further, for possible untracked files
+		}
+	    }
+	    if ($has_uncommitted) {
+		return '<<';
+	    } elsif ($has_untracked) {
+		return '*';
+	    }
 	}
+
+	{
+	    my @cmd = ("git", "status", "--untracked-files=no");
+	    open my $fh, "-|", @cmd
+		or die "Can't run '@cmd': $!";
+	    my $l;
+	    $l = <$fh>;
+	    $l = <$fh>;
+	    if      ($l =~ m{^(# )?Your branch is ahead}) {
+		return '<';
+	    } elsif ($l =~ m{^(# )?Your branch is behind}) {
+		return '>';
+	    } elsif ($l =~ m{^(# )?Your branch and .* have diverged}) {
+		return '<>';
+	    }
+	}
+
+	if (-f ".git/svn/.metadata") {
+	    # simple-minded heuristics, works only with svn standard branch
+	    # layout
+	    my $root_dir = $self->git_root;
+	    if (open my $fh_remote, "$root_dir/.git/refs/remotes/trunk") {
+		if (open my $fh_local, "$root_dir/.git/refs/heads/master") {
+		    chomp(my $sha1_remote = <$fh_remote>);
+		    chomp(my $sha1_local = <$fh_local>);
+		    if ($sha1_remote ne $sha1_local) {
+			my $remote_is_newer;
+			if (open my $log_fh, '-|', 'git', 'log', '--pretty=format:%H', 'master..remotes/trunk') {
+			    if (scalar <$log_fh>) {
+				$remote_is_newer = 1;
+			    }
+			}
+			my $local_is_newer;
+			if (open my $log_fh, '-|', 'git', 'log', '--pretty=format:%H', 'remotes/trunk..master') {
+			    if (scalar <$log_fh>) {
+				$local_is_newer = 1;
+			    }
+			}
+			if ($remote_is_newer && $local_is_newer) {
+			    return '<>';
+			} elsif ($remote_is_newer) {
+			    return '>';
+			} elsif ($local_is_newer) {
+			    return '<';
+			} else {
+			    return '?'; # Should never happen
+			}
+		    }
+		}
+	    }
+	}
+
+	return '';
+
     } $directory;
 }
 
