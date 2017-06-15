@@ -67,7 +67,7 @@ SKIP: {
     is $d->git_short_status, '<<', 'dirty after change';
 
     $d->system(qw(git add testfile));
-    $d->system(qw(git commit), '-m', 'actually some content');
+    _git_commit_with_author('actually some content');
     is $d->git_short_status, '';
 
     my $workdir2 = "$dir/newworkdir2";
