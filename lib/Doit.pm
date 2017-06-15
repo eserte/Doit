@@ -1044,12 +1044,14 @@ use warnings;
 	my($class, $infh, $outfh, %options) = @_;
 
 	my $debug = delete $options{debug};
+	my $label = delete $options{label};
 	die "Unhandled options: " . join(" ", %options) if %options;
 
 	$outfh->autoflush(1);
 	bless {
 	       infh  => $infh,
 	       outfh => $outfh,
+	       label => $label,
 	       debug => $debug,
 	      }, $class;
     }
@@ -1069,7 +1071,7 @@ use warnings;
 		return $ret[0];
 	    }
 	} else {
-	    die "Unexpected return type " . (defined $rettype ? "'$rettype'" : "<undefined>") . " (should be 'e' or 'r')";
+	    die "Unexpected return type " . (defined $self->{label} ? "in connection '$self->{label}' " : "") . (defined $rettype ? "'$rettype'" : "<undefined>") . " (should be 'e' or 'r')";
 	}
     }
 }
@@ -1264,7 +1266,7 @@ use warnings;
 	my @cmd_comm = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.sudo.$<.sock", debug => shift)}, !!$debug);
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
-	$self->{rpc} = Doit::RPC::Client->new($out, $in);
+	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:");
 	$self;
     }
 
@@ -1361,7 +1363,7 @@ use warnings;
 	    warn "comm perl cmd: @cmd_comm\n" if $debug;
 	    my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
 	    $self->{comm_pid} = $comm_pid;
-	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
+	    $self->{rpc} = Doit::RPC::Client->new($in, $out, label => "ssh:$host");
 	}
 	$self;
     }
