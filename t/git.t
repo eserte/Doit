@@ -6,6 +6,7 @@
 #
 
 use strict;
+use Cwd qw(realpath);
 use File::Temp qw(tempdir);
 use Test::More;
 
@@ -21,7 +22,8 @@ plan 'no_plan';
 my $d = Doit->init;
 $d->add_component('git');
 
-my $dir = tempdir('doit-git-XXXXXXXX', CLEANUP => 1, TMPDIR => 1);
+# realpath() needed on darwin
+my $dir = realpath(tempdir('doit-git-XXXXXXXX', CLEANUP => 1, TMPDIR => 1));
 
 # Tests with the Doit repository (if checked out)
 SKIP: {
