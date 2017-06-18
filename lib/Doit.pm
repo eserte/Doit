@@ -1212,7 +1212,7 @@ use warnings;
 
     sub add_components {
 	my(@components) = @_;
-	q|for my $component (qw(| . join(", ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } |;
+	q|for my $component (qw(| . join(" ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } |;
     }
 
     sub self_require {
