@@ -38,6 +38,12 @@ install:
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cpanm --quiet --installdeps --notest .; fi
  - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_IPC_RUN" = 1 ]; then cpanm --quiet --notest IPC::Run; fi
 
+addons:
+  apt:
+    packages:
+      # For Doit::Locale
+      - locales
+
 script:
  - perl Build.PL && ./Build && ./Build test
  # Cannot install on MacOSX
