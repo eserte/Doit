@@ -865,6 +865,8 @@ use warnings;
     }
     sub is_dry_run { shift->{dryrun} }
 
+    sub can_ipc_run { eval { require IPC::Run; 1 } }
+
     sub install_generic_cmd {
 	my($self, $name, @args) = @_;
 	$self->{X}->install_generic_cmd($name, @args);

@@ -18,12 +18,12 @@ use Test::More 'no_plan';
 
 use Doit;
 
-my $has_ipc_run = eval { require IPC::Run; 1 };
-
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 chdir $tempdir or die "Can't chdir to $tempdir: $!";
 
 my $r = Doit->init;
+my $has_ipc_run = $r->can_ipc_run;
+
 $r->touch("decl-test");
 ok -f "decl-test";
 $r->touch("decl-test");
