@@ -42,7 +42,13 @@ sub locale_enable_locale {
     close $fh
 	or error "Error while running 'locale -a': $!";
 
-    if (!-e "/etc/locale.gen") { # Debian and Debian-lie
+    if (-x "/usr/sbin/locale-gen" && !-e "/etc/locale.gen") {
+	# e.g. Ubuntu 12.04
+	$self->system('locale-gen', $locale->[0]);
+	return 1;
+    }
+
+    if (!-e "/etc/locale.gen") { # Debian and Debian-like
 	error "Don't know how to enable locales on this system";
     }
 
