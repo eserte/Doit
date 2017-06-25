@@ -1237,7 +1237,6 @@ use warnings;
 	my $dry_run = delete $opts{dry_run};
 	my $debug = delete $opts{debug};
 	my @components = @{ delete $opts{components} || [] };
-	delete $opts{components}; # XXX not used here, only for ssh
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { }, $class;
