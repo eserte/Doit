@@ -362,7 +362,7 @@ use warnings;
 					 or die "Copy failed: $!";
 			     },
 			     msg => do {
-				 if (-e $to) {
+				 if (-e $real_to) {
 				     my $diff;
 				     if (eval { require IPC::Run; 1 }) {
 					 IPC::Run::run(['diff', '-u', $to, $from], '>', \$diff);
