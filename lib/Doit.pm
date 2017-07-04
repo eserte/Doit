@@ -350,7 +350,7 @@ use warnings;
 	my $real_to;
 	if (-d $to) {
 	    require File::Basename;
-	    $real_to = "$to/" . File::Basename::basename($to);
+	    $real_to = "$to/" . File::Basename::basename($from);
 	} else {
 	    $real_to = $to;
 	}
