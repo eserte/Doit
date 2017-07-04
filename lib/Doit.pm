@@ -347,7 +347,14 @@ use warnings;
     sub cmd_copy {
 	my($self, $from, $to) = @_;
 	my @commands;
-	if (!-e $to || do { require File::Compare; File::Compare::compare($from, $to) != 0 }) {
+	my $real_to;
+	if (-d $to) {
+	    require File::Basename;
+	    $real_to = "$to/" . File::Basename::basename($to);
+	} else {
+	    $real_to = $to;
+	}
+	if (!-e $real_to || do { require File::Compare; File::Compare::compare($from, $real_to) != 0 }) {
 	    push @commands, {
 			     code => sub {
 				 require File::Copy;
