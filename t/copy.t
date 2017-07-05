@@ -46,10 +46,10 @@ is slurp("$tempdir/destdir2/srcfile"), "source data\na new line\n", 'copy was ag
 
 # copy to non-existent directory
 eval { $d->copy("$tempdir/srcfile", "$tempdir/non-existent-directory/destfile") };
-like $@, qr{Copy failed: No such file or directory};
+like $@, qr{Copy failed: };
 
 # copy non-existent source file
 eval { $d->copy("$tempdir/non-existent-srcfile", "$tempdir/destdir2") };
-like $@, qr{Copy failed: No such file or directory};
+like $@, qr{Copy failed: };
 
 __END__
