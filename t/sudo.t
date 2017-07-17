@@ -53,18 +53,10 @@ is $pwinfo[0], 'root';
 is $sudo->call('stdout_test'), 4711;
 is $sudo->call('stderr_test'), 314;
 
-## XXX does not work, probably because refs cannot be serialized
-#{
-#    my $res = $sudo->run(['perl', '-e', 'print "STDOUT without newline"'], '>', \my $stdout);
-#    # XXX what's $res supposed to be?
-#    is $stdout, 'STDOUT without newline';
-#}
-#
-#{
-#    my $res = $sudo->run(['perl', '-e', 'print STDERR "STDERR without newline"'], '>', \my $stderr);
-#    # XXX what's $res supposed to be?
-#    is $stderr, 'STDERR without newline';
-#}
+{
+    my $res = $sudo->qx({quiet=>1}, 'perl', '-e', 'print "STDOUT without newline"');
+    is $res, 'STDOUT without newline';
+}
 
 # not needed anymore, but try it anyway
 $sudo->exit;

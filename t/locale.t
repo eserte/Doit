@@ -32,10 +32,8 @@ pass "added component 'locale'";
     }
     $sudo->exit;
 
- SKIP: {
-	skip "Does not have IPC::Run", 1
-	    if !$d->can_ipc_run;
-	$d->run(['locale', '-a'], '>', \my $all_locales);
+    {
+	my $all_locales = $d->qx({quiet=>1}, qw(locale -a));
 	my $try_locales_rx = '(' . join('|', map { quotemeta $_ } @try_locales) . ')';
 	ok grep { /$try_locales_rx/ } split /\n/, $all_locales;
     }

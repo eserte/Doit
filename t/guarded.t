@@ -33,16 +33,14 @@ $d->add_component('guarded');
     is $called, 1, '2nd time "using" not called';
 }
 
-SKIP: {
-    skip "Need IPC::Run", 1 if !$d->can_ipc_run;
-
+{
     my $var = 0;
     $d->guarded_step(
 	"extern command",
 	ensure => sub { $var == 3.14 },
 	using  => sub {
 	    my $d = shift;
-	    $d->run(['perl', '-e', 'print 3.14'], '>', \$var);
+	    $var = $d->qx('perl', '-e', 'print 3.14');
 	},
     );
     is $var, 3.14, 'Doit method successfully run';
