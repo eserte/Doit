@@ -394,18 +394,6 @@ use warnings;
 	Doit::Commands->new(@commands);
     }
 
-    sub cmd_rmdir {
-	my($self, $directory) = @_;
-	my @commands;
-	if (-d $directory) {
-	    push @commands, {
-			     code => sub { rmdir $directory or die $! },
-			     msg  => "rmdir $directory",
-			    };
-	}
-	Doit::Commands->new(@commands);
-    }
-
     sub _handle_dollar_questionmark () {
 	if ($? & 127) {
 	    my $signalnum = $? & 127;
@@ -422,6 +410,50 @@ use warnings;
 				   exitcode => $exitcode,
 			          );
 	}
+    }
+
+    sub cmd_qx {
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	my $quiet = delete $options->{quiet};
+	my $info = delete $options->{info};
+	error "Unhandled options: " . join(" ", %$options) if %$options;
+
+	my $code = sub {
+	    open my $fh, '-|', @args
+		or error "Error running '@args': $!";
+	    undef $/;
+	    my $buf = <$fh>;
+	    close $fh
+		or _handle_dollar_questionmark;
+	    $buf;
+	};
+
+	my @commands;
+	push @commands, {
+			 ($info ? (rv => $code->(), code => sub {}) : (code => $code)),
+			 ($quiet ? () : (msg => "@args")),
+			};
+	Doit::Commands->new(@commands);
+    }
+
+    sub cmd_info_qx {
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	$options->{info} = 1;
+	$self->cmd_qx($options, @args);
+    }
+
+    sub cmd_rmdir {
+	my($self, $directory) = @_;
+	my @commands;
+	if (-d $directory) {
+	    push @commands, {
+			     code => sub { rmdir $directory or die $! },
+			     msg  => "rmdir $directory",
+			    };
+	}
+	Doit::Commands->new(@commands);
     }
 
     sub cmd_run {
@@ -934,6 +966,7 @@ use warnings;
 		 qw(make_path remove_tree), # File::Path
 		 qw(copy move), # File::Copy
 		 qw(run), # IPC::Run
+		 qw(qx info_qx), # qx// and variant which even runs in dry-run mode, both using list syntax
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
 		 qw(create_file_if_nonexisting), # does the half of touch
