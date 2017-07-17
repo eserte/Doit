@@ -34,6 +34,8 @@ $remote->call("something");
 my $second_remote = $doit->do_sudo;
 $second_remote->system('echo', 'Running two sudos in parallel is OK');
 
+system("ls -al /tmp/.doit*"); # don't use $doit->system here, as it may fail --- with Linux Abstract Namespaces Sockets, nothing is listed here
+
 warn $remote->exit;
 
 __END__

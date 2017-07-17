@@ -1273,6 +1273,10 @@ use warnings;
 	# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=762465
 	system 'sudo', @sudo_opts, 'true';
 
+	# On linux use Linux Abstract Namespace Sockets ---
+	# invisible and automatically cleaned up. See man 7 unix.
+	my $LASN_PREFIX = $^O eq 'linux' ? '\0' : '';
+
 	# Run the server
 	my @cmd_worker =
 	    (
@@ -1280,8 +1284,8 @@ use warnings;
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
-	     q{Doit::RPC::Server->new($d, "} . $sock_path . q{", excl => 1, debug => } . ($debug?1:0) . q{)->run();} .
-	     q<END { unlink "> . $sock_path . q<" }>, # cleanup socket file
+	     q{Doit::RPC::Server->new($d, "} . $LASN_PREFIX . $sock_path . q{", excl => 1, debug => } . ($debug?1:0) . q{)->run();} .
+	     ($LASN_PREFIX ? '' : q<END { unlink "> . $sock_path . q<" }>), # cleanup socket file, except if Linux Abstract Namespace Sockets are used
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
 	my $worker_pid = fork;
@@ -1297,7 +1301,7 @@ use warnings;
 	# access.
 	my($in, $out);
 	my @cmd_comm = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
-			q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift)}, !!$debug);
+			q{Doit::Comm->comm_to_sock("} . $LASN_PREFIX . $sock_path . q{", debug => shift)}, !!$debug);
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
 	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:");
