@@ -1264,7 +1264,6 @@ use warnings;
 	    require POSIX;
 	    "/tmp/." . join(".", "doit", "sudo", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, (++$socket_count)) . ".sock";
 	};
-	$self->{sock_path} = $sock_path;
 
 	# Make sure password has to be entered only once (if at all)
 	# Using 'sudo --validate' would be more correct, however,
@@ -1368,6 +1367,12 @@ use warnings;
 		$ssh->rsync_put({verbose => $debug}, $from, $full_target);
 	    }
 	}
+
+	my $sock_path = do {
+	    require POSIX;
+	    "/tmp/." . join(".", "doit", "ssh", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, int(rand(99999999))) . ".sock";
+	};
+
 	my @cmd;
 	if (defined $as) {
 	    if ($as eq 'root') {
@@ -1376,31 +1381,28 @@ use warnings;
 		@cmd = ('sudo', '-u', $as);
 	    }
 	} # XXX add ssh option -t? for password input?
-	if (0) {
-	    push @cmd, ("perl", "-I.doit", "-I.doit/lib", "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
-	    warn "remote perl cmd: @cmd\n" if $debug;
-	    my($out, $in, $pid) = $ssh->open2(\%ssh_run_opts, @cmd);
-	    $self->{rpc} = Doit::RPC::Client->new($in, $out);
-	} else {
-	    # XXX better path for sock!
-	    my @cmd_worker =
-		(
-		 @cmd, "perl", "-I.doit", "-I.doit/lib", "-e",
-		 Doit::_ScriptTools::self_require() .
-		 q{my $d = Doit->init; } .
-		 Doit::_ScriptTools::add_components(@components) .
-		 q{Doit::RPC::Server->new($d, "/tmp/.doit.$<.sock", debug => } . ($debug?1:0).q{)->run();},
-		 "--", ($dry_run? "--dry-run" : ())
-		);
-	    warn "remote perl cmd: @cmd_worker\n" if $debug;
-	    my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
-	    $self->{worker_pid} = $worker_pid;
-	    my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.$<.sock", debug => shift)}, !!$debug);
-	    warn "comm perl cmd: @cmd_comm\n" if $debug;
-	    my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
-	    $self->{comm_pid} = $comm_pid;
-	    $self->{rpc} = Doit::RPC::Client->new($in, $out, label => "ssh:$host");
-	}
+
+	my @cmd_worker =
+	    (
+	     @cmd, "perl", "-I.doit", "-I.doit/lib", "-e",
+	     Doit::_ScriptTools::self_require() .
+	     q{my $d = Doit->init; } .
+	     Doit::_ScriptTools::add_components(@components) .
+	     q{Doit::RPC::Server->new($d, "} . $sock_path . q{", excl => 1, debug => } . ($debug?1:0).q{)->run();} .
+	     q<END { unlink "> . $sock_path . q<" }>, # cleanup socket file
+	     "--", ($dry_run? "--dry-run" : ())
+	    );
+	warn "remote perl cmd: @cmd_worker\n" if $debug;
+	my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
+	$self->{worker_pid} = $worker_pid;
+
+	my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e",
+			q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift)}, !!$debug);
+	warn "comm perl cmd: @cmd_comm\n" if $debug;
+	my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
+	$self->{comm_pid} = $comm_pid;
+	$self->{rpc} = Doit::RPC::Client->new($in, $out, label => "ssh:$host");
+
 	$self;
     }
 
