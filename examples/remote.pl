@@ -31,7 +31,6 @@ GetOptions("root"   => \my $do_root,
 	   "local"  => \my $do_local,
 	  )
     or die "usage: $0 [--root|--remote|--local]\n";
-my $remote;
 
 sub create_remote_connection {
     if ($do_root) {
