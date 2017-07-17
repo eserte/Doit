@@ -75,9 +75,10 @@ sub ssl_install_ca_certificate {
     if ($dest_file !~ m{\.crt$}) {
 	$dest_file .= '.crt';
     }
-    $self->copy($ca_file, "/usr/local/share/ca-certificates/$dest_file");
-    if (!$self->is_dry_run) {
-	$self->system('update-ca-certificates');
+    my $sudo = $< == 0 ? $self: $self->do_sudo; # unprivileged? -> upgrade to sudo
+    $sudo->copy($ca_file, "/usr/local/share/ca-certificates/$dest_file");
+    if (!$sudo->is_dry_run) {
+	$sudo->system('update-ca-certificates');
     } else {
 	info "Would need to run update-ca-certificates";
     }
