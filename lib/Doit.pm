@@ -1388,16 +1388,22 @@ use warnings;
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
-	     q{Doit::RPC::Server->new($d, "} . $sock_path . q{", excl => 1, debug => } . ($debug?1:0).q{)->run();} .
-	     q<END { unlink "> . $sock_path . q<" }>, # cleanup socket file
+	     q<sub _server_cleanup { unlink "> . $sock_path . q<" }> .
+	     q<$SIG{PIPE} = \&_server_cleanup; > .
+	     q<END { _server_cleanup() } > .
+	     q{Doit::RPC::Server->new($d, "} . $sock_path . q{", excl => 1, debug => } . ($debug?1:0).q{)->run();},
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
 	warn "remote perl cmd: @cmd_worker\n" if $debug;
 	my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
 	$self->{worker_pid} = $worker_pid;
 
-	my @cmd_comm = (@cmd, "perl", "-I.doit/lib", "-MDoit", "-e",
-			q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift)}, !!$debug);
+	my @cmd_comm =
+	    (
+	     @cmd, "perl", "-I.doit/lib", "-MDoit", "-e",
+	     q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift);},
+	     !!$debug,
+	    );
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
 	$self->{comm_pid} = $comm_pid;
