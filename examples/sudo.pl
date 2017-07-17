@@ -21,6 +21,7 @@ sub something {
 return 1 if caller;
 
 my $doit = Doit->init;
+
 my $remote = $doit->do_sudo; # (sudo_opts => ['-u', '#'.$<]);
 #my $cmd = q{echo $(hostname; echo -n ": "; date)};
 #$doit->system($cmd);
@@ -29,6 +30,10 @@ $doit->call("hello");
 #$remote->system("id");
 $remote->call("hello");
 $remote->call("something");
+
+my $second_remote = $doit->do_sudo;
+$second_remote->system('echo', 'Running two sudos in parallel is OK');
+
 warn $remote->exit;
 
 __END__

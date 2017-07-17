@@ -1093,12 +1093,14 @@ use warnings;
 	my($class, $runner, $sockpath, %options) = @_;
 
 	my $debug = delete $options{debug};
+	my $excl  = delete $options{excl};
 	die "Unhandled options: " . join(" ", %options) if %options;
 
 	bless {
 	       runner   => $runner,
 	       sockpath => $sockpath,
 	       debug    => $debug,
+	       excl     => $excl,
 	      }, $class;
     }
 
@@ -1121,7 +1123,7 @@ use warnings;
 
 	$d->("Start worker ($$)...");
 	my $sockpath = $self->{sockpath};
-	if (-e $sockpath) {
+	if (!$self->{excl} && -e $sockpath) {
 	    $d->("unlink socket $sockpath");
 	    unlink $sockpath;
 	}
@@ -1238,6 +1240,8 @@ use warnings;
 
     use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
 
+    my $socket_count = 0;
+
     sub do_connect {
 	my($class, %opts) = @_;
 	my @sudo_opts = @{ delete $opts{sudo_opts} || [] };
@@ -1251,15 +1255,34 @@ use warnings;
 	require File::Basename;
 	require IPC::Open2;
 	require Symbol;
-	#my @cmd = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e", q{require "} . File::Basename::basename($0) . q{"; Doit::RPC::SimpleServer->new(Doit->init)->run();}, "--", ($dry_run? "--dry-run" : ()));
-	#my($in, $out) = (Symbol::gensym(), Symbol::gensym());
+
+	# Socket pathname, make it possible to find out
+	# old outdated sockets easily by including a
+	# timestamp. Also need to maintain a $socket_count,
+	# if the same script opens multiple sockets quickly.
+	my $sock_path = do {
+	    require POSIX;
+	    "/tmp/." . join(".", "doit", "sudo", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, (++$socket_count)) . ".sock";
+	};
+	$self->{sock_path} = $sock_path;
+
+	# Make sure password has to be entered only once (if at all)
+	# Using 'sudo --validate' would be more correct, however,
+	# mysterious "sudo: ignoring time stamp from the future"
+	# errors may happen every now and then. Seen on a
+	# debian/jessie system, possibly related to
+	# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=762465
+	system 'sudo', @sudo_opts, 'true';
+
+	# Run the server
 	my @cmd_worker =
 	    (
 	     'sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e",
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
-	     q{Doit::RPC::Server->new($d, "/tmp/.doit.sudo.$<.sock", debug => } . ($debug?1:0) . q{)->run();},
+	     q{Doit::RPC::Server->new($d, "} . $sock_path . q{", excl => 1, debug => } . ($debug?1:0) . q{)->run();} .
+	     q<END { unlink "> . $sock_path . q<" }>, # cleanup socket file
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
 	my $worker_pid = fork;
@@ -1270,11 +1293,16 @@ use warnings;
 	    exec @cmd_worker;
 	    die "Failed to run '@cmd_worker': $!";
 	}
+
+	# Run the client --- must also run under root for socket
+	# access.
 	my($in, $out);
-	my @cmd_comm = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e", q{Doit::Comm->comm_to_sock("/tmp/.doit.sudo.$<.sock", debug => shift)}, !!$debug);
+	my @cmd_comm = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
+			q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift)}, !!$debug);
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
 	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:");
+
 	$self;
     }
 
