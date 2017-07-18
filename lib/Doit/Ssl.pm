@@ -18,7 +18,6 @@ use vars qw($VERSION);
 $VERSION = '0.01';
 
 use File::Basename 'basename';
-use IPC::Run 'run';
 
 use Doit::Log;
 
@@ -40,12 +39,7 @@ sub ssl_install_ca_certificate {
 	error "openssl is not available";
     }
 
-    my $fingerprint;
-    {
-	my @cmd = (qw(openssl x509 -noout -fingerprint -in), $ca_file);
-	run([@cmd], '>', \$fingerprint)
-	    or error "Running '@cmd' failed";
-    }
+    my $fingerprint = $self->info_qx({quiet=>1}, qw(openssl x509 -noout -fingerprint -in), $ca_file);
 
     my $cert_file = '/etc/ssl/certs/ca-certificates.crt'; # XXX what about non-Debians?
     if (open my $fh, '<', $cert_file) {
@@ -56,10 +50,7 @@ sub ssl_install_ca_certificate {
 	    } else {
 		$buf .= $_;
 		if (/END CERTIFICATE/) {
-		    my $check_fingerprint;
-		    my @cmd = qw(openssl x509 -noout -fingerprint);
-		    run([@cmd], '<', \$buf, '>', \$check_fingerprint)
-			or error "Running '@cmd' failed";
+		    my $check_fingerprint = $self->info_open2({quiet=>1, instr=>$buf}, qw(openssl x509 -noout -fingerprint));
 		    if ($fingerprint eq $check_fingerprint) {
 			# Found certificate, nothing to do
 			return 0;
