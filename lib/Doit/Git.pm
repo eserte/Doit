@@ -35,9 +35,10 @@ sub _in_directory (&$) {
 sub git_repo_update {
     my($self, %opts) = @_;
     my $repository = delete $opts{repository};
-    my $directory = delete $opts{directory};
-    my $origin = delete $opts{origin} || 'origin';
+    my $directory  = delete $opts{directory};
+    my $origin     = delete $opts{origin} || 'origin';
     my $clone_opts = delete $opts{clone_opts};
+    my $quiet      = delete $opts{quiet};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
     my $save_pwd = save_pwd2();
@@ -56,7 +57,12 @@ sub git_repo_update {
 	if ($actual_repository ne $repository) {
 	    die "remote $origin does not point to $repository, but to $actual_repository\n";
 	}
-	$self->system(qw(git fetch));
+	if ($quiet) {
+	    # XXX there's no quiet option for system, misuse qx instead
+	    $self->qx({quiet=>1}, qw(git fetch));
+	} else {
+	    $self->system(qw(git fetch));
+	}
 	my $status = $self->git_short_status;
 	if ($status eq '>') {
 	    $self->system(qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...

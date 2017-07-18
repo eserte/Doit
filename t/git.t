@@ -94,6 +94,7 @@ sub run_tests {
     ok -d "$directory/.git";
     is $d->git_repo_update(repository => $repository, directory => $directory), 0, 'second call does nothing';
     is $d->git_get_commit_hash(directory => $directory), $commit_hash, 'unchanged commit hash';
+    is $d->git_repo_update(repository => $repository, directory => $directory, quiet => 1), 0, 'third call is quiet';
 
     Doit::Git::_in_directory(sub {
 	$d->system(qw(git reset --hard HEAD^));
