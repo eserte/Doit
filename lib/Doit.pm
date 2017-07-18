@@ -412,6 +412,45 @@ use warnings;
 	}
     }
 
+    sub cmd_open2 {
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	my $quiet = delete $options->{quiet};
+	my $info = delete $options->{info};
+	my $instr = delete $options->{instr}; $instr = '' if !defined $instr;
+	error "Unhandled options: " . join(" ", %$options) if %$options;
+
+	require IPC::Open2;
+
+	my $code = sub {
+	    my($chld_out, $chld_in);
+	    my $pid = IPC::Open2::open2($chld_out, $chld_in, @args);
+	    print $chld_in $instr;
+	    close $chld_in;
+	    local $/;
+	    my $buf = <$chld_out>;
+	    close $chld_out;
+	    waitpid $pid, 0;
+	    $? == 0
+		or _handle_dollar_questionmark;
+	    $buf;
+	};
+
+	my @commands;
+	push @commands, {
+			 ($info ? (rv => $code->(), code => sub {}) : (code => $code)),
+			 ($quiet ? () : (msg => "@args")),
+			};
+	Doit::Commands->new(@commands);
+    }
+
+    sub cmd_info_open2 {
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	$options->{info} = 1;
+	$self->cmd_open2($options, @args);
+    }
+
     sub cmd_qx {
 	my($self, @args) = @_;
 	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
@@ -967,6 +1006,7 @@ use warnings;
 		 qw(copy move), # File::Copy
 		 qw(run), # IPC::Run
 		 qw(qx info_qx), # qx// and variant which even runs in dry-run mode, both using list syntax
+		 qw(open2 info_open2), # IPC::Open2
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
 		 qw(create_file_if_nonexisting), # does the half of touch
