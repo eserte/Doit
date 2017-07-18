@@ -394,22 +394,28 @@ use warnings;
 	Doit::Commands->new(@commands);
     }
 
-    sub _handle_dollar_questionmark () {
+    sub _analyze_dollar_questionmark () {
 	if ($? & 127) {
 	    my $signalnum = $? & 127;
 	    my $coredump = ($? & 128) ? 'with' : 'without';
-	    Doit::Exception::throw(
-				   sprintf("Command died with signal %d, %s coredump", $signalnum, $coredump),
-				   signalnum => $signalnum,
-				   coredump  => $coredump,
-			          );
+	    (
+		msg       => sprintf("Command died with signal %d, %s coredump", $signalnum, $coredump),
+		signalnum => $signalnum,
+		coredump  => $coredump,
+	    );
 	} else {
 	    my $exitcode = $?>>8;
-	    Doit::Exception::throw(
-				   "Command exited with exit code " . $exitcode,
-				   exitcode => $exitcode,
-			          );
+	    (
+		msg      => "Command exited with exit code " . $exitcode,
+		exitcode => $exitcode,
+	    );
 	}
+    }
+
+    sub _handle_dollar_questionmark () {
+	my %res = _analyze_dollar_questionmark;
+	my $msg = delete $res{msg};
+	Doit::Exception::throw($msg, %res);
     }
 
     sub cmd_open2 {
@@ -449,6 +455,80 @@ use warnings;
 	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
 	$options->{info} = 1;
 	$self->cmd_open2($options, @args);
+    }
+
+    sub cmd_open3 {
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	my $quiet = delete $options->{quiet};
+	my $info = delete $options->{info};
+	my $timeout = delete $options->{timeout} || 86400;
+	my $instr = delete $options->{instr};
+	my $errref = delete $options->{errref};
+	my $statusref = delete $options->{statusref};
+	error "Unhandled options: " . join(" ", %$options) if %$options;
+
+	require IO::Select;
+	require IPC::Open3;
+	require Symbol;
+
+	my $code = sub {
+	    my($chld_out, $chld_in, $chld_err);
+	    $chld_err = Symbol::gensym();
+	    my $pid = IPC::Open3::open3((defined $instr ? $chld_in : undef), $chld_out, $chld_err, @args);
+	    if (defined $instr) {
+		print $chld_in $instr;
+		close $chld_in;
+	    }
+
+	    my $sel = IO::Select->new;
+	    $sel->add($chld_out);
+	    $sel->add($chld_err);
+
+	    my %buf = ($chld_out => '', $chld_err => '');
+	    while(my @ready_fhs = $sel->can_read($timeout)) {
+		for my $ready_fh (@ready_fhs) {
+		    my $buf = '';
+		    while (sysread $ready_fh, $buf, 1024, length $buf) { }
+		    if ($buf eq '') { # eof
+			$sel->remove($ready_fh);
+			$ready_fh->close;
+			last if $sel->count == 0;
+		    } else {
+			$buf{$ready_fh} .= $buf;
+		    }
+		}
+	    }
+
+	    waitpid $pid, 0;
+	    if ($statusref) {
+		%$statusref = ( _analyze_dollar_questionmark );
+	    } else {
+		if ($? != 0) {
+		    _handle_dollar_questionmark;
+		}
+	    }
+
+	    if ($errref) {
+		$$errref = $buf{$chld_err};
+	    }
+
+	    $buf{$chld_out};
+	};
+
+	my @commands;
+	push @commands, {
+			 ($info ? (rv => $code->(), code => sub {}) : (code => $code)),
+			 ($quiet ? () : (msg => "@args")),
+			};
+	Doit::Commands->new(@commands);
+    }
+
+    sub cmd_info_open3 {
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	$options->{info} = 1;
+	$self->cmd_open3($options, @args);
     }
 
     sub cmd_qx {
@@ -1007,6 +1087,7 @@ use warnings;
 		 qw(run), # IPC::Run
 		 qw(qx info_qx), # qx// and variant which even runs in dry-run mode, both using list syntax
 		 qw(open2 info_open2), # IPC::Open2
+		 qw(open3 info_open3), # IPC::Open3
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
 		 qw(create_file_if_nonexisting), # does the half of touch

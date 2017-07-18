@@ -1,0 +1,72 @@
+#!/usr/bin/perl -w
+# -*- cperl -*-
+
+#
+# Author: Slaven Rezic
+#
+
+use strict;
+use Test::More;
+
+plan skip_all => "Signals are problematic on Windows" if $^O eq 'MSWin32';
+plan 'no_plan';
+
+use Doit;
+
+{
+    my $r = Doit->init;
+
+    {
+	is $r->open3({errref => \my $stderr}, $^X, '-e', 'print scalar <STDIN>'), '', 'no instr -> empty input';
+	is $stderr, '', 'No stderr';
+    }
+    {
+	is $r->open3({errref => \my $stderr}, $^X, '-e', 'print scalar <STDIN>; print STDERR "a warning"'), '', 'no instr -> empty input';
+	is $stderr, "a warning", "With stderr";
+    }
+    {
+	is $r->open3({errref => \my $stderr, instr=>"some input\n"}, $^X, '-e', 'print scalar <STDIN>; print STDERR "a warning"'), "some input\n", 'expected single-line result';
+	is $stderr, "a warning", "With stderr";
+    }
+    {
+	is $r->open3({errref => \my $stderr, instr=>"first line\nsecond line\n"}, $^X, '-e', 'print scalar <STDIN>; print STDERR "a warning"; print scalar <STDIN>;'), "first line\nsecond line\n", 'expected multi-line result';
+	is $stderr, "a warning", "With stderr";
+    }
+
+    {
+	my %status;
+	is $r->open3({errref => \my $stderr, statusref => \%status}, $^X, '-e', 'print STDERR "a warning"; exit 0'), '';
+	is $status{exitcode}, 0, 'status reference filled, exit code as expected (success)';
+    }
+
+    {
+	my %status;
+	is $r->open3({errref => \my $stderr, statusref => \%status}, $^X, '-e', 'print STDERR "a warning"; exit 1'), '';
+	is $status{exitcode}, 1, 'status reference filled, exit code as expected (fail)';
+    }
+
+    eval { $r->open3($^X, '-e', 'kill TERM => $$') };
+    like $@, qr{^Command died with signal 15, without coredump};
+    is $@->{signalnum}, 15;
+    is $@->{coredump}, 'without';
+
+    eval { $r->open3($^X, '-e', 'kill KILL => $$') };
+    like $@, qr{^Command died with signal 9, without coredump};
+    is $@->{signalnum}, 9;
+    is $@->{coredump}, 'without';
+
+    is $r->open3({quiet=>1}, $^X, '-e', '#nothing'), '', 'nothing returned; command is also quiet';
+
+    is $r->info_open3($^X, '-e', 'print 42'), 42, 'info_open3 behaves as open3 in non-dry-run mode';
+}
+
+{
+    local @ARGV = ('--dry-run');
+    my $dry_run = Doit->init;
+    is $dry_run->open3({instr=>"input"}, $^X, '-e', 'print scalar <STDIN>'), undef, 'no output in dry-run mode';
+    is $dry_run->open3({instr=>"input",info=>1}, $^X, '-e', 'print scalar <STDIN>'), "input", 'info=>1: there is output in dry-run mode';
+    is $dry_run->info_open3({instr=>"input"}, $^X, '-e', 'print scalar <STDIN>'), "input", 'info_open3 behaves like info=>1';
+}
+
+
+__END__
