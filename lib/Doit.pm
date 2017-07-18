@@ -422,7 +422,7 @@ use warnings;
 	my $code = sub {
 	    open my $fh, '-|', @args
 		or error "Error running '@args': $!";
-	    undef $/;
+	    local $/;
 	    my $buf = <$fh>;
 	    close $fh
 		or _handle_dollar_questionmark;
