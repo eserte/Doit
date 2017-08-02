@@ -1621,6 +1621,7 @@ use warnings;
 
 	my $tries = 20;
 	my $sock;
+	my $sock_err;
 	{
 	    my $sleep;
 	    for my $try (1..$tries) {
@@ -1629,6 +1630,7 @@ use warnings;
 					      Peer => $peer,
 					     );
 		last if $sock;
+		$sock_err = "(peer=$peer, errno=$!)";
 		if (eval { require Time::HiRes; 1 }) {
 		    $sleep = \&Time::HiRes::sleep;
 		} else {
@@ -1640,7 +1642,7 @@ use warnings;
 	    }
 	}
 	if (!$sock) {
-	    die "COMM: Can't connect to socket (after $tries retries): $!";
+	    die "COMM: Can't connect to socket (after $tries retries) $sock_err";
 	}
 	$d->("socket to worker was created");
 
