@@ -6,6 +6,7 @@
 #
 
 use strict;
+use Getopt::Long;
 use Test::More;
 
 use Doit;
@@ -20,6 +21,8 @@ sub run {
 sub pwinfo {
     getpwuid($<);
 }
+
+sub envinfo { \%ENV }
 
 sub stdout_test {
     print "This goes to STDOUT\n";
@@ -37,8 +40,16 @@ if (!is_in_path('sudo')) {
     plan skip_all => 'git not in PATH';
 }
 
+my $other_user;
+my $debug;
+GetOptions(
+	   "other-user=s" => \$other_user,
+	   "debug" => \$debug,
+	  )
+    or die "usage: $0 [--other-user username] [--debug]\n";
+
 my $d = Doit->init;
-my $sudo = $d->do_sudo(sudo_opts => ['-n'], debug => 0);
+my $sudo = $d->do_sudo(sudo_opts => ['-n'], debug => $debug);
 my $res = eval { $sudo->call('run') };
 
 plan skip_all => "Cannot run sudo password-less" if $@;
@@ -62,9 +73,24 @@ is $sudo->call('stderr_test'), 314;
 $sudo->exit;
 
 {
-    my $sudo2 = $d->do_sudo(sudo_opts => ['-n'], debug => 0);
+    my $sudo2 = $d->do_sudo(sudo_opts => ['-n'], debug => $debug);
     isa_ok $sudo2, 'Doit::Sudo';
     # hopefully no warnings on destroy
+}
+
+SKIP: {
+    skip "--other-user option not set", 1
+	if !defined $other_user;
+    # -H (--set-home) may or may not be necessary
+    my $sudo = $d->do_sudo(sudo_opts => ['-n', '-u', $other_user, '-H'], debug => $debug);
+    my $res = eval { $sudo->call('run') };
+    skip "Cannot run sudo -u password-less",1
+	if $@;
+
+    my(@pwinfo) = $sudo->call('pwinfo');
+    is $pwinfo[0], $other_user;
+    my $envinfo = $sudo->call('envinfo');
+    is $envinfo->{HOME}, (getpwnam($other_user))[7], 'home directory of other user set to HOME env var';
 }
 
 __END__
