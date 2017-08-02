@@ -87,6 +87,13 @@ SKIP: {
     is $d->git_config(key => "test.key"), "test.val2", 'config key now changed';
     $d->git_config(key => "test.key", val => "test.val2");
     is $d->git_config(key => "test.key"), "test.val2", 'nothing changed now';
+
+    is $d->git_repo_update(
+			   repository => "$workdir/.git",
+			   repository_aliases => [$workdir],
+			   directory => $workdir2,
+			  ), 0, "handling repository_aliases";
+
 }
 
 chdir "/"; # for File::Temp cleanup
