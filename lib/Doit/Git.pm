@@ -272,8 +272,9 @@ sub git_config {
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
     _in_directory {
-	chomp(my($old_val) = $self->info_qx({quiet=>1}, qw(git config), $key));
-	if ($old_val ne $val) {
+	no warnings 'uninitialized'; # $old_val may be undef
+	chomp(my($old_val) = eval { $self->info_qx({quiet=>1}, qw(git config), $key) });
+	if (!defined $old_val || $old_val ne $val) {
 	    $self->system(qw(git config), $key, $val);
 	}
     } $directory;
