@@ -274,8 +274,12 @@ sub git_config {
     _in_directory {
 	no warnings 'uninitialized'; # $old_val may be undef
 	chomp(my($old_val) = eval { $self->info_qx({quiet=>1}, qw(git config), $key) });
-	if (!defined $old_val || $old_val ne $val) {
-	    $self->system(qw(git config), $key, $val);
+	if (!defined $val) {
+	    $old_val;
+	} else {
+	    if (!defined $old_val || $old_val ne $val) {
+		$self->system(qw(git config), $key, $val);
+	    }
 	}
     } $directory;
 }
