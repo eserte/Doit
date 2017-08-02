@@ -35,6 +35,7 @@ sub _in_directory (&$) {
 sub git_repo_update {
     my($self, %opts) = @_;
     my $repository = delete $opts{repository};
+    my @repository_aliases = @{ delete $opts{repository_aliases} || [] };
     my $directory  = delete $opts{directory};
     my $origin     = delete $opts{origin} || 'origin';
     my $clone_opts = delete $opts{clone_opts};
@@ -54,8 +55,8 @@ sub git_repo_update {
 	    die "No .git directory found in '$directory', refusing to clone...\n";
 	}
 	chomp(my $actual_repository = `git config --get 'remote.$origin.url'`); # XXX should use something "safe"
-	if ($actual_repository ne $repository) {
-	    die "remote $origin does not point to $repository, but to $actual_repository\n";
+	if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
+	    die "remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n";
 	}
 	if ($quiet) {
 	    # XXX there's no quiet option for system, misuse qx instead
