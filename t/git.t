@@ -79,6 +79,14 @@ SKIP: {
     Doit::Git::_in_directory(sub {
 	is $d->git_root, $workdir, 'git_root in subdirectory';
     }, 'subdir');
+
+    is $d->git_config(key => "test.key"), undef, 'config key does not exist yet';
+    $d->git_config(key => "test.key", val => "test.val");
+    is $d->git_config(key => "test.key"), "test.val", 'config key now exists';
+    $d->git_config(key => "test.key", val => "test.val2");
+    is $d->git_config(key => "test.key"), "test.val2", 'config key now changed';
+    $d->git_config(key => "test.key", val => "test.val2");
+    is $d->git_config(key => "test.key"), "test.val2", 'nothing changed now';
 }
 
 chdir "/"; # for File::Temp cleanup
