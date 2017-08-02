@@ -412,9 +412,16 @@ use warnings;
 	}
     }
 
-    sub _handle_dollar_questionmark () {
+    sub _handle_dollar_questionmark (@) {
+	my(%opts) = @_;
+	my $prefix_msg = delete $opts{prefix_msg};
+	error "Unhandled options: " . join(" ", %opts) if %opts;
+
 	my %res = _analyze_dollar_questionmark;
 	my $msg = delete $res{msg};
+	if (defined $prefix_msg) {
+	    $msg = $prefix_msg.$msg;
+	}
 	Doit::Exception::throw($msg, %res);
     }
 
@@ -438,7 +445,7 @@ use warnings;
 	    close $chld_out;
 	    waitpid $pid, 0;
 	    $? == 0
-		or _handle_dollar_questionmark;
+		or _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "open2 command '@args' failed: ") : ());
 	    $buf;
 	};
 
@@ -505,7 +512,7 @@ use warnings;
 		%$statusref = ( _analyze_dollar_questionmark );
 	    } else {
 		if ($? != 0) {
-		    _handle_dollar_questionmark;
+		    _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "open3 command '@args' failed: ") : ());
 		}
 	    }
 
@@ -544,7 +551,7 @@ use warnings;
 	    local $/;
 	    my $buf = <$fh>;
 	    close $fh
-		or _handle_dollar_questionmark;
+		or _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "qx command '@args' failed: ") : ());
 	    $buf;
 	};
 

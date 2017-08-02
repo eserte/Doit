@@ -35,6 +35,9 @@ use Doit;
     is $r->open2({quiet=>1}, $^X, '-e', '#nothing'), '', 'nothing returned; command is also quiet';
 
     is $r->info_open2($^X, '-e', 'print 42'), 42, 'info_open2 behaves as open2 in non-dry-run mode';
+
+    ok !eval { $r->info_open2($^X, '-e', 'exit 1'); 1 };
+    like $@, qr{open2 command '.* -e exit 1' failed: Command exited with exit code 1 at .* line \d+}, 'verbose error message with failed info_open2 command';
 }
 
 {

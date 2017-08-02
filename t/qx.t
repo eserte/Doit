@@ -33,6 +33,9 @@ use Doit;
     is $r->qx({quiet=>1}, $^X, '-e', '#nothing'), '', 'nothing returned; command is also quiet';
 
     is $r->info_qx($^X, '-e', 'print 42'), 42, 'info_qx behaves as qx in non-dry-run mode';
+
+    ok !eval { $r->info_qx($^X, '-e', 'exit 1'); 1 };
+    like $@, qr{qx command '.* -e exit 1' failed: Command exited with exit code 1 at .* line \d+}, 'verbose error message with failed info_qx command';
 }
 
 {
