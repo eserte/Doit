@@ -99,6 +99,7 @@ sub deb_install_key {
 
     my $found_key;
     if ($key) {
+	$key =~ s{\s}{}g; # convenience: strip spaces from key ('apt-key finger' returns them with spaces)
 	local $ENV{LC_ALL} = 'C';
 	open my $fh, '-|', 'gpg', '--keyring', '/etc/apt/trusted.gpg', '--list-keys', '--fingerprint', '--with-colons'
 	    or die "Running gpg failed: $!";
