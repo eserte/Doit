@@ -101,6 +101,14 @@ sub deb_install_key {
     if ($key) {
 	$key =~ s{\s}{}g; # convenience: strip spaces from key ('apt-key finger' returns them with spaces)
 	local $ENV{LC_ALL} = 'C';
+	# XXX If run with $sudo, then this will emit warnings in the form
+	#   gpg: WARNING: unsafe ownership on configuration file `$HOME/.gnupg/gpg.conf'
+	# Annoying, but harmless. Could be workarounded by specifying
+	# '--homedir=/root/.gpg', but this would create gpg files under ~root. Similar
+	# if using something like
+	#   local $ENV{HOME} = (getpwuid($<))[7];
+	# Probably better would be to work with privilege escalation and run
+	# this command as normal user (to be implemented).
 	open my $fh, '-|', 'gpg', '--keyring', '/etc/apt/trusted.gpg', '--list-keys', '--fingerprint', '--with-colons'
 	    or die "Running gpg failed: $!";
 	while(<$fh>) {
@@ -116,7 +124,7 @@ sub deb_install_key {
     my $changed = 0;
     if (!$found_key) {
 	if ($keyserver) {
-	    $self->run('apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
+	    $self->system('apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
 	} elsif ($url) {
 	    $self->run(['curl', '-fsSL', $url], '|', ['apt-key', 'add', '-']);
 	} else {
