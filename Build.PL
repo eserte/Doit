@@ -33,20 +33,7 @@ my $Build_PL_file_contents = do {
 my $Build_PL_md5hex = md5_hex $Build_PL_file_contents;
 
 if (basename($0) eq 'Build.PL') {
-    if (@ARGV) {
-	error "Extra arguments found: '@ARGV'";
-    }
-    {
-	if (-l "Build") { # formerly this used to be a symlink
-	    $doit->unlink("Build");
-	}
-	$doit->write_binary('Build', <<"EOF" . $Build_PL_file_contents);
-#! $Config{perlpath}
-# MD5: $Build_PL_md5hex
-EOF
-	$doit->chmod(0755, 'Build');
-    }
-    exit;
+    _Build_PL_mode();
 }
 
 # Check if Build is up-to-date (md5 check, no timestamp check)
@@ -72,13 +59,22 @@ EOF
 }
 
 require Getopt::Long;
-my $opt_verbose = 0;
-my $opt_uninst = 0;
-my $opt_destdir = '';
+my %opt = (verbose => 0, uninst => 0, destdir => '', create_packlist => 1);
+$Build_PL::ARGV=$Build_PL::ARGV if 0; # cease -w
+@ARGV = (@$Build_PL::ARGV, @ARGV);
 Getopt::Long::GetOptions(
-    "verbose" => \$opt_verbose,
-    "uninst" => \$opt_uninst,
-    "destdir=s" => \$opt_destdir,
+    \%opt,
+    'allow_mb_mismatch=i',
+    'config=s%',
+    'create_packlist=i',
+    'destdir=s',
+    'installdirs=s',
+    'install_path=s%',
+    'prefix=s',
+    'uninst:1',
+    'verbose:1',
+    'versionlib=s',
+    'version=s',
 )
     or error "usage: $0 [options]";
 
@@ -109,6 +105,8 @@ sub build {
 sub clean {
     $doit->remove_tree('blib');
 }
+
+sub realclean { &clean }
 
 sub test {
     $doit->system(_prove_path(), '-b', 't'); # use right perl?
@@ -172,31 +170,46 @@ sub install {
     my @euii_args = (
 	from_to => {
 	    (
-		0 # XXX add condition for perl installs
-		? (
+		($opt{installdirs}||'') eq 'core'
+		?
+		(
 		    read          => "$Config{archlib}/auto/$FULLEXT/.packlist",
-		    write         => "$opt_destdir$Config{installarchlib}/auto/$FULLEXT/.packlist",
-		    $INST_LIB     => "$opt_destdir$Config{installprivlib}",
-		    $INST_ARCHLIB => "$opt_destdir$Config{installarchlib}",
-		    $INST_BIN     => "$opt_destdir$Config{installbin}",
-		    $INST_SCRIPT  => "$opt_destdir$Config{installscript}",
-		    $INST_MAN1DIR => "$opt_destdir$Config{installman1dir}",
-		    $INST_MAN3DIR => "$opt_destdir$Config{installman3dir}",
+		    ($opt{create_packlist} ? (write => "$opt{destdir}$Config{installarchlib}/auto/$FULLEXT/.packlist") : ()),
+		    $INST_LIB     => "$opt{destdir}$Config{installprivlib}",
+		    $INST_ARCHLIB => "$opt{destdir}$Config{installarchlib}",
+		    $INST_BIN     => "$opt{destdir}$Config{installbin}",
+		    $INST_SCRIPT  => "$opt{destdir}$Config{installscript}",
+		    $INST_MAN1DIR => "$opt{destdir}$Config{installman1dir}",
+		    $INST_MAN3DIR => "$opt{destdir}$Config{installman3dir}",
 		)
-		: (
+		:
+		($opt{installdirs}||'') eq 'vendor'
+		?
+		(
+		    read          => "$Config{vendorlib}/auto/$FULLEXT/.packlist",
+		    ($opt{create_packlist} ? (write => "$opt{destdir}$Config{installarchlib}/auto/$FULLEXT/.packlist") : ()),
+		    $INST_LIB     => "$opt{destdir}$Config{installvendorlib}",
+		    $INST_ARCHLIB => "$opt{destdir}$Config{installvendorarch}",
+		    $INST_BIN     => "$opt{destdir}$Config{installvendorbin}",
+		    $INST_SCRIPT  => "$opt{destdir}$Config{installvendorscript}",
+		    $INST_MAN1DIR => "$opt{destdir}$Config{installvendorman1dir}",
+		    $INST_MAN3DIR => "$opt{destdir}$Config{installvendorman3dir}",
+		)
+		: # default is site
+		(
 		    read          => "$Config{sitearchexp}/auto/$FULLEXT/.packlist",
-		    write         => "$opt_destdir$Config{installarchlib}/auto/$FULLEXT/.packlist",
-		    $INST_LIB     => "$opt_destdir$Config{installsitelib}",
-		    $INST_ARCHLIB => "$opt_destdir$Config{installsitearch}",
-		    $INST_BIN     => "$opt_destdir$Config{installsitebin}",
-		    $INST_SCRIPT  => "$opt_destdir$Config{installsitescript}",
-		    $INST_MAN1DIR => "$opt_destdir$Config{installsiteman1dir}",
-		    $INST_MAN3DIR => "$opt_destdir$Config{installsiteman3dir}",
-		) # XXX need also something for vendor installs
+		    ($opt{create_packlist} ? (write => "$opt{destdir}$Config{installarchlib}/auto/$FULLEXT/.packlist") : ()),
+		    $INST_LIB     => "$opt{destdir}$Config{installsitelib}",
+		    $INST_ARCHLIB => "$opt{destdir}$Config{installsitearch}",
+		    $INST_BIN     => "$opt{destdir}$Config{installsitebin}",
+		    $INST_SCRIPT  => "$opt{destdir}$Config{installsitescript}",
+		    $INST_MAN1DIR => "$opt{destdir}$Config{installsiteman1dir}",
+		    $INST_MAN3DIR => "$opt{destdir}$Config{installsiteman3dir}",
+		)
 	    )
 	},
-	verbose           => $opt_verbose,
-	uninstall_shadows => $opt_uninst,
+	verbose           => $opt{verbose},
+	uninstall_shadows => $opt{uninst},
 	dir_mode          => $PERM_DIR,
     );
     if ($doit->is_dry_run) {
@@ -245,6 +258,22 @@ sub _cover_path {
 	}
     }
     error "No 'prove' for the current perl found";
+}
+
+sub _Build_PL_mode {
+    require Data::Dumper;
+    my $argv_serialized = "\n" . '$Build_PL::ARGV = ' . Data::Dumper->new([\@ARGV], [])->Indent(1)->Useqq(1)->Sortkeys(1)->Terse(1)->Dump . ";\n\n";
+    {
+	if (-l "Build") { # formerly this used to be a symlink
+	    $doit->unlink("Build");
+	}
+	$doit->write_binary('Build', <<"EOF" . $argv_serialized . $Build_PL_file_contents);
+#! $Config{perlpath}
+# MD5: $Build_PL_md5hex
+EOF
+	$doit->chmod(0755, 'Build');
+    }
+    exit;
 }
 
 __END__
