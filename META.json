@@ -1,0 +1,27 @@
+{
+   "abstract" : "a scripting framework",
+   "author" : [
+      "Slaven Rezic <srezic@cpan.org>"
+   ],
+   "dynamic_config" : 1,
+   "generated_by" : "CPAN::Meta::Converter version 2.150010",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Doit",
+   "prereqs" : {
+      "runtime" : {
+         "recommends" : {
+            "IPC::Run" : "0",
+            "Net::OpenSSH" : "0"
+         }
+      }
+   },
+   "release_status" : "stable",
+   "version" : "0.01",
+   "x_serialization_backend" : "JSON::PP version 2.27400_02"
+}

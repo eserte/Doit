@@ -207,6 +207,28 @@ sub install {
     }
 }
 
+sub generate_META_json {
+    require CPAN::Meta;
+    require ExtUtils::MakeMaker;
+    my $meta = CPAN::Meta->new({
+	version  => 1.4,
+	name     => 'Doit',
+	author   => 'Slaven Rezic <srezic@cpan.org>',
+	abstract => 'a scripting framework',
+	license  => 'perl',
+	version  => MM->parse_version("$FindBin::RealBin/lib/Doit.pm"),
+	prereqs  => {
+	    runtime => {
+		recommends => {
+		    'IPC::Run'     => 0,
+		    'Net::OpenSSH' => 0,
+		},
+	    },
+	},
+    });
+    $meta->save("META.json");
+}
+
 sub _prove_path {
     for my $candidate ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}") {
 	if (-x $candidate) {
