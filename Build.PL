@@ -243,7 +243,11 @@ sub generate_META_json {
 }
 
 sub _prove_path {
-    for my $candidate ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}") {
+    my @candidates = ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}");
+    if ($^O eq 'MSWin32') {
+	unshift @candidates, map { "$_.bat"} @candidates;
+    }
+    for my $candidate (@candidates) {
 	if (-x $candidate) {
 	    return $candidate;
 	}
@@ -252,12 +256,16 @@ sub _prove_path {
 }
 
 sub _cover_path {
-    for my $candidate ("$Config{bin}/cover") {
+    my @candidates = ("$Config{bin}/cover");
+    if ($^O eq 'MSWin32') {
+	unshift @candidates, map { "$_.bat"} @candidates;
+    }
+    for my $candidate (@candidates) {
 	if (-x $candidate) {
 	    return $candidate;
 	}
     }
-    error "No 'prove' for the current perl found";
+    error "No 'cover' for the current perl found";
 }
 
 sub _Build_PL_mode {
