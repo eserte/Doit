@@ -15,7 +15,7 @@ package Doit::User;
 
 use strict;
 use warnings;
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Exporter 'import';
 our @EXPORT_OK = qw(as_user);
@@ -67,7 +67,7 @@ sub functions { qw(user_account user_add_user_to_group) }
 sub user_account {
     my($self, %opts) = @_;
 
-    error "Only supported for linux" if $^O ne 'linux';
+    error "Only supported for linux and freebsd" if $^O !~ /^(linux|freebsd)$/;
 
     my $username = delete $opts{username};
     if (!defined $username) { error "'username' is mandatory" }
@@ -91,7 +91,12 @@ sub user_account {
 
     if ($ensure eq 'absent') {
 	if (defined $got_username) {
-	    $self->system('userdel', $username); # XXX what about --remove
+	    my $sys_userdel =
+		(    $^O eq 'linux'   ? sub { $self->system('userdel', $username) } # XXX what about --remove?
+		   : $^O eq 'freebsd' ? sub { $self->system('pw', 'userdel', $username) } # XXX what about -r?
+		   :                    sub { error "userdel NYI for $^O" }
+		);
+	    $sys_userdel->();
 	}
     } elsif ($ensure ne 'present') {
 	error "Valid values for 'ensure': 'absent', 'present' (got: '$ensure')\n";
@@ -108,10 +113,14 @@ sub user_account {
 	     || (!defined $got_uid)
 	    )
 	   ) {
-	    push @args, '--uid', $uid;
+	    push @args, ($^O eq 'linux' ? '--uid' : $^O eq 'freebsd' ? '-u' : error "NYI"), $uid;
 	}
 	if ($cmd eq 'useradd') {
-	    push @args, '--user-group';
+	    if ($^O eq 'linux') {
+		push @args, '--user-group';
+	    } elsif ($^O eq 'freebsd') {
+		# done automatically
+	    }
 	}
 	## XXX?
 	#if (defined $uid &&
@@ -128,9 +137,13 @@ sub user_account {
 	     || (!defined $got_home)
 	    )
 	   ) {
-	    push @args, '--home', $home, '--create-home';
+	    push @args, ($^O eq 'linux'   ? ('--home', $home, '--create-home') :
+			 $^O eq 'freebsd' ? ('-d',     $home, '-m') :
+			 error "NYI");
 	} elsif ($cmd eq 'useradd') {
-	    push @args, '--create-home';
+	    push @args, ($^O eq 'linux'   ? ('--create-home') :
+			 $^O eq 'freebsd' ? ('-m') :
+			 error "NYI");
 	}
 	if (defined $shell &&
 	    (
@@ -138,18 +151,26 @@ sub user_account {
 	     || (!defined $got_shell)
 	    )
 	   ) {
-	    push @args, '--shell', $shell;
+	    push @args, ($^O eq 'linux'   ? '--shell' :
+			 $^O eq 'freebsd' ? '-s' :
+			 error "NYI"), $shell;
 	}
 	if (@groups) {
 	    my @got_groups = sort _get_user_groups($username);
 	    my @want_groups = sort @groups;
 	    if ("@want_groups" ne "@got_groups") {
-		push @args, '--groups', join(",", @groups);
+		push @args, ($^O eq 'linux'   ? '--groups' :
+			     $^O eq 'freebsd' ? '-G' :
+			     error "NYI"), join(",", @groups);
 	    }
 	}
 	if ($cmd eq 'useradd' || @args) {
 	    local $ENV{PATH} = "/usr/sbin:$ENV{PATH}";
-	    $self->system($cmd, @args, $username);
+	    if      ($^O eq 'linux') {
+		$self->system($cmd, @args, $username);
+	    } elsif ($^O eq 'freebsd') {
+		$self->system('pw', $cmd, @args, '-n', $username);
+	    }
 	}
 
 	if (!$self->is_dry_run) {
@@ -188,7 +209,13 @@ sub user_add_user_to_group {
     if (!defined $group) { error "group is mandatory" }
     my %user_groups = map{($_,1)} _get_user_groups($username);
     if (!$user_groups{$group}) {
-	$self->system('usermod', '--append', '--groups', $group, $username);
+	if      ($^O eq 'linux') {
+	    $self->system('usermod', '--append', '--groups', $group, $username);
+	} elsif ($^O eq 'freebsd') {
+	    $self->system('pw', 'groupmod', '-m', $username, '-n', $group);
+	} else {
+	    error "user_add_user_to_group NYI for $^O";
+	}
     }
 }
 
