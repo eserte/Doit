@@ -543,6 +543,7 @@ use warnings;
 	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
 	my $quiet = delete $options->{quiet};
 	my $info = delete $options->{info};
+	my $statusref = delete $options->{statusref};
 	error "Unhandled options: " . join(" ", %$options) if %$options;
 
 	my $code = sub {
@@ -550,8 +551,14 @@ use warnings;
 		or error "Error running '@args': $!";
 	    local $/;
 	    my $buf = <$fh>;
-	    close $fh
-		or _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "qx command '@args' failed: ") : ());
+	    close $fh;
+	    if ($statusref) {
+		%$statusref = ( _analyze_dollar_questionmark );
+	    } else {
+		if ($? != 0) {
+		    _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "qx command '@args' failed: ") : ());
+		}
+	    }
 	    $buf;
 	};
 

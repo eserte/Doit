@@ -36,6 +36,18 @@ use Doit;
 
     ok !eval { $r->info_qx($^X, '-e', 'exit 1'); 1 };
     like $@, qr{qx command '.* -e exit 1' failed: Command exited with exit code 1 at .* line \d+}, 'verbose error message with failed info_qx command';
+
+    {
+	my %status;
+	is $r->qx({statusref => \%status}, $^X, '-e', 'print STDOUT "some output\n"; exit 0'), "some output\n";
+	is $status{exitcode}, 0, 'status reference filled, exit code as expected (success)';
+    }
+
+    {
+	my %status;
+	is $r->qx({statusref => \%status}, $^X, '-e', 'print STDOUT "some output\n"; exit 1'), "some output\n";
+	is $status{exitcode}, 1, 'status reference filled, exit code as expected (failure)';
+    }
 }
 
 {
