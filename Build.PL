@@ -97,7 +97,7 @@ sub build {
 	my $dest = 'blib/'.$file;
 	if (!-e $dest || -M $dest > -M $file) {
 	    $doit->make_path(dirname($dest));
-	    $doit->system('cp', $file, $dest);
+	    $doit->copy($file, $dest);
 	}
     }
 }
