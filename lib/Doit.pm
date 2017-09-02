@@ -112,6 +112,8 @@ use warnings;
 
     use Doit::Log;
 
+    my $diff_error_shown;
+
     sub _new {
 	my $class = shift;
 	my $self = bless { }, $class;
@@ -365,8 +367,11 @@ use warnings;
 				 if (-e $real_to) {
 				     my $diff;
 				     if (eval { require IPC::Run; 1 }) {
-					 IPC::Run::run(['diff', '-u', $to, $from], '>', \$diff);
-					 "copy $from $to\ndiff:\n$diff";
+					 if (eval { IPC::Run::run(['diff', '-u', $to, $from], '>', \$diff); 1 }) {
+					     "copy $from $to\ndiff:\n$diff";
+					 } else {
+					     "copy $from $to\n(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+					 }
 				     } else {
 					 $diff = `diff -u '$to' '$from'`;
 					 "copy $from $to\ndiff:\n$diff";
@@ -735,8 +740,6 @@ use warnings;
 	Doit::Commands->new(@commands);
     }
 
-    my $diff_error_shown;
-
     sub cmd_write_binary {
 	my($self, $filename, $content) = @_;
 
@@ -981,7 +984,9 @@ use warnings;
 			     msg => do {
 				 my $diff;
 				 if (eval { require IPC::Run; 1 }) {
-				     IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff);
+				     if (!eval { IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff); 1 }) {
+					 $diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+				     }
 				 } else {
 				     $diff = `diff -u '$file' '$tmpfile'`;
 				 }
