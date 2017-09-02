@@ -372,7 +372,7 @@ use warnings;
 					 "copy $from $to\ndiff:\n$diff";
 				     }
 				 } else {
-				     "copy $from $to (destination does not exist)\n";
+				     "copy $from $to (destination does not exist)";
 				 }
 			     },
 			     rv => 1,
