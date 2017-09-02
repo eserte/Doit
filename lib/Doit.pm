@@ -1386,7 +1386,11 @@ use warnings;
 		return;
 	    }
 	    open my $oldout, ">&STDOUT" or die $!;
-	    open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
+	    if ($^O eq 'MSWin32') {
+		open STDOUT, '>', 'CON:' or die $!; # XXX????
+	    } else {
+		open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
+	    }
 	    my($rettype, @ret) = $self->{runner}->call_wrapped_method($context, @data);
 	    open STDOUT, ">&", $oldout or die $!;
 	    $self->send_data($rettype, @ret);
