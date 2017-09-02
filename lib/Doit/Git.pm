@@ -42,21 +42,29 @@ sub git_repo_update {
     my $quiet      = delete $opts{quiet};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
-    my $save_pwd = save_pwd2();
-
     my $has_changes = 0;
-    if (-e $directory) {
+    my $do_clone;
+    if (!-e $directory) {
+	$do_clone = 1;
+    } else {
 	if (!-d $directory) {
 	    die "'$directory' exists, but is not a directory\n";
 	}
+	if (!-d "$directory/.git") {
+	    if (_is_dir_empty($directory)) {
+		$do_clone = 1;
+	    } else {
+		die "No .git directory found in non-empty '$directory', refusing to clone...\n";
+	    }
+	}
+    }
+    if (!$do_clone) {
+	my $save_pwd = save_pwd2();
 	chdir $directory
 	    or die "Can't chdir $directory: $!";
-	if (!-d ".git") {
-	    die "No .git directory found in '$directory', refusing to clone...\n";
-	}
 	chomp(my $actual_repository = `git config --get 'remote.$origin.url'`); # XXX should use something "safe"
 	if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
-	    die "remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n";
+	    die "In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n";
 	}
 	if ($quiet) {
 	    # XXX there's no quiet option for system, misuse qx instead
@@ -282,6 +290,20 @@ sub git_config {
 	    }
 	}
     } $directory;
+}
+
+# From https://stackoverflow.com/a/4495524/2332415
+sub _is_dir_empty {
+    my ($dir) = @_;
+
+    opendir my $h, $dir
+        or die "Cannot open directory: '$dir': $!";
+
+    while (defined (my $entry = readdir $h)) {
+        return unless $entry =~ /^[.][.]?\z/;
+    }
+
+    return 1;
 }
 
 # REPO BEGIN

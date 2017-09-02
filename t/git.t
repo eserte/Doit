@@ -94,6 +94,9 @@ SKIP: {
 			   directory => $workdir2,
 			  ), 0, "handling repository_aliases";
 
+    $d->mkdir("$dir/empty_exists");
+    $d->git_repo_update(repository => "$workdir/.git", directory => "$dir/empty_exists");
+    ok -d "$dir/empty_exists/.git";
 }
 
 chdir "/"; # for File::Temp cleanup
@@ -130,6 +133,7 @@ sub run_tests {
     }, $directory);
 
     $d->mkdir("$dir/exists");
+    $d->create_file_if_nonexisting("$dir/exists/make_directory_non_empty");
     eval { $d->git_repo_update(repository => $repository, directory => "$dir/exists") };
     like $@, qr{No .git directory found in};
 
