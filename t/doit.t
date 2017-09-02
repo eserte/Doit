@@ -93,9 +93,9 @@ $r->remove_tree("decl-test", "decl-deep/test");
 ok ! -d "decl-deep/test";
 $r->remove_tree("decl-test", "decl-deep/test");
 if ($^O eq 'MSWin32') { # date is interactive on Windows
-    $r->system(qw(echo hello));
+    $r->system($^X, '-le', 'print q{hello}');
     if ($has_ipc_run) {
-	$r->run([qw(echo hello)]);
+	$r->run([$^X, '-le', 'print q{hello}']);
     }
 } else {
     $r->system("date");
@@ -106,10 +106,10 @@ if ($^O eq 'MSWin32') { # date is interactive on Windows
 $r->system("hostname", "-f");
 if ($has_ipc_run) {
     $r->run(["hostname", "-f"]);
-    $r->cond_run(cmd => [qw(echo unconditional cond_run)]);
-    $r->cond_run(if => sub { 1 }, cmd => [qw(echo always true)]);
-    $r->cond_run(if => sub { 0 }, cmd => [qw(echo), 'never true, should never happen!!!']);
-    $r->cond_run(if => sub { rand(1) < 0.5 }, cmd => [qw(echo yes)]);
+    $r->cond_run(cmd => [$^X, '-le', 'print q(unconditional cond_run)']);
+    $r->cond_run(if => sub { 1 }, cmd => [$^X, '-le', 'print q(always true)']);
+    $r->cond_run(if => sub { 0 }, cmd => [$^X, '-le', 'print q(never true, should never happen!!!)']);
+    $r->cond_run(if => sub { rand(1) < 0.5 }, cmd => [$^X, '-le', 'print q(yes)']);
 }
 
 $r->install_generic_cmd('never_executed', sub { 0 }, sub { die "never executed" });
