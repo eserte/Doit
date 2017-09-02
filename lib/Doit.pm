@@ -425,6 +425,16 @@ use warnings;
 	Doit::Exception::throw($msg, %res);
     }
 
+    sub _show_cwd ($) {
+	my $flag = shift;
+	if ($flag) {
+	    require Cwd;
+	    " (in " . Cwd::getcwd() . ")";
+	} else {
+	    "";
+	}
+    }
+
     sub cmd_open2 {
 	my($self, @args) = @_;
 	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
@@ -641,6 +651,9 @@ use warnings;
 
     sub cmd_system {
 	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	my $show_cwd = delete $options->{show_cwd};
+	error "Unhandled options: " . join(" ", %$options) if %$options;
 	my @commands;
 	push @commands, {
 			 code => sub {
@@ -649,7 +662,7 @@ use warnings;
 				 _handle_dollar_questionmark;
 			     }
 			 },
-			 msg  => "@args",
+			 msg  => "@args" . _show_cwd($show_cwd),
 			};
 	Doit::Commands->new(@commands);
     }

@@ -18,6 +18,19 @@ my $r = Doit->init;
 $r->system('true');
 pass 'no exception';
 
+SKIP: {
+    skip "Requires Capture::Tiny", 1
+	if !eval { require Capture::Tiny; 1 };
+    my $save_pwd = save_pwd2();
+    chdir "/";
+    my($stdout, $stderr) = Capture::Tiny::capture
+	(sub {
+	     $r->system({show_cwd=>1}, 'echo', 'hello');
+	 });
+    is $stdout, "hello\n";
+    like $stderr, qr{INFO:.*echo hello \(in /\)};
+}
+
 eval { $r->system('false') };
 like $@, qr{^Command exited with exit code 1};
 is $@->{exitcode}, 1;
@@ -42,5 +55,30 @@ SKIP: {
     is $@->{signalnum}, 6;
     is $@->{coredump}, 'with';
 }
+
+# REPO BEGIN
+# REPO NAME save_pwd2 /home/eserte/src/srezic-repository 
+# REPO MD5 d0ad5c46f2276dc8aff7dd5b0a83ab3c
+
+BEGIN {
+    sub save_pwd2 {
+	require Cwd;
+	my $pwd = Cwd::getcwd();
+	if (!defined $pwd) {
+	    warn "No known current working directory";
+	}
+	bless {cwd => $pwd}, __PACKAGE__ . '::SavePwd2';
+    }
+    my $DESTROY = sub {
+	my $self = shift;
+	if (defined $self->{cwd}) {
+	    chdir $self->{cwd}
+	        or die "Can't chdir to $self->{cwd}: $!";
+	}
+    };
+    no strict 'refs';
+    *{__PACKAGE__.'::SavePwd2::DESTROY'} = $DESTROY;
+}
+# REPO END
 
 __END__
