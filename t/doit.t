@@ -92,9 +92,16 @@ $r->rmdir("decl-test");
 $r->remove_tree("decl-test", "decl-deep/test");
 ok ! -d "decl-deep/test";
 $r->remove_tree("decl-test", "decl-deep/test");
-$r->system("date");
-if ($has_ipc_run) {
-    $r->run(["date"]);
+if ($^O eq 'MSWin32') { # date is interactive on Windows
+    $r->system(qw(echo hello));
+    if ($has_ipc_run) {
+	$r->run([qw(echo hello)]);
+    }
+} else {
+    $r->system("date");
+    if ($has_ipc_run) {
+	$r->run(["date"]);
+    }
 }
 $r->system("hostname", "-f");
 if ($has_ipc_run) {
