@@ -62,7 +62,7 @@ sub git_repo_update {
 	my $save_pwd = save_pwd2();
 	chdir $directory
 	    or die "Can't chdir $directory: $!";
-	chomp(my $actual_repository = `git config --get 'remote.$origin.url'`); # XXX should use something "safe"
+	chomp(my $actual_repository = eval { $self->info_qx({quiet=>1}, qw(git config --get), "remote.$origin.url") });
 	if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
 	    die "In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n";
 	}
