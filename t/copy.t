@@ -37,12 +37,13 @@ $d->copy("$tempdir/srcfile", "$tempdir/destdir2");
 pass 'no copy, unchanged file';
 
 $d->change_file("$tempdir/srcfile", {add_if_missing => "a new line"});
+my $new_contents = slurp("$tempdir/srcfile");
 
 $d->copy("$tempdir/srcfile", "$tempdir/destdir1/destfile");
-is slurp("$tempdir/destdir1/destfile"), "source data\na new line\n", 'copy was again done after changed file';
+is slurp("$tempdir/destdir1/destfile"), $new_contents, 'copy was again done after changed file';
 
 $d->copy("$tempdir/srcfile", "$tempdir/destdir2");
-is slurp("$tempdir/destdir2/srcfile"), "source data\na new line\n", 'copy was again done after changed file';
+is slurp("$tempdir/destdir2/srcfile"), $new_contents, 'copy was again done after changed file';
 
 # copy to non-existent directory
 eval { $d->copy("$tempdir/srcfile", "$tempdir/non-existent-directory/destfile") };
