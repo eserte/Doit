@@ -70,11 +70,11 @@ sub git_repo_update {
 	    # XXX there's no quiet option for system, misuse qx instead
 	    $self->qx({quiet=>1}, qw(git fetch));
 	} else {
-	    $self->system(qw(git fetch));
+	    $self->system({show_cwd=>1}, qw(git fetch));
 	}
 	my $status = $self->git_short_status;
 	if ($status eq '>') {
-	    $self->system(qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
+	    $self->system({show_cwd=>1}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
 	    $has_changes = 1;
 	} # else: ahead, diverged, or something else
     } else {
