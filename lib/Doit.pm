@@ -735,6 +735,8 @@ use warnings;
 	Doit::Commands->new(@commands);
     }
 
+    my $diff_error_shown;
+
     sub cmd_write_binary {
 	my($self, $filename, $content) = @_;
 
@@ -772,8 +774,11 @@ use warnings;
 				 if ($need_diff) {
 				     if (eval { require IPC::Run; 1 }) {
 					 my $diff;
-					 IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff);
-					 "Replace existing file $filename with diff:\n$diff";
+					 if (eval { IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff); 1 }) {
+					     "Replace existing file $filename with diff:\n$diff";
+					 } else {
+					     "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+					 }
 				     } else {
 					 my $diff;
 					 if (eval { require File::Temp; 1 }) {
