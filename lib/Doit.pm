@@ -929,7 +929,7 @@ use warnings;
 	require File::Temp;
 	require File::Basename;
 	require File::Copy;
-	my($tmfh,$tmpfile) = File::Temp::tempfile('doittemp_XXXXXXXX', UNLINK => 1, DIR => File::Basename::dirname($file));
+	my($tmpfh,$tmpfile) = File::Temp::tempfile('doittemp_XXXXXXXX', UNLINK => 1, DIR => File::Basename::dirname($file));
 	File::Copy::copy($file, $tmpfile)
 		or die "failed to copy $file to temporary file $tmpfile: $!";
 	_copy_stat $file, $tmpfile;
@@ -974,6 +974,7 @@ use warnings;
 	}
 
 	untie @lines;
+	close $tmpfh;
 
 	if ($no_of_changes) {
 	    push @commands, {
