@@ -28,6 +28,10 @@ like $@, qr{\. is not a file};
 
 $r->touch("work-file");
 $r->chmod(0600, "work-file");
+my $got_mode = (stat("work-file"))[2] & 07777;
+if ($^O ne 'MSWin32') { # here it's 0666
+    is $got_mode, 0600, 'chmod worked';
+}
 $changes = $r->change_file("work-file");
 ok -z "work-file", "still empty";
 ok !$changes, 'no changes';
@@ -172,6 +176,6 @@ like $@, qr{match or unless_match is missing};
 
 {
     my @s = stat("work-file");
-    is $s[2]&07777, 0600, 'preserved mode';
+    is $s[2]&07777, $got_mode, 'preserved mode';
 }
 __END__
