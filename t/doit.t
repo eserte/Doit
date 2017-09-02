@@ -103,9 +103,17 @@ if ($^O eq 'MSWin32') { # date is interactive on Windows
 	$r->run(["date"]);
     }
 }
-$r->system("hostname", "-f");
+{
+    my @hostname = ('hostname');
+    if ($^O ne 'MSWin32') {
+	push @hostname, '-f';
+    }
+    $r->system(@hostname);
+    if ($has_ipc_run) {
+	$r->run([@hostname]);
+    }
+}
 if ($has_ipc_run) {
-    $r->run(["hostname", "-f"]);
     $r->cond_run(cmd => [$^X, '-le', 'print q(unconditional cond_run)']);
     $r->cond_run(if => sub { 1 }, cmd => [$^X, '-le', 'print q(always true)']);
     $r->cond_run(if => sub { 0 }, cmd => [$^X, '-le', 'print q(never true, should never happen!!!)']);
