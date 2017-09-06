@@ -242,6 +242,29 @@ sub generate_META_json {
     $meta->save("META.json");
 }
 
+sub debian_package {
+    for my $tool (qw(dh-make-perl rsync)) {
+	$doit->qx('which', $tool); # existence check
+    }
+    require File::Temp;
+    require File::Glob;
+    my $dir = File::Temp::tempdir("Doit_debian_package_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    $doit->system('rsync', '-a', '--exclude=.git', "$FindBin::RealBin/", "$dir/Doit/");
+    my $deb;
+    {
+	my $save_pwd = save_pwd2();
+	chdir "$dir/Doit" or die "Can't chdir to $dir/Doit: $!";
+	$doit->system(qw(dh-make-perl --build --vcs none));
+	my(@debs) = File::Glob::bsd_glob("$dir/*.deb");
+	if (@debs != 1) {
+	    error "Expecting exactly one generated .deb, but got: <@debs>\n";
+	}
+	$deb = $debs[0];
+    }
+    $doit->system('cp', $deb, basename($deb));
+    print basename($deb), "\n";
+}
+
 sub _prove_path {
     my @candidates = ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}");
     if ($^O eq 'MSWin32') {
@@ -283,5 +306,30 @@ EOF
     }
     exit;
 }
+
+# REPO BEGIN
+# REPO NAME save_pwd2 /home/slaven.rezic/src/srezic-repository 
+# REPO MD5 d0ad5c46f2276dc8aff7dd5b0a83ab3c
+
+BEGIN {
+    sub save_pwd2 {
+	require Cwd;
+	my $pwd = Cwd::getcwd();
+	if (!defined $pwd) {
+	    warn "No known current working directory";
+	}
+	bless {cwd => $pwd}, __PACKAGE__ . '::SavePwd2';
+    }
+    my $DESTROY = sub {
+	my $self = shift;
+	if (defined $self->{cwd}) {
+	    chdir $self->{cwd}
+	        or die "Can't chdir to $self->{cwd}: $!";
+	}
+    };
+    no strict 'refs';
+    *{__PACKAGE__.'::SavePwd2::DESTROY'} = $DESTROY;
+}
+# REPO END
 
 __END__
