@@ -250,11 +250,18 @@ sub debian_package {
     require File::Glob;
     my $dir = File::Temp::tempdir("Doit_debian_package_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
     $doit->system('rsync', '-a', '--exclude=.git', "$FindBin::RealBin/", "$dir/Doit/");
+
+    my $version;
+    my $git_describe = eval { $doit->info_qx('git', 'describe') };
+    if (defined $git_describe && $git_describe =~ m{^([0-9\.]+)-(\d+)-g(.*)}) {
+	$version = $1."+git".$2."+".$3."-1"; # XXX make debian_revision configurable? when to add things like "ubuntu3"? make it completely configurable?
+    }
+
     my $deb;
     {
 	my $save_pwd = save_pwd2();
 	chdir "$dir/Doit" or die "Can't chdir to $dir/Doit: $!";
-	$doit->system(qw(dh-make-perl --build --vcs none));
+	$doit->system(qw(dh-make-perl --build --vcs none), (defined $version ? ('--version', $version) : ()));
 	my(@debs) = File::Glob::bsd_glob("$dir/*.deb");
 	if (@debs != 1) {
 	    error "Expecting exactly one generated .deb, but got: <@debs>\n";
