@@ -1732,7 +1732,19 @@ use warnings;
 		if ($self->{debug}) {
 		    info "Reaping process $pid...";
 		}
-		my $got_pid = waitpid $pid, &POSIX::WNOHANG;
+		my $start_time = time;
+		my $got_pid = Doit::RPC::gentle_retry(
+		    code => sub {
+			waitpid $pid, &POSIX::WNOHANG;
+		    },
+		    retry_msg_code => sub {
+			my($seconds) = @_;
+			if (time - $start_time >= 2) {
+			    info "can't reap process $pid, sleep for $seconds seconds";
+			}
+		    },
+		    fast_sleep => 0.01,
+		);
 		if (!$got_pid) {
 		    warning "Could not reap process $pid...";
 		}
