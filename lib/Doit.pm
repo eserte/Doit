@@ -1235,6 +1235,34 @@ use warnings;
 	}
     }
 
+    sub gentle_retry {
+	my(%opts) = @_;
+	my $code           = delete $opts{code} || die "code is mandatory";
+	my $tries          = delete $opts{tries} || 20;
+	my $fast_tries     = delete $opts{fast_tries} || int($tries/2);
+	my $slow_sleep     = delete $opts{slow_sleep} || 1;
+	my $fast_sleep     = delete $opts{fast_sleep} || 0.1;
+	my $retry_msg_code = delete $opts{retry_msg_code};
+	my $fail_info_ref  = delete $opts{fail_info_ref};
+	die "Unhandled options: " . join(" ", %opts) if %opts;
+
+	for my $try (1..$tries) {
+	    my $ret = $code->(fail_info_ref => $fail_info_ref, try => $try);
+	    return $ret if $ret;
+	    my $sleep_sub;
+	    if ($fast_tries && eval { require Time::HiRes; 1 }) {
+		$sleep_sub = \&Time::HiRes::sleep;
+	    } else {
+		$sleep_sub = sub { sleep $_[0] };
+	    }
+	    my $seconds = $try <= $fast_tries && defined &Time::HiRes::sleep ? $fast_sleep : $slow_sleep;
+	    $retry_msg_code->($seconds) if $retry_msg_code;
+	    $sleep_sub->($seconds);
+	}
+
+	undef;
+    }
+
 }
 
 {
@@ -1655,27 +1683,24 @@ use warnings;
 	$d->("Start communication process (pid $$)...");
 
 	my $tries = 20;
-	my $sock;
 	my $sock_err;
-	{
-	    my $sleep;
-	    for my $try (1..$tries) {
-		$sock = IO::Socket::UNIX->new(
-					      Type => SOCK_STREAM(),
-					      Peer => $peer,
-					     );
-		last if $sock;
-		$sock_err = "(peer=$peer, errno=$!)";
-		if (eval { require Time::HiRes; 1 }) {
-		    $sleep = \&Time::HiRes::sleep;
-		} else {
-		    $sleep = sub { sleep $_[0] };
-		}
-		my $seconds = $try < 10 && defined &Time::HiRes::sleep ? 0.1 : 1;
+	my $sock = Doit::RPC::gentle_retry(
+	    code => sub {
+		my(%opts) = @_;
+		my $sock = IO::Socket::UNIX->new(
+		    Type => SOCK_STREAM(),
+		    Peer => $peer,
+		);
+		return $sock if $sock;
+		${$opts{fail_info_ref}} = "(peer=$peer, errno=$!)";
+		undef;
+	    },
+	    retry_msg_code => sub {
+		my($seconds) = @_;
 		$d->("can't connect, sleep for $seconds seconds");
-		$sleep->($seconds);
-	    }
-	}
+	    },
+	    fail_info_ref => \$sock_err,
+	);
 	if (!$sock) {
 	    die "COMM: Can't connect to socket (after $tries retries) $sock_err";
 	}
