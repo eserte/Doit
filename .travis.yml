@@ -4,7 +4,7 @@ matrix:
   include:
 # First five
     - perl: "5.22"
-      env: WITH_IPC_RUN=1
+      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1
     - perl: "5.20"
     # Actually the perl here does not matter
     - perl: "5.18"
@@ -19,7 +19,7 @@ matrix:
       env: WITH_IPC_RUN=1
     - perl: "5.10"
     - perl: "5.8"
-      env: WITH_IPC_RUN=1
+      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1
     # Actually the perl here does not matter
     - perl: "5.14"
       env: USE_SYSTEM_PERL=1
@@ -37,6 +37,7 @@ install:
  # On Linux run the normal travis-ci install command.
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cpanm --quiet --installdeps --notest .; fi
  - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_IPC_RUN" = 1 ]; then cpanm --quiet --notest IPC::Run; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_NET_OPENSSH" = 1 ]; then cpanm --quiet --notest Net::OpenSSH; fi
 
 addons:
   apt:

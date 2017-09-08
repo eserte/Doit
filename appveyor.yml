@@ -10,6 +10,8 @@ install:
   - if not exist "C:\strawberry" cinst strawberryperl
   - set PATH=C:\strawberry\perl\bin;C:\strawberry\perl\site\bin;C:\strawberry\c\bin;%PATH%
   - cd C:\projects\%APPVEYOR_PROJECT_NAME%
+# XXX --installdeps should work
+  - cpanm --quiet IPC::Run
 #  - cpanm --installdeps .
 
 build_script:
