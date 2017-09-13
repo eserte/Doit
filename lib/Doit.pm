@@ -75,7 +75,22 @@ use warnings;
 
     sub new {
 	my($class, $msg, %opts) = @_;
-	my $level = delete $opts{__level} || 1;
+	my $level = delete $opts{__level} || 'auto';
+	if ($level eq 'auto') {
+	    my $_level = 0;
+	    while() {
+		my @stackinfo = caller($_level);
+		if (!@stackinfo) {
+		    $level = $_level - 1;
+		    last;
+		}
+		if ($stackinfo[1] !~ m{([/\\]|^)Doit\.pm$}) {
+		    $level = $_level;
+		    last;
+		}
+		$_level++;
+	    }
+	}
 	($opts{__package}, $opts{__filename}, $opts{__line}) = caller($level);
 	bless {
 	       __msg  => $msg,
