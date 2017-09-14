@@ -93,6 +93,18 @@ $changes = $r->change_file("work-file",
 		          );
 is $changes, 2, 'two changes';
 
+$changes = $r->change_file({
+			    check => sub {
+				my $file = shift;
+				$r->system($^X, '-nle', 'END { if ($. == 7) { exit 0 } else { die "Expected seven lines in work-file, got $." } }', $file);
+				1;
+			    },
+			   },
+			   "work-file",
+			   {add_if_missing => "add another line"},
+			  );
+is $changes, 1, 'one change, with check';
+
 { # add_after vs. add_after_first vs. add_before vs. add_before_last
     $r->touch('work-file-2');
     $r->chmod(0600, 'work-file-2');
@@ -173,6 +185,16 @@ like $@, qr{action must be a sub reference};
 eval { $r->change_file("work-file",
 		       {}) };
 like $@, qr{match or unless_match is missing};
+
+eval { $r->change_file({
+			check => sub {
+			    die "Simulate failed check";
+			},
+		       },
+		       "work-file",
+		       {add_if_missing => "add another line for the fail-check simulation"},
+		      ) };
+like $@, qr{Simulate failed check};
 
 {
     my @s = stat("work-file");

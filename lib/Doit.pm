@@ -823,12 +823,18 @@ use warnings;
     }
 
     sub cmd_change_file {
-	my($self, $file, @changes) = @_;
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	my $check = delete $options->{check};
+	if ($check && ref $check ne 'CODE') { error "check parameter should be a CODE reference" }
+	error "Unhandled options: " . join(" ", %$options) if %$options;
+
+	my($file, @changes) = @args;
 	if (!-e $file) {
-	    die "$file does not exist";
+	    error "$file does not exist";
 	}
 	if (!-f $file) {
-	    die "$file is not a file";
+	    error "$file is not a file";
 	}
 
 	my $debug;
@@ -994,6 +1000,13 @@ use warnings;
 	if ($no_of_changes) {
 	    push @commands, {
 			     code => sub {
+				 if ($check) {
+				     # XXX maybe it would be good to pass the Doit::Runner object,
+				     #     but unfortunately it's not available at this point ---
+				     #     maybe the code sub should generally get it as first argument?
+				     $check->($tmpfile)
+					 or error "Check on file $file failed";
+				 }
 				 rename $tmpfile, $file
 				     or die "Can't rename $tmpfile to $file: $!";
 			     },
