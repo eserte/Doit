@@ -1571,7 +1571,10 @@ use warnings;
 	my $tty = delete $opts{tty};
 	my $port = delete $opts{port};
 	my $master_opts = delete $opts{master_opts};
-	die "Unhandled options: " . join(" ", %opts) if %opts;
+	my $put_to_remote = delete $opts{put_to_remote} || 'rsync_put'; # XXX ideally this should be determined automatically
+	$put_to_remote =~ m{^(rsync_put|scp_put)$}
+	    or error "Valid values for put_to_remote: rsync_put or scp_put";
+	error "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { host => $host, debug => $debug }, $class;
 	my %ssh_run_opts = (
@@ -1583,7 +1586,8 @@ use warnings;
 	    ($master_opts   ? (master_opts   => $master_opts)   : ()),
 	);
 	my $ssh = Net::OpenSSH->new($host, %ssh_new_opts);
-	$ssh->error and die "Connection error to $host: " . $ssh->error;
+	$ssh->error
+	    and error "Connection error to $host: " . $ssh->error;
 	$self->{ssh} = $ssh;
 	{
 	    my $remote_cmd = "[ ! -d .doit/lib ] && mkdir -p .doit/lib";
@@ -1593,9 +1597,9 @@ use warnings;
 	    $ssh->system(\%ssh_run_opts, $remote_cmd);
 	}
 	if ($0 ne '-e') {
-	    $ssh->rsync_put({verbose => $debug}, $0, ".doit/"); # XXX verbose?
+	    $ssh->$put_to_remote({verbose => $debug}, $0, ".doit/"); # XXX verbose?
 	}
-	$ssh->rsync_put({verbose => $debug}, __FILE__, ".doit/lib/");
+	$ssh->$put_to_remote({verbose => $debug}, __FILE__, ".doit/lib/");
 	{
 	    my %seen_dir;
 	    for my $component (@components) {
@@ -1607,7 +1611,7 @@ use warnings;
 		    $ssh->system(\%ssh_run_opts, "[ ! -d $target_dir ] && mkdir -p $target_dir");
 		    $seen_dir{$target_dir} = 1;
 		}
-		$ssh->rsync_put({verbose => $debug}, $from, $full_target);
+		$ssh->$put_to_remote({verbose => $debug}, $from, $full_target);
 	    }
 	}
 
