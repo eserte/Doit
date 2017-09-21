@@ -280,6 +280,45 @@ sub _debian_package {
     print basename($deb), "\n";
 }
 
+sub debian_package_with_docker {
+    my $distro_spec = $ENV{DISTRO_SPEC};
+    if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
+	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
+    }
+    require File::Temp;
+    my $dir = File::Temp::tempdir("Doit_debian_package_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    $doit->add_component('git');
+    $doit->git_repo_update(
+	repository => $FindBin::RealBin,
+	directory  => $dir,
+	#no: clone_opts => [qw(--depth=1)],
+    );
+    $doit->write_binary("$dir/docker-compose.yml", <<"EOF");
+build: 
+    build: .
+    command: sh -c 'perl Build.PL && ./Build debian_package && cp *.deb /pkg'
+    volumes: 
+        - .:/data
+        - /tmp:/pkg
+    working_dir: /data
+EOF
+    $doit->write_binary("$dir/Dockerfile", <<"EOF");
+FROM $distro_spec
+MAINTAINER Slaven Rezic "srezic\@cpan.org"
+
+ENV DEBIAN_FRONTEND noninteractive 
+
+RUN apt-get update && apt-get install -y \\
+    dh-make-perl \\
+    lsb-release \\
+    rsync \\
+    libipc-run-perl \\
+    libnet-openssh-perl
+EOF
+    chdir $dir or die "Can't chdir to $dir: $!";
+    $doit->system('docker-compose', 'run', 'build');
+}
+
 sub _prove_path {
     my @candidates = ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}");
     if ($^O eq 'MSWin32') {
