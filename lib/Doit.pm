@@ -1492,6 +1492,8 @@ use warnings;
 
     use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
 
+    use Doit::Log;
+
     my $socket_count = 0;
 
     sub do_connect {
@@ -1523,7 +1525,17 @@ use warnings;
 	# errors may happen every now and then. Seen on a
 	# debian/jessie system, possibly related to
 	# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=762465
-	system 'sudo', @sudo_opts, 'true';
+	{
+	    my @cmd = ('sudo', @sudo_opts, 'true');
+	    system @cmd;
+	    if ($? != 0) {
+		# Possible cases:
+		# - sudo is not installed
+		# - sudo authentication is not possible or user entered wrong password
+		# - true is not installed (hopefully this never happens on Unix systems)
+		error "Command '@cmd' failed";
+	    }
+	}
 
 	# On linux use Linux Abstract Namespace Sockets ---
 	# invisible and automatically cleaned up. See man 7 unix.
