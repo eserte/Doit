@@ -248,6 +248,9 @@ sub generate_META_json {
     $meta->save("META.json");
 }
 
+# XXX the debian package build functionality should go into
+# a separate Doit component
+
 sub debian_package {
     _debian_package('--depends' => 'perl, libnet-openssh-perl, libipc-run-perl', '--add-distro-version' => '1');
 }
@@ -255,9 +258,12 @@ sub debian_package {
 sub _debian_package {
     my(%opts) = @_;
 
-    for my $tool (qw(dh-make-perl rsync)) {
+    for my $tool (qw(dh-make-perl rsync)) { # XXX maybe add git here?
 	$doit->qx('which', $tool); # existence check
     }
+
+    # XXX optionally support inplace operation without rsync ---
+    # useful e.g. for docker builds
     require File::Temp;
     require File::Glob;
     my $dir = File::Temp::tempdir("Doit_debian_package_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
@@ -266,7 +272,7 @@ sub _debian_package {
     my $version = delete $opts{'--version'};
     my $add_distro_version = delete $opts{'--add-distro-version'};
     if (!defined $version) {
-	my $git_describe = eval { $doit->info_qx('git', 'describe') };
+	my $git_describe = eval { $doit->info_qx('git', 'describe') }; # XXX what if this fails? Optionally made fatal?
 	if (defined $git_describe && $git_describe =~ m{^([0-9\.]+)-(\d+)-g(.*)}) {
 	    $version = $1."+git".$2."+".$3."-1"; # XXX make "1" configurable?
 	    if ($add_distro_version) {
@@ -306,7 +312,7 @@ sub debian_package_with_docker {
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
-    for my $tool (qw(docker-compose)) {
+    for my $tool (qw(docker)) {
 	$doit->qx('which', $tool); # existence check
     }
     require File::Temp;
@@ -315,32 +321,36 @@ sub debian_package_with_docker {
     $doit->git_repo_update(
 	repository => $FindBin::RealBin,
 	directory  => $dir,
-	#no: clone_opts => [qw(--depth=1)],
+	# no: we need the full history for correct git version calculation: clone_opts => [qw(--depth=1)],
     );
-    $doit->write_binary("$dir/docker-compose.yml", <<"EOF");
-build: 
-    build: .
-    command: sh -c 'perl Build.PL && ./Build debian_package && cp *.deb /pkg'
-    volumes: 
-        - .:/data
-        - /tmp:/pkg
-    working_dir: /data
-EOF
     $doit->write_binary("$dir/Dockerfile", <<"EOF");
 FROM $distro_spec
 MAINTAINER Slaven Rezic "srezic\@cpan.org"
 
 ENV DEBIAN_FRONTEND noninteractive 
 
-RUN apt-get update && apt-get install -y \\
+RUN apt-get update && apt-get install -y --no-install-recommends \\
     dh-make-perl \\
     lsb-release \\
     rsync \\
+    git
+
+# XXX This is depending on the current perl module and should be configurable
+RUN apt-get install -y --no-install-recommends \\
     libipc-run-perl \\
     libnet-openssh-perl
+
 EOF
-    chdir $dir or die "Can't chdir to $dir: $!";
-    $doit->system('docker-compose', 'run', 'build');
+    {
+	my $save_pwd = save_pwd2();
+	chdir $dir
+	    or die "Can't chdir to $dir: $!";
+	$doit->system(qw(docker build -t dh-make-perl-build .));
+	$doit->system(
+		      qw(docker run), '-v', "$dir:/data", qw(-v /tmp:/pkg dh-make-perl-build),
+		      'sh', '-c', 'cd /data && perl Build.PL && ./Build debian_package && cp *.deb /pkg'
+		     );
+    }
 }
 
 sub _prove_path {
