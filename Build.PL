@@ -249,7 +249,7 @@ sub generate_META_json {
 }
 
 sub debian_package {
-    _debian_package('--depends' => 'perl, libnet-openssh-perl, libipc-run-perl');
+    _debian_package('--depends' => 'perl, libnet-openssh-perl, libipc-run-perl', '--add-distro-version' => '1');
 }
 
 sub _debian_package {
@@ -264,10 +264,25 @@ sub _debian_package {
     $doit->system('rsync', '-a', '--exclude=.git', "$FindBin::RealBin/", "$dir/Doit/");
 
     my $version = delete $opts{'--version'};
+    my $add_distro_version = delete $opts{'--add-distro-version'};
     if (!defined $version) {
 	my $git_describe = eval { $doit->info_qx('git', 'describe') };
 	if (defined $git_describe && $git_describe =~ m{^([0-9\.]+)-(\d+)-g(.*)}) {
-	    $version = $1."+git".$2."+".$3."-1"; # XXX make debian_revision configurable? when to add things like "ubuntu3"? make it completely configurable?
+	    $version = $1."+git".$2."+".$3."-1"; # XXX make "1" configurable?
+	    if ($add_distro_version) {
+		chomp(my $dist_id = $doit->qx({quiet=>1}, 'lsb_release', '-si'));
+		chomp(my $rel     = $doit->qx({quiet=>1}, 'lsb_release', '-sr'));
+		if ($dist_id eq 'Debian') {
+		    $rel =~ s{^(\d+).*}{$1};
+		    $version .= "+deb${rel}u${add_distro_version}";
+		} elsif ($dist_id eq 'LinuxMit') {
+		    $version .= "+linuxmint${rel}u${add_distro_version}";
+		} elsif ($dist_id eq 'Ubuntu') {
+		    $version .= "~ubuntu${rel}.${add_distro_version}";
+		} else {
+		    error "No distro version support for '$dist_id'";
+		}
+	    }
 	}
     }
 
