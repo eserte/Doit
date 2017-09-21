@@ -306,6 +306,9 @@ sub debian_package_with_docker {
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
+    for my $tool (qw(docker-compose)) {
+	$doit->qx('which', $tool); # existence check
+    }
     require File::Temp;
     my $dir = File::Temp::tempdir("Doit_debian_package_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
     $doit->add_component('git');
