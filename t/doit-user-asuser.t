@@ -34,9 +34,9 @@ sub run {
 return 1 if caller;
 
 my $d = Doit->init;
-my $sudo = $d->do_sudo(sudo_opts => ['-n']);
+my $sudo = eval { $d->do_sudo(sudo_opts => ['-n']) };
+plan skip_all => "Cannot run sudo at all (not installed?)" if !$sudo;
 my $res = eval { $sudo->call('can_run_test') };
-
 plan skip_all => "Cannot run sudo password-less" if $@;
 plan skip_all => "Cannot run test for other reasons" if !$res;
 
