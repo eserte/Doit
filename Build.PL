@@ -32,6 +32,12 @@ my $Build_PL_file_contents = do {
 };
 my $Build_PL_md5hex = md5_hex $Build_PL_file_contents;
 
+for (@ARGV) {
+    if (/.*=.*/) { # looks like oldfashioned options (e.g. "installdirs=vendor")
+	s/^/--/;
+    }
+}
+
 if (basename($0) eq 'Build.PL') {
     _Build_PL_mode();
 }
