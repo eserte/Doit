@@ -17,6 +17,7 @@ use File::Temp 'tempdir';
 use Test::More 'no_plan';
 
 use Doit;
+use Doit::Log (); # don't import: clash with Test::More::note
 
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 chdir $tempdir or die "Can't chdir to $tempdir: $!";
@@ -51,8 +52,13 @@ $r->chmod(0644, "decl-test");
 $r->chmod(0644, "decl-test");
 $r->chown($>, undef, "decl-test");
 $r->chown($>, undef, "decl-test");
-$r->chown(undef, (split / /, $))[1], "decl-test");
-$r->chown(undef, (split / /, $))[1], "decl-test");
+my $another_group = (split / /, $))[1];
+if (defined $another_group) {
+    $r->chown(undef, $another_group, "decl-test");
+    $r->chown(undef, $another_group, "decl-test");
+} else {
+    Doit::Log::info("No other group available for test (we have only gids: $))");
+}
 $r->rename("decl-test", "decl-test3");
 $r->move("decl-test3", "decl-test2");
 $r->rename("decl-test2", "decl-test");
