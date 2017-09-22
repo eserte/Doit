@@ -756,7 +756,11 @@ use warnings;
     }
 
     sub cmd_write_binary {
-	my($self, $filename, $content) = @_;
+	my($self, @args) = @_;
+	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	my $quiet = delete $options->{quiet} || 0;
+	error "Unhandled options: " . join(" ", %$options) if %$options;
+	my($filename, $content) = @args;
 
 	my $doit;
 	my $need_diff;
@@ -781,6 +785,7 @@ use warnings;
 	if ($doit) {
 	    push @commands, {
 			     code => sub {
+				 # XXX make atomic!
 				 open my $ofh, '>', $filename
 				     or die "Can't write to $filename: $!";
 				 binmode $ofh;
@@ -788,35 +793,47 @@ use warnings;
 				 close $ofh
 				     or die "While closing $filename: $!";
 			     },
-			     msg => do {
-				 if ($need_diff) {
-				     if (eval { require IPC::Run; 1 }) {
-					 my $diff;
-					 if (eval { IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff); 1 }) {
-					     "Replace existing file $filename with diff:\n$diff";
+			     ($quiet >= 2
+			      ? ()
+			      : (msg => do {
+				     if ($quiet) {
+					 if ($need_diff) {
+					     "Replace existing file $filename";
 					 } else {
-					     "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+					     "Create new file $filename";
 					 }
 				     } else {
-					 my $diff;
-					 if (eval { require File::Temp; 1 }) {
-					     my($tempfh,$tempfile) = File::Temp::tempfile(UNLINK => 1);
-					     print $tempfh $content;
-					     if (close $tempfh) {
-						 $diff = `diff -u '$filename' '$tempfile'`;
-						 unlink $tempfile;
+					 if ($need_diff) {
+					     # XXX use safe backtick (info_qx) -> no IPC::Run required anymore
+					     if (eval { require IPC::Run; 1 }) {
+						 my $diff;
+						 if (eval { IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff); 1 }) {
+						     "Replace existing file $filename with diff:\n$diff";
+						 } else {
+						     "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+						 }
 					     } else {
-						 $diff = "(diff not available, error in tempfile creation ($!))";
+						 my $diff;
+						 if (eval { require File::Temp; 1 }) {
+						     my($tempfh,$tempfile) = File::Temp::tempfile(UNLINK => 1);
+						     print $tempfh $content;
+						     if (close $tempfh) {
+							 $diff = `diff -u '$filename' '$tempfile'`;
+							 unlink $tempfile;
+						     } else {
+							 $diff = "(diff not available, error in tempfile creation ($!))";
+						     }
+						 } else {
+						     $diff = "(diff not available, neither IPC::Run nor File::Temp available)";
+						 }
+						 "Replace existing file $filename with diff:\n$diff";
 					     }
 					 } else {
-					     $diff = "(diff not available, neither IPC::Run nor File::Temp available)";
+					     "Create new file $filename with content:\n$content";
 					 }
-					 "Replace existing file $filename with diff:\n$diff";
 				     }
-				 } else {
-				     "Create new file $filename with content:\n$content";
 				 }
-			     },
+			     )),
 			    };
 	}
 	Doit::Commands->new(@commands);
