@@ -49,9 +49,9 @@ GetOptions(
     or die "usage: $0 [--other-user username] [--debug]\n";
 
 my $d = Doit->init;
-my $sudo = $d->do_sudo(sudo_opts => ['-n'], debug => $debug);
+my $sudo = eval { $d->do_sudo(sudo_opts => ['-n'], debug => $debug) };
+plan skip_all => "Cannot run sudo" if !$sudo;
 my $res = eval { $sudo->call('run') };
-
 plan skip_all => "Cannot run sudo password-less" if $@;
 plan 'no_plan';
 
