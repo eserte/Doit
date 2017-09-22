@@ -15,7 +15,7 @@ package Doit::User;
 
 use strict;
 use warnings;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Exporter 'import';
 our @EXPORT_OK = qw(as_user);
@@ -56,6 +56,8 @@ use Doit::Log;
 	local $< = $uid;
 	local $> = $uid;
 	local $ENV{HOME} = $homedir;
+	local $ENV{USER} = $user;
+	local $ENV{LOGNAME} = $user;
 
 	$code->();
     }

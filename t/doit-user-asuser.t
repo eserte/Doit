@@ -26,6 +26,9 @@ sub run {
 
 	$res{uname}   = $uname;
 	$res{homedir} = $homedir;
+	$res{homeenv} = $ENV{HOME};
+	$res{userenv} = $ENV{USER};
+	$res{lognameenv} = $ENV{LOGNAME};
     } $ENV{SUDO_USER};
 
     \%res;
@@ -44,8 +47,11 @@ plan 'no_plan';
 
 $res = $sudo->call('run');
 
-is $res->{uname}, $res->{SUDO_USER};
-is $res->{homedir}, $ENV{HOME};
+is $res->{uname}, $res->{SUDO_USER}, 'expected numeric user id (through id command)';
+is $res->{homedir}, $ENV{HOME}, 'expected home directory (through tilde expansion)';
+is $res->{homeenv}, $ENV{HOME}, 'expected home directory (through environment)';
+is $res->{userenv}, $ENV{USER}, 'expected user (through environment)';
+is $res->{lognameenv}, $ENV{LOGNAME}, 'expected logname (through environment)';
 
 ## not needed anymore
 #$sudo->exit;
