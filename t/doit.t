@@ -35,7 +35,7 @@ $r->utime(undef, undef, "decl-test");
 }
 {
     my @s_before = stat "decl-test";
-    $r->create_file_if_nonexisting("decl-test"), 'create_file_if_nonexisting on an existent file';
+    $r->create_file_if_nonexisting("decl-test");
     my @s_after = stat "decl-test";
     # unfortunately perl has integer timestamps, so this test is
     # unlikely to fail, even if we had a problem:
