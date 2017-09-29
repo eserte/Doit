@@ -340,6 +340,42 @@ use warnings;
 	}
     }
 
+    sub cmd_ln_nsf {
+	my($self, $oldfile, $newfile) = @_;
+
+	my $doit = 1;
+	if (!defined $oldfile) {
+	    error "oldfile was not specified for ln_nsf";
+	} elsif (!defined $newfile) {
+	    error "newfile was not specified for ln_nsf";
+	} elsif (-l $newfile) {
+	    my $points_to = readlink $newfile
+		or error "Unexpected: readlink $newfile failed (race condition?)";
+	    if ($points_to eq $oldfile) {
+		$doit = 0;
+	    }
+	} elsif (-d $newfile) {
+	    # Theoretically "ln -nsf destination directory" works (not always,
+	    # e.g. fails with destination=/), but results are not very useful,
+	    # so fail here.
+	    error qq{"$newfile" already exists as a directory};
+	} else {
+	    # probably a file, keep $doit=1
+	}
+
+	my @commands;
+	if ($doit) {
+	    push @commands, {
+			     code => sub {
+				 system 'ln', '-nsf', $oldfile, $newfile;
+				 error "ln -nsf $oldfile $newfile failed" if $? != 0;
+			     },
+			     msg => "ln -nsf $oldfile $newfile",
+			    };
+	}
+	Doit::Commands->new(@commands);
+    }
+
     sub cmd_make_path {
 	my($self, @directories) = @_;
 	my $options = {}; if (ref $directories[-1] eq 'HASH') { $options = pop @directories }
@@ -1217,6 +1253,7 @@ use warnings;
 		 qw(open3 info_open3), # IPC::Open3
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
+		 qw(ln_nsf), # like unix ln -nsf
 		 qw(create_file_if_nonexisting), # does the half of touch
 		 qw(write_binary), # like File::Slurper
 		 qw(change_file), # own invention

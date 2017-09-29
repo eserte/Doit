@@ -68,13 +68,32 @@ ok -e "decl-copy"
 $r->copy("decl-test", "decl-copy"); # no action
 $r->unlink("decl-copy");
 TODO: {
-    todo_skip "symlinks not working on Windows", 2
+    todo_skip "symlinks not working on Windows", 11
 	if $^O eq 'MSWin32';
+
     $r->symlink("tmp/decl-test", "decl-test-symlink");
-    ok -l "decl-test-symlink";
+    ok -l "decl-test-symlink", 'symlink created';
+    is readlink("decl-test-symlink"), "tmp/decl-test", 'symlink points to expected destination';
     $r->symlink("tmp/decl-test", "decl-test-symlink");
+    ok -l "decl-test-symlink", 'symlink still exists';
+    is readlink("decl-test-symlink"), "tmp/decl-test", 'symlink did not change expected destination';
     $r->unlink("decl-test-symlink");
-    ok ! -e "decl-test-symlink";
+    ok ! -e "decl-test-symlink", 'symlink was removed';
+
+    $r->ln_nsf("tmp/decl-test", "decl-test-symlink2");
+    ok -l "decl-test-symlink2", 'symlink created with ln -nsf';
+    is readlink("decl-test-symlink2"), "tmp/decl-test", 'symlink points to expected destination';
+    $r->ln_nsf("tmp/decl-test", "decl-test-symlink2");
+    ok -l "decl-test-symlink2", 'symlink still exists (ln -nsf)';
+    is readlink("decl-test-symlink2"), "tmp/decl-test", 'symlink did not change expected destination';
+    $r->unlink("decl-test-symlink2");
+    ok ! -e "decl-test-symlink2", 'symlink was removed';
+
+    $r->mkdir("dir-for-ln-nsf-test");
+    ok -d "dir-for-ln-nsf-test";
+    eval { $r->ln_nsf("tmp/decl-test", "dir-for-ln-nsf-test") };
+    like $@, qr{"dir-for-ln-nsf-test" already exists as a directory};
+    ok -d "dir-for-ln-nsf-test", 'directory still exists after failed ln -nsf';
 }
 $r->write_binary("decl-test", "some content\n");
 $r->write_binary("decl-test", "some content\n");
