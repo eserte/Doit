@@ -21,6 +21,7 @@ use Digest::MD5 qw(md5_hex);
 use File::Basename;
 use Doit;
 use Doit::Log;
+use Doit::Util qw(in_directory);
 
 my $doit = Doit->init;
 
@@ -293,16 +294,14 @@ sub _debian_package {
     }
 
     my $deb;
-    {
-	my $save_pwd = save_pwd2();
-	chdir "$dir/Doit" or die "Can't chdir to $dir/Doit: $!";
+    in_directory {
 	$doit->system(qw(dh-make-perl --build --vcs none), (defined $version ? ('--version', $version) : ()), %opts);
 	my(@debs) = File::Glob::bsd_glob("$dir/*.deb");
 	if (@debs != 1) {
 	    error "Expecting exactly one generated .deb, but got: <@debs>\n";
 	}
 	$deb = $debs[0];
-    }
+    } "$dir/Doit";
     $doit->system('cp', $deb, basename($deb));
     print basename($deb), "\n";
 }
@@ -341,16 +340,13 @@ RUN apt-get install -y --no-install-recommends \\
     libnet-openssh-perl
 
 EOF
-    {
-	my $save_pwd = save_pwd2();
-	chdir $dir
-	    or die "Can't chdir to $dir: $!";
+    in_directory {
 	$doit->system(qw(docker build -t dh-make-perl-build .));
 	$doit->system(
 		      qw(docker run), '-v', "$dir:/data", qw(-v /tmp:/pkg dh-make-perl-build),
 		      'sh', '-c', 'cd /data && perl Build.PL && ./Build debian_package && cp *.deb /pkg'
 		     );
-    }
+    } $dir;
 }
 
 sub _prove_path {
@@ -394,30 +390,5 @@ EOF
     }
     exit;
 }
-
-# REPO BEGIN
-# REPO NAME save_pwd2 /home/slaven.rezic/src/srezic-repository 
-# REPO MD5 d0ad5c46f2276dc8aff7dd5b0a83ab3c
-
-BEGIN {
-    sub save_pwd2 {
-	require Cwd;
-	my $pwd = Cwd::getcwd();
-	if (!defined $pwd) {
-	    warn "No known current working directory";
-	}
-	bless {cwd => $pwd}, __PACKAGE__ . '::SavePwd2';
-    }
-    my $DESTROY = sub {
-	my $self = shift;
-	if (defined $self->{cwd}) {
-	    chdir $self->{cwd}
-	        or die "Can't chdir to $self->{cwd}: $!";
-	}
-    };
-    no strict 'refs';
-    *{__PACKAGE__.'::SavePwd2::DESTROY'} = $DESTROY;
-}
-# REPO END
 
 __END__

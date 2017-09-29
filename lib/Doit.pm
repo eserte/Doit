@@ -111,6 +111,50 @@ use warnings;
 }
 
 {
+    package Doit::Util;
+    use Exporter 'import';
+    our @EXPORT; BEGIN { @EXPORT = qw(in_directory) }
+    $INC{'Doit/Util.pm'} = __FILE__; # XXX hack
+    use Doit::Log;
+
+    sub in_directory (&$) {
+	my($code, $dir) = @_;
+	my $save_pwd;
+	if (defined $dir) {
+	    $save_pwd = save_pwd2();
+	    chdir $dir
+		or error "Can't chdir to $dir: $!";
+	}
+	$code->();
+    }
+
+    # REPO BEGIN
+    # REPO NAME save_pwd2 /Users/eserte/src/srezic-repository 
+    # REPO MD5 d0ad5c46f2276dc8aff7dd5b0a83ab3c
+    sub save_pwd2 {
+	require Cwd;
+	my $pwd = Cwd::getcwd();
+	if (!defined $pwd) {
+	    warning "No known current working directory";
+	}
+	bless {cwd => $pwd}, __PACKAGE__ . '::SavePwd2';
+    }
+
+    {
+	my $DESTROY = sub {
+	    my $self = shift;
+	    if (defined $self->{cwd}) {
+		chdir $self->{cwd}
+		    or error "Can't chdir to $self->{cwd}: $!";
+	    }
+	};
+	no strict 'refs';
+	*{__PACKAGE__.'::SavePwd2::DESTROY'} = $DESTROY;
+    }
+    # REPO END
+}
+
+{
     package Doit;
 
     our $VERSION = '0.01';

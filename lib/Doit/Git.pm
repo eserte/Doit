@@ -19,18 +19,10 @@ use warnings;
 use vars qw($VERSION);
 $VERSION = '0.01';
 
+use Doit::Util qw(in_directory);
+
 sub new { bless {}, shift }
 sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash git_get_commit_files git_get_changed_files git_is_shallow git_current_branch git_config) }
-
-sub _in_directory (&$) {
-    my($code, $dir) = @_;
-    my $save_pwd;
-    if (defined $dir) {
-	$save_pwd = save_pwd2();
-	chdir $dir or die "Can't chdir to $dir: $!";
-    }
-    $code->();
-}
 
 sub git_repo_update {
     my($self, %opts) = @_;
@@ -59,24 +51,23 @@ sub git_repo_update {
 	}
     }
     if (!$do_clone) {
-	my $save_pwd = save_pwd2();
-	chdir $directory
-	    or die "Can't chdir $directory: $!";
-	chomp(my $actual_repository = eval { $self->info_qx({quiet=>1}, qw(git config --get), "remote.$origin.url") });
-	if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
-	    die "In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n";
-	}
-	if ($quiet) {
-	    # XXX there's no quiet option for system, misuse qx instead
-	    $self->qx({quiet=>1}, qw(git fetch));
-	} else {
-	    $self->system({show_cwd=>1}, qw(git fetch));
-	}
-	my $status = $self->git_short_status;
-	if ($status eq '>') {
-	    $self->system({show_cwd=>1}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
-	    $has_changes = 1;
-	} # else: ahead, diverged, or something else
+	in_directory {
+	    chomp(my $actual_repository = eval { $self->info_qx({quiet=>1}, qw(git config --get), "remote.$origin.url") });
+	    if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
+		die "In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n";
+	    }
+	    if ($quiet) {
+		# XXX there's no quiet option for system, misuse qx instead
+		$self->qx({quiet=>1}, qw(git fetch));
+	    } else {
+		$self->system({show_cwd=>1}, qw(git fetch));
+	    }
+	    my $status = $self->git_short_status;
+	    if ($status eq '>') {
+		$self->system({show_cwd=>1}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
+		$has_changes = 1;
+	    } # else: ahead, diverged, or something else
+	} $directory;
     } else {
 	my @cmd = (qw(git clone --origin), $origin);
 	if ($clone_opts) {
@@ -96,7 +87,7 @@ sub git_short_status {
 
     my $untracked_files = 'normal'; # XXX or "no"? make it configurable?
 
-    _in_directory {
+    in_directory {
 	local $ENV{LC_ALL} = 'C';
 
 	{
@@ -188,7 +179,7 @@ sub git_root {
     my $directory = delete $opts{directory};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
-    _in_directory {
+    in_directory {
 	chomp(my $dir = `git rev-parse --show-toplevel`);
 	$dir;
     } $directory;
@@ -199,7 +190,7 @@ sub git_get_commit_hash {
     my $directory = delete $opts{directory};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
-    _in_directory {
+    in_directory {
 	chomp(my $commit = `git log -1 --format=%H`);
 	$commit;
     } $directory;
@@ -212,7 +203,7 @@ sub git_get_commit_files {
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
     my @files;
-    _in_directory {
+    in_directory {
 	my @cmd = ('git', 'show', $commit, '--pretty=format:', '--name-only');
 	open my $fh, '-|', @cmd
 	    or die "Error running @cmd: $!";
@@ -235,7 +226,7 @@ sub git_get_changed_files {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
     my @files;
-    _in_directory {
+    in_directory {
 	my @cmd = qw(git status --porcelain);
 	open my $fh, '-|', @cmd
 	    or die "Error running @cmd: $!";
@@ -264,7 +255,7 @@ sub git_current_branch {
     my $directory = delete $opts{directory};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
-    _in_directory {
+    in_directory {
 	my $git_root = $self->git_root;
 	my $fh;
 	open $fh, "<", "$git_root/.git/HEAD" and $_ = <$fh> and m{refs/heads/(\S+)} and return $1;
@@ -279,7 +270,7 @@ sub git_config {
     my $val       = delete $opts{val};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
-    _in_directory {
+    in_directory {
 	no warnings 'uninitialized'; # $old_val may be undef
 	chomp(my($old_val) = eval { $self->info_qx({quiet=>1}, qw(git config), $key) });
 	if (!defined $val) {
@@ -305,31 +296,6 @@ sub _is_dir_empty {
 
     return 1;
 }
-
-# REPO BEGIN
-# REPO NAME save_pwd2 /Users/eserte/src/srezic-repository 
-# REPO MD5 d0ad5c46f2276dc8aff7dd5b0a83ab3c
-
-BEGIN {
-    sub save_pwd2 {
-	require Cwd;
-	my $pwd = Cwd::getcwd();
-	if (!defined $pwd) {
-	    warn "No known current working directory";
-	}
-	bless {cwd => $pwd}, __PACKAGE__ . '::SavePwd2';
-    }
-    my $DESTROY = sub {
-	my $self = shift;
-	if (defined $self->{cwd}) {
-	    chdir $self->{cwd}
-	        or die "Can't chdir to $self->{cwd}: $!";
-	}
-    };
-    no strict 'refs';
-    *{__PACKAGE__.'::SavePwd2::DESTROY'} = $DESTROY;
-}
-# REPO END
 
 1;
 

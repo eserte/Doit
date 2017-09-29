@@ -12,6 +12,7 @@ use Test::More;
 
 use Doit;
 use Doit::Extcmd qw(is_in_path);
+use Doit::Util qw(in_directory);
 
 if (!is_in_path('git')) {
     plan skip_all => 'git not in PATH';
@@ -76,8 +77,12 @@ SKIP: {
     run_tests($workdir, $workdir2);
 
     $d->mkdir('subdir');
-    Doit::Git::_in_directory(sub {
+    in_directory {
 	is $d->git_root, $workdir, 'git_root in subdirectory';
+    } 'subdir';
+
+    Doit::Util::in_directory(sub {
+	is $d->git_root, $workdir, 'in_directory call without prototype';
     }, 'subdir');
 
     is $d->git_config(key => "test.key"), undef, 'config key does not exist yet';
@@ -114,7 +119,7 @@ sub run_tests {
     is $d->git_get_commit_hash(directory => $directory), $commit_hash, 'unchanged commit hash';
     is $d->git_repo_update(repository => $repository, directory => $directory, quiet => 1), 0, 'third call is quiet';
 
-    Doit::Git::_in_directory(sub {
+    in_directory {
 	$d->system(qw(git reset --hard HEAD^));
 	is $d->git_short_status, '>', 'remote is now newer';
 
@@ -130,7 +135,7 @@ sub run_tests {
 
 	$d->system(qw(git checkout -b new_branch));
 	is $d->git_current_branch, 'new_branch';
-    }, $directory);
+    } $directory;
 
     $d->mkdir("$dir/exists");
     $d->create_file_if_nonexisting("$dir/exists/make_directory_non_empty");
