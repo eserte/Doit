@@ -281,7 +281,7 @@ sub _debian_package {
 		if ($dist_id eq 'Debian') {
 		    $rel =~ s{^(\d+).*}{$1};
 		    $version .= "+deb${rel}u${add_distro_version}";
-		} elsif ($dist_id eq 'LinuxMit') {
+		} elsif ($dist_id eq 'LinuxMint') {
 		    $version .= "+linuxmint${rel}u${add_distro_version}";
 		} elsif ($dist_id eq 'Ubuntu') {
 		    $version .= "~ubuntu${rel}.${add_distro_version}";
