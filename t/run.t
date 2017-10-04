@@ -8,7 +8,6 @@
 use strict;
 use Test::More;
 
-plan skip_all => "Signals are problematic on Windows" if $^O eq 'MSWin32';
 plan skip_all => "no IPC::Run installed (highly recommended, but optional)" if !eval { require IPC::Run; 1 };
 plan 'no_plan';
 
@@ -16,22 +15,31 @@ use Doit;
 
 my $r = Doit->init;
 
-$r->run('true');
+$r->run($^X, '-e', 'exit 0');
 pass 'no exception';
 
-eval { $r->run('false') };
+eval { $r->run($^X, '-e', 'exit 1') };
 like $@, qr{^Command exited with exit code 1};
 is $@->{exitcode}, 1;
 
-eval { $r->run([$^X, '-e', 'kill TERM => $$']) };
-like $@, qr{^Command died with signal 15, without coredump};
-is $@->{signalnum}, 15;
-is $@->{coredump}, 'without';
+SKIP: {
+    skip "kill TERM not supported on Windows' system()", 3 if $^O eq 'MSWin32';
+    eval { $r->run([$^X, '-e', 'kill TERM => $$']) };
+    like $@, qr{^Command died with signal 15, without coredump};
+    is $@->{signalnum}, 15;
+    is $@->{coredump}, 'without';
+}
 
 eval { $r->run([$^X, '-e', 'kill KILL => $$']) };
-like $@, qr{^Command died with signal 9, without coredump};
-is $@->{signalnum}, 9;
-is $@->{coredump}, 'without';
+if ($^O eq 'MSWin32') {
+    # There does not seem to be any signal handling on Windows
+    # --- exit(9) and kill KILL is indistinguishable here.
+    like $@, qr{^Command exited with exit code 9};
+} else {
+    like $@, qr{^Command died with signal 9, without coredump};
+    is $@->{signalnum}, 9;
+    is $@->{coredump}, 'without';
+}
 
 SKIP: {
     skip "No BSD::Resource available", 1

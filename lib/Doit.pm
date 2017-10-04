@@ -622,6 +622,8 @@ use warnings;
 	my $instr = delete $options->{instr}; $instr = '' if !defined $instr;
 	error "Unhandled options: " . join(" ", %$options) if %$options;
 
+	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
+
 	require IPC::Open2;
 
 	my $code = sub {
@@ -663,6 +665,8 @@ use warnings;
 	my $errref = delete $options->{errref};
 	my $statusref = delete $options->{statusref};
 	error "Unhandled options: " . join(" ", %$options) if %$options;
+
+	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
 
 	require IO::Select;
 	require IPC::Open3;
@@ -734,6 +738,8 @@ use warnings;
 	my $info = delete $options->{info};
 	my $statusref = delete $options->{statusref};
 	error "Unhandled options: " . join(" ", %$options) if %$options;
+
+	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
 
 	my $code = sub {
 	    open my $fh, '-|', @args

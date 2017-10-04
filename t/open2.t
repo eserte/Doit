@@ -8,10 +8,12 @@
 use strict;
 use Test::More;
 
-plan skip_all => "Signals are problematic on Windows" if $^O eq 'MSWin32';
 plan 'no_plan';
 
 use Doit;
+
+TODO: {
+    todo_skip "Hangs on Windows, need to check why", 1 if $^O eq 'MSWin32';
 
 {
     my $r = Doit->init;
@@ -48,5 +50,6 @@ use Doit;
     is $dry_run->info_open2({instr=>"input"}, $^X, '-e', 'print scalar <STDIN>'), "input", 'info_open2 behaves like info=>1';
 }
 
+} # TODO
 
 __END__

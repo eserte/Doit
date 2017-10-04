@@ -8,7 +8,6 @@
 use strict;
 use Test::More;
 
-plan skip_all => "Signals are problematic on Windows" if $^O eq 'MSWin32';
 plan 'no_plan';
 
 use Doit;
@@ -16,7 +15,7 @@ use Doit::Util qw(in_directory);
 
 my $r = Doit->init;
 
-$r->system('true');
+$r->system($^X, '-e', 'exit 0');
 pass 'no exception';
 
 SKIP: {
@@ -28,23 +27,33 @@ SKIP: {
 		 $r->system({show_cwd=>1}, 'echo', 'hello');
 	     });
 	is $stdout, "hello\n";
-	like $stderr, qr{INFO:.*echo hello \(in /\)};
+	my $rootdir = $^O eq 'MSWin32' ? qr{.:/} : qr{/};
+	like $stderr, qr{INFO:.*echo hello \(in $rootdir\)};
     } "/";
 }
 
-eval { $r->system('false') };
+eval { $r->system($^X, '-e', 'exit 1') };
 like $@, qr{^Command exited with exit code 1};
 is $@->{exitcode}, 1;
 
-eval { $r->system($^X, '-e', 'kill TERM => $$') };
-like $@, qr{^Command died with signal 15, without coredump};
-is $@->{signalnum}, 15;
-is $@->{coredump}, 'without';
+SKIP: {
+    skip "kill TERM not supported on Windows' system()", 3 if $^O eq 'MSWin32';
+    eval { $r->system($^X, '-e', 'kill TERM => $$') };
+    like $@, qr{^Command died with signal 15, without coredump};
+    is $@->{signalnum}, 15;
+    is $@->{coredump}, 'without';
+}
 
 eval { $r->system($^X, '-e', 'kill KILL => $$') };
-like $@, qr{^Command died with signal 9, without coredump};
-is $@->{signalnum}, 9;
-is $@->{coredump}, 'without';
+if ($^O eq 'MSWin32') {
+    # There does not seem to be any signal handling on Windows
+    # --- exit(9) and kill KILL is indistinguishable here.
+    like $@, qr{^Command exited with exit code 9};
+} else {
+    like $@, qr{^Command died with signal 9, without coredump};
+    is $@->{signalnum}, 9;
+    is $@->{coredump}, 'without';
+}
 
 SKIP: {
     skip "No BSD::Resource available", 1
