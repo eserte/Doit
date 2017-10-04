@@ -117,12 +117,12 @@ $r->rmdir("decl-test");
 $r->remove_tree("decl-test", "decl-deep/test");
 ok ! -d "decl-deep/test";
 $r->remove_tree("decl-test", "decl-deep/test");
-if ($^O eq 'MSWin32') { # date is interactive on Windows
-    $r->system($^X, '-le', 'print q{hello}');
-    if ($has_ipc_run) {
-	$r->run([$^X, '-le', 'print q{hello}']);
-    }
-} else {
+$r->system($^X, '-le', 'print q{hello}');
+$r->system($^X, '-le', 'print "hello"');
+if ($has_ipc_run) {
+    $r->run([$^X, '-le', 'print qq{hello}']);
+}
+if ($^O ne 'MSWin32') { # date is interactive on Windows
     $r->system("date");
     if ($has_ipc_run) {
 	$r->run(["date"]);

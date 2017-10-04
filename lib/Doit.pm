@@ -155,6 +155,85 @@ use warnings;
 }
 
 {
+    package Doit::Win32Util;
+
+    # Taken from http://blogs.perl.org/users/graham_knop/2011/12/using-system-or-exec-safely-on-windows.html
+    sub win32_quote_list {
+	my (@args) = @_;
+
+	my $args = join ' ', map { _quote_literal($_) } @args;
+
+	if (_has_shell_metachars($args)) {
+	    # cmd.exe treats quotes differently from standard
+	    # argument parsing. just escape everything using ^.
+	    $args =~ s/([()%!^"<>&|])/^$1/g;
+	}
+	return $args;
+    }
+
+    sub _quote_literal {
+	my ($text) = @_;
+
+	# basic argument quoting.  uses backslashes and quotes to escape
+	# everything.
+	if ($text ne '' && $text !~ /[ \t\n\v"]/) {
+	    # no quoting needed
+	} else {
+	    my @text = split '', $text;
+	    $text = q{"};
+	    for (my $i = 0; ; $i++) {
+		my $bs_count = 0;
+		while ( $i < @text && $text[$i] eq "\\" ) {
+		    $i++;
+		    $bs_count++;
+		}
+		if ($i > $#text) {
+		    $text .= "\\" x ($bs_count * 2);
+		    last;
+		} elsif ($text[$i] eq q{"}) {
+		    $text .= "\\" x ($bs_count * 2 + 1);
+		} else {
+		    $text .= "\\" x $bs_count;
+		}
+		$text .= $text[$i];
+	    }
+	    $text .= q{"};
+	}
+
+	return $text;
+    }
+
+    # direct port of code from win32.c
+    sub _has_shell_metachars {
+	my $string = shift;
+	my $inquote = 0;
+	my $quote = '';
+
+	my @string = split '', $string;
+	for my $char (@string) {
+	    if ($char eq q{%}) {
+		return 1;
+	    } elsif ($char eq q{'} || $char eq q{"}) {
+		if ($inquote) {
+		    if ($char eq $quote) {
+			$inquote = 0;
+			$quote = '';
+		    }
+		} else {
+		    $quote = $char;
+		    $inquote++;
+		}
+	    } elsif ($char eq q{<} || $char eq q{>} || $char eq q{|}) {
+		if ( ! $inquote) {
+		    return 1;
+		}
+	    }
+	}
+	return;
+    }
+}
+
+{
     package Doit;
 
     our $VERSION = '0.01';
@@ -752,6 +831,7 @@ use warnings;
     sub cmd_system {
 	my($self, @args) = @_;
 	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
 	my $show_cwd = delete $options->{show_cwd};
 	error "Unhandled options: " . join(" ", %$options) if %$options;
 	my @commands;
