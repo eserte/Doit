@@ -17,7 +17,11 @@ use Doit::Log qw(info warning error); # "note" unfortunately collides with Test:
 
 plan 'no_plan';
 
-is Doit::Log::_can_coloring(), 1; # as Term::ANSIColor is a prereq for this test, _can_coloring has to be true
+SKIP: {
+    skip "No log coloring on Windows", 1
+	if $^O eq 'MSWin32';
+    is Doit::Log::_can_coloring(), 1; # as Term::ANSIColor is a prereq for this test, _can_coloring has to be true on non-Windows systems
+}
 
 my($stdout, $stderr);
 
@@ -26,7 +30,11 @@ my($stdout, $stderr);
 };
 is $stdout, '';
 is colorstrip($stderr), "INFO: info message\n";
-isnt $stderr, colorstrip($stderr), 'message is colored';
+SKIP: {
+    skip "No log coloring here", 1
+	if !Doit::Log::_can_coloring();
+    isnt $stderr, colorstrip($stderr), 'message is colored';
+}
 
 ($stdout, $stderr) = capture {
     Doit::Log::note "note message";

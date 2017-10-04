@@ -32,7 +32,11 @@ use warnings;
 	my $can_coloring;
 	sub _can_coloring {
 	    return $can_coloring if defined $can_coloring;
-	    $can_coloring = eval { require Term::ANSIColor; 1 } ? 1 : 0;
+	    # XXX What needs to be done to get coloring on Windows?
+	    # XXX Probably should also check if the terminal is ANSI-capable at all
+	    # XXX Probably should not use coloring on non-terminals (but
+	    #     there could be a --color option like in git to force it)
+	    $can_coloring = $^O ne 'MSWin32' && eval { require Term::ANSIColor; 1 } ? 1 : 0;
 	}
     }
 
