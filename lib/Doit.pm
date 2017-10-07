@@ -133,15 +133,22 @@ use warnings;
 	my $self = shift;
 	for my $scope_cleanup (@$self) {
 	    my($code) = $scope_cleanup->{code};
-	    eval {
+	    if ($] >= 5.014) {
+		eval {
+		    $code->();
+		};
+		if ($@) {
+		    # error() will give visual feedback about the problem,
+		    # die() would be left unnoticed. Note that
+		    # an exception in a DESTROY block is not fatal,
+		    # and can be only detected by inspecting $@.
+		    error "Scope cleanup failed: $@";
+		}
+	    } else {
+		# And eval {} in older perl versions would
+		# clobber an outside $@. See
+		# perldoc perl5140delta, "Exception Handling"
 		$code->();
-	    };
-	    if ($@) {
-		# error() will give visual feedback about the problem,
-		# die() would be left unnoticed. Note that
-		# an exception in a DESTROY block is not fatal,
-		# and can be only detected by inspecting $@.
-		error "Scope cleanup failed: $@";
 	    }
 	}
     }

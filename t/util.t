@@ -25,6 +25,7 @@ plan 'no_plan';
 	in_directory {
 	    die "A failure happened";
 	} $change_dir;
+	fail "This should never happen";
     };
     like $@, qr{^A failure happened}, 'exception was propagated';
     is getcwd, $orig_dir, "directory was restored to $orig_dir, in spite of an exception";
