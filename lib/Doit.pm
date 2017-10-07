@@ -115,47 +115,71 @@ use warnings;
 }
 
 {
+    package Doit::ScopeCleanups;
+    $INC{'Doit/ScopeCleanups.pm'} = __FILE__; # XXX hack
+    use Doit::Log;
+
+    sub new {
+	my($class) = @_;
+	bless [], $class;
+    }
+
+    sub add_scope_cleanup {
+	my($self, $code) = @_;
+	push @$self, { code => $code };
+    }
+
+    sub DESTROY {
+	my $self = shift;
+	for my $scope_cleanup (@$self) {
+	    my($code) = $scope_cleanup->{code};
+	    eval {
+		$code->();
+	    };
+	    if ($@) {
+		# error() will give visual feedback about the problem,
+		# die() would be left unnoticed. Note that
+		# an exception in a DESTROY block is not fatal,
+		# and can be only detected by inspecting $@.
+		error "Scope cleanup failed: $@";
+	    }
+	}
+    }
+}
+
+{
     package Doit::Util;
     use Exporter 'import';
-    our @EXPORT; BEGIN { @EXPORT = qw(in_directory) }
+    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup) }
     $INC{'Doit/Util.pm'} = __FILE__; # XXX hack
     use Doit::Log;
 
+    sub new_scope_cleanup (&) {
+	my($code) = @_;
+	my $sc = Doit::ScopeCleanups->new;
+	$sc->add_scope_cleanup($code);
+	$sc;
+    }
+
     sub in_directory (&$) {
 	my($code, $dir) = @_;
-	my $save_pwd;
+	my $scope_cleanup;
 	if (defined $dir) {
-	    $save_pwd = save_pwd2();
+	    require Cwd;
+	    my $pwd = Cwd::getcwd();
+	    if (!defined $pwd) {
+		warning "No known current working directory";
+	    } else {
+		$scope_cleanup = new_scope_cleanup
+		    (sub {
+			 chdir $pwd or error "Can't chdir to $pwd: $!";
+		     });
+	    }
 	    chdir $dir
 		or error "Can't chdir to $dir: $!";
 	}
 	$code->();
     }
-
-    # REPO BEGIN
-    # REPO NAME save_pwd2 /Users/eserte/src/srezic-repository 
-    # REPO MD5 d0ad5c46f2276dc8aff7dd5b0a83ab3c
-    sub save_pwd2 {
-	require Cwd;
-	my $pwd = Cwd::getcwd();
-	if (!defined $pwd) {
-	    warning "No known current working directory";
-	}
-	bless {cwd => $pwd}, __PACKAGE__ . '::SavePwd2';
-    }
-
-    {
-	my $DESTROY = sub {
-	    my $self = shift;
-	    if (defined $self->{cwd}) {
-		chdir $self->{cwd}
-		    or error "Can't chdir to $self->{cwd}: $!";
-	    }
-	};
-	no strict 'refs';
-	*{__PACKAGE__.'::SavePwd2::DESTROY'} = $DESTROY;
-    }
-    # REPO END
 }
 
 {
