@@ -849,6 +849,18 @@ use warnings;
 	Doit::Commands->new(@commands);
     }
 
+    sub cmd_setenv {
+	my($self, $key, $val) = @_;
+	my @commands;
+	if (!defined $ENV{$key} || $ENV{$key} ne $val) {
+	    push @commands, {
+			     code => sub { $ENV{$key} = $val },
+			     msg => qq{set \$ENV{$key} to "$val", previous value was } . (defined $ENV{$key} ? qq{"$ENV{$key}"} : qq{unset}),
+			    };
+	}
+	Doit::Commands->new(@commands);
+    }
+
     sub cmd_symlink {
 	my($self, $oldfile, $newfile) = @_;
 	my $doit;
@@ -938,6 +950,18 @@ use warnings;
 	    push @commands, {
 			     code => sub { unlink @files_to_remove or die $! },
 			     msg  => "unlink @files_to_remove", # shellquote?
+			    };
+	}
+	Doit::Commands->new(@commands);
+    }
+
+    sub cmd_unsetenv {
+	my($self, $key) = @_;
+	my @commands;
+	if (defined $ENV{$key}) {
+	    push @commands, {
+			     code => sub { delete $ENV{$key} },
+			     msg => qq{unset \$ENV{$key}, previous value was "$ENV{$key}"},
 			    };
 	}
 	Doit::Commands->new(@commands);
@@ -1382,6 +1406,7 @@ use warnings;
 		 qw(create_file_if_nonexisting), # does the half of touch
 		 qw(write_binary), # like File::Slurper
 		 qw(change_file), # own invention
+		 qw(setenv unsetenv), # $ENV manipulation
 		) {
 	install_cmd $cmd;
     }
