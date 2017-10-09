@@ -49,7 +49,8 @@ TODO: {
 	is $status{exitcode}, 1, 'status reference filled, exit code as expected (fail)';
     }
 
-    {
+ TODO: {
+	todo_skip "Tests out of sequence with perl 5.8", 1 if $] < 5.010;
 	local $TODO;
 	$TODO = "No expection with older perl versions" if $] < 5.014;
 	my($stderr, %status);
