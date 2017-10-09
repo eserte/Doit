@@ -613,7 +613,13 @@ use warnings;
     }
 
     sub _analyze_dollar_questionmark () {
-	if ($? & 127) {
+	if ($? == -1) {
+	    (
+	        msg       => sprintf("Could not execute command: %s", $!),
+	        errno     => $!,
+	        exitcode  => $?,
+	    );
+	} elsif ($? & 127) {
 	    my $signalnum = $? & 127;
 	    my $coredump = ($? & 128) ? 'with' : 'without';
 	    (

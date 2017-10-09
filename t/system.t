@@ -13,6 +13,8 @@ plan 'no_plan';
 use Doit;
 use Doit::Util qw(in_directory);
 
+use Errno qw(ENOENT);
+
 my $r = Doit->init;
 
 $r->system($^X, '-e', 'exit 0');
@@ -35,6 +37,17 @@ SKIP: {
 eval { $r->system($^X, '-e', 'exit 1') };
 like $@, qr{^Command exited with exit code 1};
 is $@->{exitcode}, 1;
+
+eval { $r->system('this-cmd-does-not-exist-'.$$.'-'.time) };
+if ($^O eq 'MSWin32') {
+    # Different error message on Windows systems
+    like $@, qr{^Command exited with exit code 1 at t\\system.t line \d+};
+    is $@->{exitcode}, 1;
+} else {
+    like $@, qr{^Could not execute command: .* at .*system.t line \d+};
+    is $@->{errno}+0, ENOENT;
+    is $@->{exitcode}, -1;
+}
 
 SKIP: {
     skip "kill TERM not supported on Windows' system()", 3 if $^O eq 'MSWin32';

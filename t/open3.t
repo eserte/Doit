@@ -12,6 +12,8 @@ plan 'no_plan';
 
 use Doit;
 
+use Errno qw(ENOENT);
+
 TODO: {
     todo_skip "Hangs on Windows, need to check why", 1 if $^O eq 'MSWin32';
 
@@ -45,6 +47,14 @@ TODO: {
 	my %status;
 	is $r->open3({errref => \my $stderr, statusref => \%status}, $^X, '-e', 'print STDERR "a warning"; exit 1'), '';
 	is $status{exitcode}, 1, 'status reference filled, exit code as expected (fail)';
+    }
+
+    {
+	local $TODO;
+	$TODO = "No expection with older perl versions" if $] < 5.014;
+	my($stderr, %status);
+	eval { $r->open3({errref => \$stderr, statusref => \%status}, 'this-cmd-does-not-exist-'.$$.'-'.time) };
+	isnt "$@", ''; # error message seems to differ between perl versions
     }
 
     eval { $r->open3($^X, '-e', 'kill TERM => $$') };
