@@ -21,6 +21,10 @@ sub environment {
     };
 }
 
+sub stdout_test {
+    print "This goes to STDOUT\n";
+}
+
 return 1 if caller;
 
 require Test::More;
@@ -40,5 +44,11 @@ is($env->{cwd}, $ENV{HOME}, 'expected cwd is current home directory');
 ## XXX Actually it's unclear what $FindBin::RealBin should return here
 #is($env->{original_realbin}, '???');
 #is($env->{refreshed_realbin}, '???');
+
+# XXX currently the output is not visible ---
+# to work around this problem $|=1 has to be set in the function
+# This should be done automatically.
+# Also, this should be a proper test, e.g. using Capture::Tiny
+$ssh->call_with_runner('stdout_test');
 
 __END__
