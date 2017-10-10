@@ -1505,7 +1505,7 @@ use warnings;
 		if ($self->{debug}) {
 		    info "Reaping process $pid...";
 		}
-		my $got_pid = waitpid $pid, 0; # &POSIX::WNOHANG;
+		my $got_pid = waitpid $pid, &POSIX::WNOHANG;
 		if (!$got_pid) {
 		    warning "Could not reap process $pid...";
 		}
