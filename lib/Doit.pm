@@ -1505,7 +1505,7 @@ use warnings;
 		if ($self->{debug}) {
 		    info "Reaping process $pid...";
 		}
-		my $got_pid = waitpid $pid, &POSIX::WNOHANG;
+		my $got_pid = waitpid $pid, 0; # &POSIX::WNOHANG;
 		if (!$got_pid) {
 		    warning "Could not reap process $pid...";
 		}
@@ -1822,7 +1822,7 @@ use warnings;
 			q{Doit::Comm->comm_to_sock("} . $LASN_PREFIX . $sock_path . q{", debug => shift)}, !!$debug);
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
-	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:");
+	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:", debug => $debug);
 
 	$self;
     }
@@ -1933,7 +1933,7 @@ use warnings;
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
 	$self->{comm_pid} = $comm_pid;
-	$self->{rpc} = Doit::RPC::Client->new($in, $out, label => "ssh:$host");
+	$self->{rpc} = Doit::RPC::Client->new($in, $out, label => "ssh:$host", debug => $debug);
 
 	$self;
     }
