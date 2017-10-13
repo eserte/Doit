@@ -26,6 +26,12 @@ $d->add_component('brew');
 plan skip_all => "No homebrew available" if !$d->can_brew;
 plan 'no_plan';
 
+if ($ENV{TRAVIS}) {
+    # XXX brew install started to fail recently --- maybe updating
+    # first fixes the problem.
+    $d->system(qw(brew update));
+}
+
 {
     my @components = @{ $d->{components} };
     is($components[0]->{relpath}, 'Doit/Brew.pm');
