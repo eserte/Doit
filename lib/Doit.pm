@@ -1783,6 +1783,14 @@ use warnings;
 	my $sudo = Doit::Sudo->do_connect(dry_run => $self->is_dry_run, components => $self->{components}, %opts);
 	$sudo;
     }
+
+    # XXX does this belong here?
+    sub do_fork {
+	my($self, %opts) = @_;
+	$self->add_component(qw(fork));
+	my $fork = Doit::Fork->do_connect(dry_run => $self->is_dry_run, %opts);
+	$fork;
+    }
 }
 
 {
