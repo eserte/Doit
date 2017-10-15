@@ -48,7 +48,14 @@ is($env->{cwd}, $ENV{HOME}, 'expected cwd is current home directory');
 # XXX currently the output is not visible ---
 # to work around this problem $|=1 has to be set in the function
 # This should be done automatically.
+# Another possibility: call $ssh->exit. But this would mean that
+# the output only appears at the exit() call, not before.
 # Also, this should be a proper test, e.g. using Capture::Tiny
 $ssh->call_with_runner('stdout_test');
+
+is($ssh->exit, 'bye-bye', 'exit called'); # XXX hmmm, should this really return "bye-bye"?
+
+eval { $ssh->system($^X, '-e', 'exit 0') };
+isnt($@, '', 'calling on ssh after exit');
 
 __END__
