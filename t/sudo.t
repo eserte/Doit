@@ -12,7 +12,7 @@ use Test::More;
 use Doit;
 use Doit::Extcmd qw(is_in_path);
 
-sub run {
+sub get_id {
     my $d = shift;
     chomp(my $res = `id -u`);
     $res;
@@ -36,6 +36,10 @@ sub stderr_test {
 
 return 1 if caller;
 
+require FindBin;
+{ no warnings 'once'; push @INC, $FindBin::RealBin; }
+require TestUtil;
+
 if (!is_in_path('sudo')) {
     plan skip_all => 'git not in PATH';
 }
@@ -49,13 +53,17 @@ GetOptions(
     or die "usage: $0 [--other-user username] [--debug]\n";
 
 my $d = Doit->init;
-my $sudo = eval { $d->do_sudo(sudo_opts => ['-n'], debug => $debug) };
-plan skip_all => "Cannot run sudo" if !$sudo;
-my $res = eval { $sudo->call('run') };
-plan skip_all => "Cannot run sudo password-less" if $@;
+my %info;
+my $sudo = TestUtil::get_sudo($d, info => \%info);
+if (!$sudo) {
+    plan skip_all => $info{error};
+}
+
 plan 'no_plan';
 
 isa_ok $sudo, 'Doit::Sudo';
+
+my $res = $sudo->call('get_id');
 is $res, 0, 'switched to uid=0';
 
 {
@@ -87,7 +95,7 @@ SKIP: {
 	if !defined $other_user;
     # -H (--set-home) may or may not be necessary
     my $sudo = $d->do_sudo(sudo_opts => ['-n', '-u', $other_user, '-H'], debug => $debug);
-    my $res = eval { $sudo->call('run') };
+    my $res = eval { $sudo->call('get_id') };
     skip "Cannot run sudo -u password-less",1
 	if $@;
 

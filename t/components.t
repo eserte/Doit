@@ -22,6 +22,10 @@ sub check_git_component {
 
 return 1 if caller;
 
+require FindBin;
+{ no warnings 'once'; push @INC, $FindBin::RealBin; }
+require TestUtil;
+
 plan 'no_plan';
 
 my $d = Doit->init;
@@ -33,12 +37,12 @@ ok $d->call_with_runner('check_git_component'), 'available git component locally
 
 SKIP: {
     my $number_of_tests = 2;
-    my $sudo = eval { $d->do_sudo(sudo_opts => ['-n'], debug => 0) };
-    skip "Cannot run sudo (not available?)", $number_of_tests
-	if !$sudo;
-    my $res = eval { $sudo->system('true'); 1 };
-    skip "Cannot run sudo (password less)", $number_of_tests
-	if !$res;
+
+    my %info;
+    my $sudo = TestUtil::get_sudo($d, info => \%info);
+    if (!$sudo) {
+	skip $info{error}, $number_of_tests;
+    }
 
     ok $sudo->call_with_runner('check_deb_component'), 'available deb component through sudo';
     ok $sudo->call_with_runner('check_git_component'), 'available git component through sudo';
