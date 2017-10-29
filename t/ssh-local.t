@@ -18,6 +18,7 @@ sub environment {
 	cwd               => getcwd,
 	original_realbin  => $original_realbin,
 	refreshed_realbin => $refreshed_realbin,
+	DOIT_IN_REMOTE    => $ENV{DOIT_IN_REMOTE},
     };
 }
 
@@ -44,6 +45,7 @@ is($env->{cwd}, $ENV{HOME}, 'expected cwd is current home directory');
 ## XXX Actually it's unclear what $FindBin::RealBin should return here
 #is($env->{original_realbin}, '???');
 #is($env->{refreshed_realbin}, '???');
+is($env->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env set');
 
 # XXX currently the output is not visible ---
 # to work around this problem $|=1 has to be set in the function

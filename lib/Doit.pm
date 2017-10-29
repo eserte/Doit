@@ -1734,6 +1734,7 @@ use warnings;
 
     sub self_require {
 	if ($0 ne '-e') { # not a oneliner
+	    q{$ENV{DOIT_IN_REMOTE} = 1; } .
 	    q{require "} . File::Basename::basename($0) . q{"; };
 	} else {
 	    q{use Doit; };

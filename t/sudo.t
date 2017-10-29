@@ -58,8 +58,12 @@ plan 'no_plan';
 isa_ok $sudo, 'Doit::Sudo';
 is $res, 0, 'switched to uid=0';
 
-my(@pwinfo) = $sudo->call('pwinfo');
-is $pwinfo[0], 'root';
+{
+    my(@pwinfo) = $sudo->call('pwinfo');
+    is $pwinfo[0], 'root';
+    my $envinfo = $sudo->call('envinfo');
+    is $envinfo->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env var set';
+}
 
 is $sudo->call('stdout_test'), 4711;
 is $sudo->call('stderr_test'), 314;
@@ -91,6 +95,7 @@ SKIP: {
     is $pwinfo[0], $other_user;
     my $envinfo = $sudo->call('envinfo');
     is $envinfo->{HOME}, (getpwnam($other_user))[7], 'home directory of other user set to HOME env var';
+    is $envinfo->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env var set';
 }
 
 __END__
