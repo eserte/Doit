@@ -126,6 +126,40 @@ sub test_installed {
     $doit->system(_prove_path(), $t_dir);
 }
 
+sub test_in_docker {
+    my $distro_spec = $ENV{DISTRO_SPEC};
+    if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
+	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
+    }
+    for my $tool (qw(docker)) {
+	$doit->qx('which', $tool); # existence check
+    }
+    require File::Temp;
+    my $dir = File::Temp::tempdir("Doit_test_in_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    $doit->write_binary("$dir/Dockerfile", <<"EOF");
+FROM $distro_spec
+MAINTAINER Slaven Rezic "srezic\@cpan.org"
+
+ENV DEBIAN_FRONTEND noninteractive 
+
+RUN apt-get update && apt-get install -y --no-install-recommends \\
+    libipc-run-perl \\
+    libnet-openssh-perl
+
+RUN apt-get install -y --no-install-recommends \\
+    sudo \\
+    rsync
+
+EOF
+    in_directory {
+	$doit->system(qw(docker build -t doit-test .));
+	$doit->system(
+		      qw(docker run), '-v', "$FindBin::RealBin:/data:ro", qw(doit-test),
+		      'sh', '-c', 'rsync -a --cvs-exclude --exclude=blib /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build test'
+		     );
+    } $dir;
+}
+
 sub cover {
     $doit->system(_prove_path(), '--exec', "$^X -Ilib -MDevel::Cover", 't');
     $doit->system(_cover_path());
