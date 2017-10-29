@@ -157,7 +157,7 @@ use warnings;
 {
     package Doit::Util;
     use Exporter 'import';
-    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup) }
+    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup copy_stat) }
     $INC{'Doit/Util.pm'} = __FILE__; # XXX hack
     use Doit::Log;
 
@@ -187,6 +187,41 @@ use warnings;
 	}
 	$code->();
     }
+
+    # $src may be a source file or an arrayref with stat information
+    sub copy_stat ($$;@) {
+	my($src, $dest, %preserve) = @_;
+	my @stat = ref $src eq 'ARRAY' ? @$src : stat($src);
+	error "Can't stat $src: $!" if !@stat;
+
+	my $preserve_ownership = exists $preserve{ownership} ? delete $preserve{ownership} : 1;
+	my $preserve_mode      = exists $preserve{mode}      ? delete $preserve{mode}      : 1;
+	my $preserve_time      = exists $preserve{time}      ? delete $preserve{time}      : 1;
+
+	error "Unhandled preserve values: " . join(" ", %preserve) if %preserve;
+
+	if ($preserve_mode) {
+	    chmod $stat[2], $dest
+		or warning "Can't chmod $dest to " . sprintf("0%o", $stat[2]) . ": $!";
+	}
+	if ($preserve_ownership) {
+	    chown $stat[4], $stat[5], $dest
+		or do {
+		    my $save_err = $!; # otherwise it's lost in the get... calls
+		    warning "Can't chown $dest to " .
+			(getpwuid($stat[4]))[0] . "/" .
+			(getgrgid($stat[5]))[0] . ": $save_err";
+		};
+	}
+	if ($preserve_time) {
+	    utime $stat[8], $stat[9], $dest
+		or warning "Can't utime $dest to " .
+		scalar(localtime $stat[8]) . "/" .
+		scalar(localtime $stat[9]) .
+		": $!";
+	}
+    }
+
 }
 
 {
@@ -335,27 +370,6 @@ use warnings;
 	};
 	no strict 'refs';
 	*{"cmd_$name"} = $cmd;
-    }
-
-    sub _copy_stat {
-	my($src, $dest) = @_;
-	my @stat = ref $src eq 'ARRAY' ? @$src : stat($src);
-	die "Can't stat $src: $!" if !@stat;
-
-	chmod $stat[2], $dest
-	    or warn "Can't chmod $dest to " . sprintf("0%o", $stat[2]) . ": $!";
-	chown $stat[4], $stat[5], $dest
-	    or do {
-		my $save_err = $!; # otherwise it's lost in the get... calls
-		warn "Can't chown $dest to " .
-		    (getpwuid($stat[4]))[0] . "/" .
-		    (getgrgid($stat[5]))[0] . ": $save_err";
-	    };
-	utime $stat[8], $stat[9], $dest
-	    or warn "Can't utime $dest to " .
-	    scalar(localtime $stat[8]) . "/" .
-	    scalar(localtime $stat[9]) .
-	    ": $!";
     }
 
     sub cmd_chmod {
@@ -1205,7 +1219,7 @@ use warnings;
 	my($tmpfh,$tmpfile) = File::Temp::tempfile('doittemp_XXXXXXXX', UNLINK => 1, DIR => File::Basename::dirname($file));
 	File::Copy::copy($file, $tmpfile)
 		or die "failed to copy $file to temporary file $tmpfile: $!";
-	_copy_stat $file, $tmpfile;
+	Doit::Util::copy_stat($file, $tmpfile);
 
 	require Tie::File;
 	tie my @lines, 'Tie::File', $tmpfile
