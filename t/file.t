@@ -109,6 +109,7 @@ SKIP: {
 
 SKIP: {
     skip "Mounting fs only implemented for linux", 1 if $^O ne 'linux';
+    skip "Cannot mount in linux containers", 1 if TestUtil::in_linux_container($doit);
     skip "dd not available", 1 if !Doit::Extcmd::is_in_path("dd");
     skip "mkfs not available", 1 if !-x "/sbin/mkfs";
     my $sudo = TestUtil::get_sudo($doit, info => \my %info);

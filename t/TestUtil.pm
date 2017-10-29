@@ -45,6 +45,21 @@ sub get_sudo ($;@) {
     $sudo;
 }
 
+sub in_linux_container ($) {
+    my($doit) = @_;
+    if (open my $fh, "/proc/1/cgroup") {
+	while(<$fh>) {
+	    chomp;
+	    my(undef, undef, $path) = split /:/;
+	    if ($path ne '/') {
+		# typically /docker or /lxc
+		return 1;
+	    }
+	}
+    }
+    return 0;
+}
+
 1;
 
 __END__
