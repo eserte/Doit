@@ -138,15 +138,12 @@ sub test_in_docker {
     my $dir = File::Temp::tempdir("Doit_test_in_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
     $doit->write_binary("$dir/Dockerfile", <<"EOF");
 FROM $distro_spec
-MAINTAINER Slaven Rezic "srezic\@cpan.org"
 
 ENV DEBIAN_FRONTEND noninteractive 
 
 RUN apt-get update && apt-get install -y --no-install-recommends \\
     libipc-run-perl \\
-    libnet-openssh-perl
-
-RUN apt-get install -y --no-install-recommends \\
+    libnet-openssh-perl \\
     sudo \\
     rsync
 
@@ -358,7 +355,6 @@ sub debian_package_with_docker {
     );
     $doit->write_binary("$dir/Dockerfile", <<"EOF");
 FROM $distro_spec
-MAINTAINER Slaven Rezic "srezic\@cpan.org"
 
 ENV DEBIAN_FRONTEND noninteractive 
 
@@ -375,7 +371,9 @@ RUN apt-get install -y --no-install-recommends \\
 
 EOF
     in_directory {
-	$doit->system(qw(docker build -t dh-make-perl-build .));
+	(my $label = $distro_spec) =~ s{:}{-}g;
+	$label = "doit-deb-$label";
+	$doit->system(qw(docker build -t), $label, qw(.));
 	$doit->system(
 		      qw(docker run), '-v', "$dir:/data", qw(-v /tmp:/pkg dh-make-perl-build),
 		      'sh', '-c', 'cd /data && perl Build.PL && ./Build debian_package && cp *.deb /pkg'
