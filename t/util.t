@@ -118,19 +118,19 @@ SKIP: {
 
 	$doit->chmod(0600, 'source');
 	copy_stat('source', 'target');
-	is(((stat('target'))[2] & 07777), 0600, 'preserving mode');
+	is(((stat('target'))[2] & 07777), ($^O eq 'MSWin32' ? 0666 : 0600), 'preserving mode');
 
-	$stat[2] = 0640;
+	$stat[2] = 0400;
 	copy_stat(\@stat, 'target');
-	is(((stat('target'))[2] & 07777), 0640, 'preserving mode using stat array');
+	is(((stat('target'))[2] & 07777), ($^O eq 'MSWin32' ? 0444 : 0400), 'preserving mode using stat array');
 
 	$stat[2] = 0644;
 	copy_stat(\@stat, 'target', 'mode' => 1);
-	is(((stat('target'))[2] & 07777), 0644, 'explicit preserve option');
+	is(((stat('target'))[2] & 07777), ($^O eq 'MSWin32' ? 0666 : 0644), 'explicit preserve option');
 
 	$stat[2] = 0755;
 	copy_stat(\@stat, 'target', 'ownership' => 1);
-	is(((stat('target'))[2] & 07777), 0644, 'unchanged stat, non-matching preserve option');
+	is(((stat('target'))[2] & 07777), ($^O eq 'MSWin32' ? 0666 : 0644), 'unchanged stat, non-matching preserve option');
 
 	$doit->utime(86400,86400,'source');
 	copy_stat('source', 'target');
