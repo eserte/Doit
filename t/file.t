@@ -6,6 +6,7 @@
 #
 
 use Doit;
+use Doit::Extcmd;
 use File::Temp 'tempdir';
 use Test::More;
 
@@ -13,6 +14,10 @@ sub slurp ($) { open my $fh, shift or die $!; local $/; <$fh> }
 sub slurp_utf8 ($) { open my $fh, shift or die $!; binmode $fh, ':encoding(utf-8)'; local $/; <$fh> }
 
 return 1 if caller;
+
+require FindBin;
+{ no warnings 'once'; push @INC, $FindBin::RealBin; }
+require TestUtil;
 
 plan 'no_plan';
 
@@ -86,4 +91,54 @@ for my $opt_def (
 				    print $fh $opt_spec;
 				}, @$opt_def);
     is slurp("$tempdir/1st"), $opt_spec, "atomic write with opts: $opt_spec";
+}
+
+SKIP: {
+    skip "No /dev/full available", 1 if !-w '/dev/full';
+    my $old_content = slurp("$tempdir/1st");
+    eval { 
+	$doit->file_atomic_write_fh("$tempdir/1st",
+				    sub {
+					my $fh = shift;
+					print $fh "/dev/full testing\n";
+				    }, dir => '/dev/full');
+    };
+    like $@, qr{Error while closing temporary file}, 'Cannot write to /dev/full as expected';
+    is slurp("$tempdir/1st"), $old_content, 'content still unchanged';
+}
+
+SKIP: {
+    skip "Mounting fs only implemented for linux", 1 if $^O ne 'linux';
+    skip "dd not available", 1 if !Doit::Extcmd::is_in_path("dd");
+    skip "mkfs not available", 1 if !-x "/sbin/mkfs";
+    my $sudo = TestUtil::get_sudo($doit, info => \my %info);
+    skip $info{error}, 1 if !$sudo;
+
+    my $fs_file = "$tempdir/testfs";
+    $doit->system(qw(dd if=/dev/zero), "of=$fs_file", qw(count=1 bs=1MB));
+    $doit->system(qw(/sbin/mkfs -t ext3), $fs_file);
+    my $mnt_point = "$tempdir/testmnt";
+    $doit->mkdir($mnt_point);
+    $sudo->system(qw(mount -o loop), $fs_file, $mnt_point);
+    $sudo->mkdir("$mnt_point/dir");
+    $sudo->chown($<, undef, "$mnt_point/dir");
+
+    my $mode_before = (stat("$tempdir/1st"))[2];
+    $doit->file_atomic_write_fh("$tempdir/1st",
+				sub {
+				    my $fh = shift;
+				    print $fh "File::Copy::move testing\n";
+				}, dir => "$mnt_point/dir");
+    is slurp("$tempdir/1st"), "File::Copy::move testing\n", "content OK after using cross-mount move";
+    my $mode_after = (stat("$tempdir/1st"))[2];
+    is $mode_after, $mode_before, 'mode was preserved';
+
+    $doit->file_atomic_write_fh("$tempdir/fresh",
+				sub {
+				    my $fh = shift;
+				    print $fh "fresh file with File::Copy::move\n";
+				}, dir => "$mnt_point/dir");
+    is slurp("$tempdir/fresh"), "fresh file with File::Copy::move\n", "cross-mount move with fresh file";
+
+    $sudo->system(qw(umount), $mnt_point);
 }

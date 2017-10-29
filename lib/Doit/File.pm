@@ -43,8 +43,16 @@ sub file_atomic_write_fh {
     my $dir = delete $opts{dir}; if (!defined $dir) { $dir = $dest_dir }
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
-    require File::Temp;
-    my($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir, UNLINK => 1);
+    my($tmp_fh,$tmp_file);
+    if ($dir eq '/dev/full') {
+	# This is just used for testing error on close()
+	$tmp_file = '/dev/full';
+	open $tmp_fh, '>', $tmp_file
+	    or error "Can't write to $tmp_file: $!";
+    } else {
+	require File::Temp;
+	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir, UNLINK => 1);
+    }
     my $same_fs = do {
 	my $tmp_dev  = (stat($tmp_file))[0];
 	my $dest_dev = (stat($dest_dir))[0];
@@ -55,7 +63,7 @@ sub file_atomic_write_fh {
 	if (-e $file) {
 	    copy_stat $file, $tmp_file;
 	}
-    } elsif (!$same_fs) {
+    } else {
 	require File::Copy; # for move()
     }
 
