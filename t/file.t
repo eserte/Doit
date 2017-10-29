@@ -158,7 +158,9 @@ SKIP: {
     $sudo->mkdir("$mnt_point/dir");
     $sudo->chown($<, undef, "$mnt_point/dir");
 
+    $doit->utime(0,0,"$tempdir/1st");
     my $mode_before = (stat("$tempdir/1st"))[2];
+    my $time = time;
     $doit->file_atomic_write_fh("$tempdir/1st",
 				sub {
 				    my $fh = shift;
@@ -167,6 +169,8 @@ SKIP: {
     is slurp("$tempdir/1st"), "File::Copy::move testing\n", "content OK after using cross-mount move";
     my $mode_after = (stat("$tempdir/1st"))[2];
     is $mode_after, $mode_before, 'mode was preserved';
+    my $mtime_after = (stat("$tempdir/1st"))[9];
+    cmp_ok $mtime_after, ">=", $time, 'current mtime';
 
     $doit->file_atomic_write_fh("$tempdir/fresh",
 				sub {

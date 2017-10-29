@@ -194,9 +194,10 @@ use warnings;
 	my @stat = ref $src eq 'ARRAY' ? @$src : stat($src);
 	error "Can't stat $src: $!" if !@stat;
 
-	my $preserve_ownership = exists $preserve{ownership} ? delete $preserve{ownership} : 1;
-	my $preserve_mode      = exists $preserve{mode}      ? delete $preserve{mode}      : 1;
-	my $preserve_time      = exists $preserve{time}      ? delete $preserve{time}      : 1;
+	my $preserve_default   = !%preserve;
+	my $preserve_ownership = exists $preserve{ownership} ? delete $preserve{ownership} : $preserve_default;
+	my $preserve_mode      = exists $preserve{mode}      ? delete $preserve{mode}      : $preserve_default;
+	my $preserve_time      = exists $preserve{time}      ? delete $preserve{time}      : $preserve_default;
 
 	error "Unhandled preserve values: " . join(" ", %preserve) if %preserve;
 
