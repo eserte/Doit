@@ -94,6 +94,39 @@ for my $opt_def (
 }
 
 SKIP: {
+    skip "No BSD::Resource available", 1
+	if !eval { require BSD::Resource; 1 };
+    skip "No fork on Windows", 1
+	if $^O eq 'MSWin32';
+    my $pid = fork;
+    die "Cannot fork: $!" if !defined $pid;
+    if ($pid == 0) {
+	my $limit_fsize = 100;
+	my $write_size = 1024;
+	require BSD::Resource;
+	BSD::Resource::setrlimit(BSD::Resource::RLIMIT_FSIZE(), $limit_fsize, $limit_fsize)
+	    or die "Cannot limit fsize: $!";
+	$SIG{XFSZ} = 'IGNORE'; # otherwise the process would be just killed
+	eval {
+	    $doit->file_atomic_write_fh("$tempdir/1st",
+					sub {
+					    my $fh = shift;
+					    print $fh "x" x $write_size;
+					}); # should fail
+	};
+	if ($@ =~ m{Error while closing temporary file}) {
+	    #diag "Got $@";
+	    exit 0;
+	} else {
+	    diag "No or unexpected exception: $@";
+	    exit 1;
+	}
+    }
+    waitpid $pid, 0;
+    is $?, 0, 'Write failed, probably got EFBIG';
+}
+
+SKIP: {
     skip "No /dev/full available", 1 if !-w '/dev/full';
     my $old_content = slurp("$tempdir/1st");
     eval { 
