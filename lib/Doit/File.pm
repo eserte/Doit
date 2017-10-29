@@ -73,8 +73,12 @@ sub file_atomic_write_fh {
 	error $@;
     }
 
+    if ($] < 5.010001) { $! = 0 }
     $tmp_fh->close
 	or error "Error while closing temporary file $tmp_file: $!";
+    if ($] < 5.010001 && $! != 0) { # at least perl 5.8.8 and 5.8.9 are buggy and do not detect errors at close time --- 5.10.1 is correct
+	error "Error while closing temporary file $tmp_file: $!";
+    }
 
     if ($same_fs) {
 	$doit->rename($tmp_file, $file);
