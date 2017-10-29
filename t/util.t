@@ -124,6 +124,14 @@ SKIP: {
 	copy_stat(\@stat, 'target');
 	is(((stat('target'))[2] & 07777), 0640, 'preserving mode using stat array');
 
+	$stat[2] = 0644;
+	copy_stat(\@stat, 'target', 'mode' => 1);
+	is(((stat('target'))[2] & 07777), 0644, 'explicit preserve option');
+
+	$stat[2] = 0755;
+	copy_stat(\@stat, 'target', 'ownership' => 1);
+	is(((stat('target'))[2] & 07777), 0644, 'unchanged stat, non-matching preserve option');
+
 	$doit->utime(86400,86400,'source');
 	copy_stat('source', 'target');
 	is((stat('target'))[8], 86400, 'preserving atime');
@@ -133,6 +141,16 @@ SKIP: {
 	copy_stat(\@stat, 'target');
 	is((stat('target'))[8], 86400*2, 'preserving atime using stat array');
 	is((stat('target'))[9], 86400*2, 'preserving mtime using stat array');
+
+	$stat[8] = $stat[9] = 86400*3;
+	copy_stat(\@stat, 'target', 'time' => 1);
+	is((stat('target'))[8], 86400*3, 'explicit preserve option');
+	is((stat('target'))[9], 86400*3);
+
+	$stat[8] = $stat[9] = 86400*4;
+	copy_stat(\@stat, 'target', 'mode' => 1);
+	is((stat('target'))[8], 86400*3, 'unchanged mtime, non-matching preserve option');
+	is((stat('target'))[9], 86400*3);
 
 	# Must be last in this block --- source+target are deleted
     SKIP: {
