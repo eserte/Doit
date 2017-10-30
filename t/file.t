@@ -100,6 +100,15 @@ $doit->mkdir("$tempdir/another_tmp");
     no_leftover_tmp $tempdir;
 }
 
+{
+    $doit->file_atomic_write("$tempdir/1st", sub {
+				 my($fh, $filename) = @_;
+				 $doit->system($^X, '-e', 'open my $ofh, ">", shift or die $!; print $ofh "external program writing the contents\n"; close $ofh or die $!', $filename);
+			     });
+    is slurp("$tempdir/1st"), "external program writing the contents\n", 'filename parameter was used';
+    no_leftover_tmp $tempdir;
+}
+
 for my $opt_def (
 		 [suffix => '.another_suffix'],
 		 [dir => "$tempdir/another_tmp"],
