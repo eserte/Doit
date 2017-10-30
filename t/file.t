@@ -96,6 +96,38 @@ $doit->mkdir("$tempdir/another_tmp");
     no_leftover_tmp $tempdir;
 }
 
+SKIP: {   # Test with setgid bit
+    skip "No gid or setgid support under Windows", 1 if $^O eq 'MSWin32';
+
+    my @gids = split / /, $(;
+    my $test_gid = $gids[-1];
+    $doit->mkdir("$tempdir/setgid");
+    $doit->chown(undef, $test_gid, "$tempdir/setgid");
+    if ($^O =~ /bsd/ || $^O eq 'darwin') {
+	# no not for setgid on BSD like systems
+    } else {
+	$doit->chmod(((stat "$tempdir/setgid")[2] & 07777) | 02000, "$tempdir/setgid");
+    }
+
+    $doit->create_file_if_nonexisting("$tempdir/setgid/stat_reference");
+
+    $doit->file_atomic_write("$tempdir/setgid/file", sub {
+				 my $fh = shift;
+				 print $fh "test setgid\n";
+			     }, tmpdir => $tempdir); # use a non-setgid directory for tmpfile
+
+    ok -s "$tempdir/setgid/file", 'Created file exists and is non-empty';
+    is slurp("$tempdir/setgid/file"), "test setgid\n", 'expected content';
+
+    my(@stat_reference)    = stat("$tempdir/setgid/stat_reference");
+    my(@stat_atomic_write) = stat("$tempdir/setgid/file");
+    is $stat_atomic_write[4], $stat_reference[4], 'expected owner on initial creation';
+    is $stat_atomic_write[5], $stat_reference[5], 'expected group on initial creation';
+    is(($stat_atomic_write[2] & 07777), ($stat_reference[2] & 07777), 'expected mode on initial creation');
+
+    no_leftover_tmp $tempdir;
+}
+
 {
     my @stat;
 

@@ -69,6 +69,12 @@ sub file_atomic_write {
 	} else {
 	    $doit->chmod(0666 & ~umask, $tmp_file);
 	}
+	if ($tmp_dir ne $dest_dir) {
+	    my @stat_destdir = stat $dest_dir;
+	    if ($^O =~ /bsd/ || $^O eq 'darwin' || ($stat_destdir[2] & 02000)) {
+		$doit->chown(undef, $stat_destdir[5], $tmp_file);
+	    }
+	}
     }
     my $same_fs = do {
 	my $tmp_dev  = (stat($tmp_file))[0];

@@ -92,6 +92,13 @@ outside (e.g. SIGINT, SIGKILL...).
 Some of L<File::Temp>'s standard behaviors are changed here: mode is
 different (see above), and C<EXLOCK> is not set.
 
+If the C<tmpdir> option is used, then the group of the created
+temporary file may differ as it was created in the final destination
+directory (e.g. in presence of setgid bits, or on BSD systems if the
+directory belongs to another group). Some precautions are made to fix
+this, at least for some common operating systems, but this is far from
+perfect.
+
 While running this function two versions of the file will exist
 simultaneously on the disk: the old version (if it's an overwrite) and
 the new version. This may be problematic if the files are large and
