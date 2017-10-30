@@ -139,11 +139,11 @@ sub user_account {
 	     || (!defined $got_home)
 	    )
 	   ) {
-	    push @args, ($^O eq 'linux'   ? ('--home', $home, '--create-home') :
+	    push @args, ($^O eq 'linux'   ? ('--home', $home, ($cmd eq 'usermod' ? '--move-home' : '--create-home')) :
 			 $^O eq 'freebsd' ? ('-d',     $home, '-m') :
 			 error "NYI");
 	} elsif ($cmd eq 'useradd') {
-	    push @args, ($^O eq 'linux'   ? ('--create-home') :
+	    push @args, ($^O eq 'linux'   ? ($cmd eq 'usermod' ? '--move-home' : '--create-home') :
 			 $^O eq 'freebsd' ? ('-m') :
 			 error "NYI");
 	}
