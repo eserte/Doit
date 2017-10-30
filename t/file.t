@@ -45,41 +45,41 @@ my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 $doit->mkdir("$tempdir/another_tmp");
 
 {
-    eval { $doit->file_atomic_write_fh };
+    eval { $doit->file_atomic_write };
     like $@, qr{file parameter is missing}i, "too few params";
 }
 
 {
-    eval { $doit->file_atomic_write_fh("$tempdir/1st") };
+    eval { $doit->file_atomic_write("$tempdir/1st") };
     like $@, qr{code parameter is missing}i, "too few params";
     ok !-e "$tempdir/1st", "file was not created";
 }
 
 {
-    eval { $doit->file_atomic_write_fh("$tempdir/1st", "not a sub") };
+    eval { $doit->file_atomic_write("$tempdir/1st", "not a sub") };
     like $@, qr{code parameter should be an anonymous subroutine or subroutine reference}i, "wrong type";
     ok !-e "$tempdir/1st", "file was not created";
 }
 
 {
-    eval { $doit->file_atomic_write_fh("$tempdir/1st", sub { }, does_not_exist => 1) };
+    eval { $doit->file_atomic_write("$tempdir/1st", sub { }, does_not_exist => 1) };
     like $@, qr{unhandled option}i, "unhandled option error";
     ok !-e "$tempdir/1st", "file was not created";
 }
 
 {
-    eval { $doit->file_atomic_write_fh("$tempdir/1st", sub { die "something failed" }) };
+    eval { $doit->file_atomic_write("$tempdir/1st", sub { die "something failed" }) };
     like $@, qr{something failed}i, "exception in code";
     ok !-e "$tempdir/1st", "file was not created";
     no_leftover_tmp $tempdir;
 }
 
 {
-    $doit->file_atomic_write_fh("$tempdir/1st", sub {
-				    my $fh = shift;
-				    binmode $fh, ':encoding(utf-8)';
-				    print $fh "\x{20ac}uro\n";
-				});
+    $doit->file_atomic_write("$tempdir/1st", sub {
+				 my $fh = shift;
+				 binmode $fh, ':encoding(utf-8)';
+				 print $fh "\x{20ac}uro\n";
+			     });
 
     ok -s "$tempdir/1st", 'Created file exists and is non-empty';
     is slurp_utf8("$tempdir/1st"), "\x{20ac}uro\n", 'expected content';
@@ -90,10 +90,10 @@ $doit->mkdir("$tempdir/another_tmp");
     $doit->chmod(0600, "$tempdir/1st");
     my $mode_before = (stat("$tempdir/1st"))[2];
 
-    $doit->file_atomic_write_fh("$tempdir/1st", sub {
-				    my $fh = shift;
-				    print $fh "changed content\n";
-				});
+    $doit->file_atomic_write("$tempdir/1st", sub {
+				 my $fh = shift;
+				 print $fh "changed content\n";
+			     });
     is slurp("$tempdir/1st"), "changed content\n", 'content of existent file changed';
     my $mode_after = (stat("$tempdir/1st"))[2];
     is $mode_after, $mode_before, 'mode was preserved';
@@ -105,11 +105,11 @@ for my $opt_def (
 		 [dir => "$tempdir/another_tmp"],
 		) {
     my $opt_spec = "@$opt_def";
-    $doit->file_atomic_write_fh("$tempdir/1st",
-				sub {
-				    my $fh = shift;
-				    print $fh $opt_spec;
-				}, @$opt_def);
+    $doit->file_atomic_write("$tempdir/1st",
+			     sub {
+				 my $fh = shift;
+				 print $fh $opt_spec;
+			     }, @$opt_def);
     is slurp("$tempdir/1st"), $opt_spec, "atomic write with opts: $opt_spec";
     if ($opt_def->[0] eq 'suffix') {
 	no_leftover_tmp $tempdir, $opt_def->[1];
@@ -120,10 +120,10 @@ for my $opt_def (
 
 { # dry-run check
     my $old_content = slurp("$tempdir/1st");
-    $doit_dryrun->file_atomic_write_fh("$tempdir/1st", sub {
-					   my $fh = shift;
-					   print $fh "this is dry run mode\n";
-				       });
+    $doit_dryrun->file_atomic_write("$tempdir/1st", sub {
+					my $fh = shift;
+					print $fh "this is dry run mode\n";
+				    });
     is slurp("$tempdir/1st"), $old_content, 'nothing changed in dry run mode';
     no_leftover_tmp $tempdir;
 }
@@ -143,11 +143,11 @@ SKIP: {
 	    or die "Cannot limit fsize: $!";
 	$SIG{XFSZ} = 'IGNORE'; # otherwise the process would be just killed
 	eval {
-	    $doit->file_atomic_write_fh("$tempdir/1st",
-					sub {
-					    my $fh = shift;
-					    print $fh "x" x $write_size;
-					}); # should fail
+	    $doit->file_atomic_write("$tempdir/1st",
+				     sub {
+					 my $fh = shift;
+					 print $fh "x" x $write_size;
+				     }); # should fail
 	};
 	if ($@ =~ m{Error while closing temporary file}) {
 	    #diag "Got $@";
@@ -166,11 +166,11 @@ SKIP: {
     skip "No /dev/full available", 1 if !-w '/dev/full';
     my $old_content = slurp("$tempdir/1st");
     eval { 
-	$doit->file_atomic_write_fh("$tempdir/1st",
-				    sub {
-					my $fh = shift;
-					print $fh "/dev/full testing\n";
-				    }, dir => '/dev/full');
+	$doit->file_atomic_write("$tempdir/1st",
+				 sub {
+				     my $fh = shift;
+				     print $fh "/dev/full testing\n";
+				 }, dir => '/dev/full');
     };
     like $@, qr{Error while closing temporary file}, 'Cannot write to /dev/full as expected';
     is slurp("$tempdir/1st"), $old_content, 'content still unchanged';
@@ -198,30 +198,30 @@ SKIP: {
     $doit->utime(0,0,"$tempdir/1st");
     my $mode_before = (stat("$tempdir/1st"))[2];
     my $time = time;
-    $doit->file_atomic_write_fh("$tempdir/1st",
-				sub {
-				    my $fh = shift;
-				    print $fh "File::Copy::move testing\n";
-				}, dir => "$mnt_point/dir");
+    $doit->file_atomic_write("$tempdir/1st",
+			     sub {
+				 my $fh = shift;
+				 print $fh "File::Copy::move testing\n";
+			     }, dir => "$mnt_point/dir");
     is slurp("$tempdir/1st"), "File::Copy::move testing\n", "content OK after using cross-mount move";
     my $mode_after = (stat("$tempdir/1st"))[2];
     is $mode_after, $mode_before, 'mode was preserved';
     my $mtime_after = (stat("$tempdir/1st"))[9];
     cmp_ok $mtime_after, ">=", $time, 'current mtime';
 
-    $doit->file_atomic_write_fh("$tempdir/fresh",
-				sub {
-				    my $fh = shift;
-				    print $fh "fresh file with File::Copy::move\n";
-				}, dir => "$mnt_point/dir");
+    $doit->file_atomic_write("$tempdir/fresh",
+			     sub {
+				 my $fh = shift;
+				 print $fh "fresh file with File::Copy::move\n";
+			     }, dir => "$mnt_point/dir");
     is slurp("$tempdir/fresh"), "fresh file with File::Copy::move\n", "cross-mount move with fresh file";
 
     { # dry-run check
 	my $old_content = slurp("$tempdir/1st");
-	$doit_dryrun->file_atomic_write_fh("$tempdir/1st", sub {
-					       my $fh = shift;
-					       print $fh "this is dry run mode\n";
-					   }, dir => "$mnt_point/dir");
+	$doit_dryrun->file_atomic_write("$tempdir/1st", sub {
+					    my $fh = shift;
+					    print $fh "this is dry run mode\n";
+					}, dir => "$mnt_point/dir");
 	is slurp("$tempdir/1st"), $old_content, 'nothing changed in dry run mode';
 	no_leftover_tmp "$mnt_point/dir", '';
     }

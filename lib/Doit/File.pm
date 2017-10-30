@@ -15,15 +15,15 @@ package Doit::File;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 use Doit::Log;
 use Doit::Util qw(copy_stat new_scope_cleanup);
 
 sub new { bless {}, shift }
-sub functions { qw(file_atomic_write_fh) }
+sub functions { qw(file_atomic_write) }
 
-sub file_atomic_write_fh {
+sub file_atomic_write {
     my($doit, $file, $code, %opts) = @_;
 
     if (!defined $file) {
@@ -78,7 +78,7 @@ sub file_atomic_write_fh {
 	require File::Copy; # for move()
     }
 
-    eval { $code->($tmp_fh) };
+    eval { $code->($tmp_fh, $tmp_file) };
     if ($@) {
 	error $@;
     }
