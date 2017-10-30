@@ -119,6 +119,10 @@ sub test {
     $doit->system(_prove_path(), '-b', 't'); # use right perl?
 }
 
+sub test_xt {
+    $doit->system(_prove_path(), '-b', 'xt'); # use right perl?
+}
+
 sub test_installed {
     my $t_dir = "$FindBin::RealBin/t";
     chdir "/"
@@ -152,7 +156,7 @@ EOF
 	$doit->system(qw(docker build -t doit-test .));
 	$doit->system(
 		      qw(docker run), '-v', "$FindBin::RealBin:/data:ro", qw(doit-test),
-		      'sh', '-c', 'rsync -a --cvs-exclude --exclude=blib /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build test'
+		      'sh', '-c', 'rsync -a --cvs-exclude --exclude=blib /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build test && ./Build test_xt'
 		     );
     } $dir;
 }
