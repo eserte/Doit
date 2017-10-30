@@ -29,13 +29,13 @@ creation. It has to be added to a script using L<Doit's add_component|Doit/add_c
 
 The following commands are added to the Doit runner object:
 
-=over
+=head3 file_atomic_write
 
-=item * file_atomic_write(I<filename>, I<code>, I<options>)
+    $doit->file_atomic_write($filename, $code, optkey => optval ...)
 
-Create a file I<filename> using a code reference I<code> in an atomic
-way. This command creates a temporary file first which is used for the
-writes. If no errors happen during the code execution (i.e. no
+Create a file I<$filename> using a code reference I<$code> in an
+atomic way. This command creates a temporary file first which is used
+for the writes. If no errors happen during the code execution (i.e. no
 perl-level exceptions when running the code reference, and no system
 errors like "no space left on device"), then the temporary file is
 renamed atomically to the final destination.
@@ -47,7 +47,7 @@ Options are specified as named parameters. Possible options are:
 
 =over
 
-=item dir => I<dir>
+=item C<< dir => I<dir> >>
 
 Change the directory where the temporary file is created. Default is
 the same directory as the final destination. The directory must
@@ -63,13 +63,22 @@ the final destination file, then the final rename is C<not> atomic
 on many systems F</tmp> is located on a separate file system (root fs
 or a special tmpfs) than the rest of the system.
 
-=item suffix => I<suffix>
+=item C<< suffix => I<suffix> >>
 
 Change the suffix used for the temporary file. Default is C<.tmp>.
 Change the suffix if a system may tolerate the existence of stray
 temporary files if special suffixes are used. For example, in a
 directory controlled by Debian's L<run-parts(8)> programm it can help
 to use C<.dpkg-tmp> as the tempory file suffix.
+
+=item C<< mode => I<mode> >>
+
+Set permissions of the final destination file, using the
+L<perlfunc/chmod> syntax.
+
+If not used, then the permissions would be as creating a normal
+non-executable file, which usually takes L<perlfunc/umask> into
+account.
 
 =back
 
@@ -79,6 +88,9 @@ The temporary file creation is done using L<File::Temp>. The temporary
 files are removed as early as possible, even in the case of
 exceptions. Only left-overs may happen if the script is killed from
 outside (e.g. SIGINT, SIGKILL...).
+
+Some of L<File::Temp>'s standard behaviors are changed here: mode is
+different (see above), and C<EXLOCK> is not set.
 
 While running this function two versions of the file will exist
 simultaneously on the disk: the old version (if it's an overwrite) and
@@ -92,8 +104,6 @@ L<errno(2)>) case.
 
 Special handling is implemented for older perls (5.8.x), as a failing
 L<close|perlfunc/close> is not correctly detected here.
-
-=back
 
 =head2 TODO
 

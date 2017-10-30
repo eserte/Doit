@@ -7,6 +7,7 @@
 
 use Doit;
 use Doit::Extcmd;
+use Doit::Util 'new_scope_cleanup';
 use File::Glob 'bsd_glob';
 use File::Temp 'tempdir';
 use Test::More;
@@ -74,7 +75,9 @@ $doit->mkdir("$tempdir/another_tmp");
     no_leftover_tmp $tempdir;
 }
 
-{
+{   # This should be the first test case creating the new file
+    $doit->create_file_if_nonexisting("$tempdir/stat_reference");
+
     $doit->file_atomic_write("$tempdir/1st", sub {
 				 my $fh = shift;
 				 binmode $fh, ':encoding(utf-8)';
@@ -83,6 +86,40 @@ $doit->mkdir("$tempdir/another_tmp");
 
     ok -s "$tempdir/1st", 'Created file exists and is non-empty';
     is slurp_utf8("$tempdir/1st"), "\x{20ac}uro\n", 'expected content';
+
+    my(@stat_reference)    = stat("$tempdir/stat_reference");
+    my(@stat_atomic_write) = stat("$tempdir/1st");
+    is $stat_atomic_write[4], $stat_reference[4], 'expected owner on initial creation';
+    is $stat_atomic_write[5], $stat_reference[5], 'expected group on initial creation';
+    is(($stat_atomic_write[2] & 07777), ($stat_reference[2] & 07777), 'expected mode on initial creation');
+
+    no_leftover_tmp $tempdir;
+}
+
+{
+    my @stat;
+
+    $doit->file_atomic_write("$tempdir/my_mode", sub {
+				 my $fh = shift;
+				 print $fh "my special mode\n";
+			     }, mode => 0400);
+
+    ok -s "$tempdir/my_mode", 'Created file exists and is non-empty';
+    is slurp("$tempdir/my_mode"), "my special mode\n", 'expected content';
+
+    @stat = stat("$tempdir/my_mode");
+    is(($stat[2] & 07777), ($^O eq 'MSWin32' ? 0444 : 0400), 'mode option on newly created file');
+
+    $doit->file_atomic_write("$tempdir/my_mode", sub {
+				 my $fh = shift;
+				 print $fh "changing my mode\n";
+			     }, mode => 0600);
+
+    is slurp("$tempdir/my_mode"), "changing my mode\n", 'content was changed';
+
+    @stat = stat("$tempdir/my_mode");
+    is(($stat[2] & 07777), ($^O eq 'MSWin32' ? 0666 : 0600), 'mode option on existing file');
+
     no_leftover_tmp $tempdir;
 }
 
@@ -200,6 +237,9 @@ SKIP: {
     $doit->system(qw(/sbin/mkfs -t ext3), $fs_file);
     my $mnt_point = "$tempdir/testmnt";
     $doit->mkdir($mnt_point);
+    my $mount_scope = new_scope_cleanup {
+	$sudo->system(qw(umount), $mnt_point);
+    };
     $sudo->system(qw(mount -o loop), $fs_file, $mnt_point);
     $sudo->mkdir("$mnt_point/dir");
     $sudo->chown($<, undef, "$mnt_point/dir");
@@ -225,6 +265,28 @@ SKIP: {
 			     }, dir => "$mnt_point/dir");
     is slurp("$tempdir/fresh"), "fresh file with File::Copy::move\n", "cross-mount move with fresh file";
 
+    {
+	my @stat;
+
+	$doit->file_atomic_write("$tempdir/my_fresh_mode",
+				 sub {
+				     my $fh = shift;
+				     print $fh "using mode and File::Copy::move (fresh)\n";
+				 }, dir => "$mnt_point/dir", mode => 0400);
+	is slurp("$tempdir/my_fresh_mode"), "using mode and File::Copy::move (fresh)\n", "cross-mount move with fresh file";
+	@stat = stat("$tempdir/my_fresh_mode");
+	is(($stat[2] & 07777), ($^O eq 'MSWin32' ? 0444 : 0400), 'mode option on newly created file');
+
+	$doit->file_atomic_write("$tempdir/my_fresh_mode",
+				 sub {
+				     my $fh = shift;
+				     print $fh "using mode and File::Copy::move (existing)\n";
+				 }, dir => "$mnt_point/dir", mode => 0600);
+	is slurp("$tempdir/my_fresh_mode"), "using mode and File::Copy::move (existing)\n", "cross-mount move with existing file";
+	@stat = stat("$tempdir/my_fresh_mode");
+	is(($stat[2] & 07777), ($^O eq 'MSWin32' ? 0666 : 0600), 'mode option on existing file');
+    }
+
     { # dry-run check
 	my $old_content = slurp("$tempdir/1st");
 	$doit_dryrun->file_atomic_write("$tempdir/1st", sub {
@@ -234,6 +296,4 @@ SKIP: {
 	is slurp("$tempdir/1st"), $old_content, 'nothing changed in dry run mode';
 	no_leftover_tmp "$mnt_point/dir", '';
     }
-
-    $sudo->system(qw(umount), $mnt_point);
 }

@@ -40,7 +40,8 @@ sub file_atomic_write {
     my $dest_dir = Cwd::realpath(File::Basename::dirname($file));
 
     my $suffix = delete $opts{suffix} || '.tmp';
-    my $dir = delete $opts{dir}; if (!defined $dir) { $dir = $dest_dir }
+    my $dir    = delete $opts{dir}; if (!defined $dir) { $dir = $dest_dir }
+    my $mode   = delete $opts{mode};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my($tmp_fh,$tmp_file);
@@ -60,9 +61,14 @@ sub file_atomic_write {
 	    or error "Can't write to $tmp_file: $!";
     } else {
 	require File::Temp;
-	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir);
+	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir, EXLOCK => 0);
 	push @cleanup_files, $tmp_file;
 	push @cleanup_fhs, $tmp_fh;
+	if (defined $mode) {
+	    $doit->chmod($mode, $tmp_file);
+	} else {
+	    $doit->chmod(0666 & ~umask, $tmp_file);
+	}
     }
     my $same_fs = do {
 	my $tmp_dev  = (stat($tmp_file))[0];
@@ -72,7 +78,7 @@ sub file_atomic_write {
 
     if ($same_fs) {
 	if (-e $file) {
-	    copy_stat $file, $tmp_file;
+	    copy_stat $file, $tmp_file, ownership => 1, mode => !defined $mode;
 	}
     } else {
 	require File::Copy; # for move()
@@ -91,18 +97,32 @@ sub file_atomic_write {
     }
 
     if ($same_fs) {
+	_make_writeable($doit, $file, 'rename');
 	$doit->rename($tmp_file, $file);
     } else {
 	my @dest_stat;
 	if (-e $file) {
 	    @dest_stat = stat($file)
 		or warning "Cannot stat $file: $! (cannot preserve permissions)"; # XXX should this be an error?
+	    _make_writeable($doit, $file, 'File::Copy::move');
 	}
 	$doit->move($tmp_file, $file);
 	if (@dest_stat) { # In dry-run mode effectively a noop
+	    $dest_stat[2] = $mode if defined $mode;
 	    copy_stat [@dest_stat], $file, ownership => 1, mode => 1;
+	} elsif (defined $mode) {
+	    $dest_stat[2] = $mode if defined $mode;
+	    copy_stat [@dest_stat], $file, mode => 1;
 	}
     }
+}
+
+sub _make_writeable {
+    my($doit, $file, $for) = @_;
+    return if $for eq 'rename' && $^O ne 'MSWin32'; # don't need to do anything
+    my $old_mode = (stat($file))[2] & 07777;
+    return if ($old_mode & 0200); # already writable
+    $doit->chmod(($old_mode | 0200), $file);
 }
 
 1;
