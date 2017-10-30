@@ -23,6 +23,9 @@ use Doit;
     if ($^O eq 'MSWin32') {
 	# For some reason, TERM works with open2 on Windows. Still it
 	# does not appear as a signal, but as a special exit code.
+	# And sometimes it appear as exit code 116, and sometimes
+	# it is not killed at all. So mark it as a TODO test.
+	local $TODO = "Handling SIGTERM on Windows seems to be unreliable";
 	like $@, qr{^Command exited with exit code 21};
     } else {
 	like $@, qr{^Command died with signal 15, without coredump};
