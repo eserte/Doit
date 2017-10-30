@@ -22,11 +22,11 @@ require FindBin;
 require TestUtil;
 
 sub no_leftover_tmp ($;$) {
-    my($dir, $suffix) = @_;
-    $suffix = '.tmp' if !defined $suffix;
+    my($tmp_dir, $tmp_suffix) = @_;
+    $tmp_suffix = '.tmp' if !defined $tmp_suffix;
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    my @files = bsd_glob("$dir/*$suffix");
-    is_deeply \@files, [], "no temporary file left-overs with suffix $suffix in $dir";
+    my @files = bsd_glob("$tmp_dir/*$tmp_suffix");
+    is_deeply \@files, [], "no temporary file left-overs with suffix $tmp_suffix in $tmp_dir";
 }
 
 plan 'no_plan';
@@ -147,8 +147,8 @@ $doit->mkdir("$tempdir/another_tmp");
 }
 
 for my $opt_def (
-		 [suffix => '.another_suffix'],
-		 [dir => "$tempdir/another_tmp"],
+		 [tmpsuffix => '.another_suffix'],
+		 [tmpdir => "$tempdir/another_tmp"],
 		) {
     my $opt_spec = "@$opt_def";
     $doit->file_atomic_write("$tempdir/1st",
@@ -157,7 +157,7 @@ for my $opt_def (
 				 print $fh $opt_spec;
 			     }, @$opt_def);
     is slurp("$tempdir/1st"), $opt_spec, "atomic write with opts: $opt_spec";
-    if ($opt_def->[0] eq 'suffix') {
+    if ($opt_def->[0] eq 'tmpsuffix') {
 	no_leftover_tmp $tempdir, $opt_def->[1];
     } else {
 	no_leftover_tmp $tempdir;
@@ -216,7 +216,7 @@ SKIP: {
 				 sub {
 				     my $fh = shift;
 				     print $fh "/dev/full testing\n";
-				 }, dir => '/dev/full');
+				 }, tmpdir => '/dev/full');
     };
     like $@, qr{Error while closing temporary file}, 'Cannot write to /dev/full as expected';
     is slurp("$tempdir/1st"), $old_content, 'content still unchanged';
@@ -251,7 +251,7 @@ SKIP: {
 			     sub {
 				 my $fh = shift;
 				 print $fh "File::Copy::move testing\n";
-			     }, dir => "$mnt_point/dir");
+			     }, tmpdir => "$mnt_point/dir");
     is slurp("$tempdir/1st"), "File::Copy::move testing\n", "content OK after using cross-mount move";
     my $mode_after = (stat("$tempdir/1st"))[2];
     is $mode_after, $mode_before, 'mode was preserved';
@@ -262,7 +262,7 @@ SKIP: {
 			     sub {
 				 my $fh = shift;
 				 print $fh "fresh file with File::Copy::move\n";
-			     }, dir => "$mnt_point/dir");
+			     }, tmpdir => "$mnt_point/dir");
     is slurp("$tempdir/fresh"), "fresh file with File::Copy::move\n", "cross-mount move with fresh file";
 
     {
@@ -272,7 +272,7 @@ SKIP: {
 				 sub {
 				     my $fh = shift;
 				     print $fh "using mode and File::Copy::move (fresh)\n";
-				 }, dir => "$mnt_point/dir", mode => 0400);
+				 }, tmpdir => "$mnt_point/dir", mode => 0400);
 	is slurp("$tempdir/my_fresh_mode"), "using mode and File::Copy::move (fresh)\n", "cross-mount move with fresh file";
 	@stat = stat("$tempdir/my_fresh_mode");
 	is(($stat[2] & 07777), ($^O eq 'MSWin32' ? 0444 : 0400), 'mode option on newly created file');
@@ -281,7 +281,7 @@ SKIP: {
 				 sub {
 				     my $fh = shift;
 				     print $fh "using mode and File::Copy::move (existing)\n";
-				 }, dir => "$mnt_point/dir", mode => 0600);
+				 }, tmpdir => "$mnt_point/dir", mode => 0600);
 	is slurp("$tempdir/my_fresh_mode"), "using mode and File::Copy::move (existing)\n", "cross-mount move with existing file";
 	@stat = stat("$tempdir/my_fresh_mode");
 	is(($stat[2] & 07777), ($^O eq 'MSWin32' ? 0666 : 0600), 'mode option on existing file');
@@ -292,7 +292,7 @@ SKIP: {
 	$doit_dryrun->file_atomic_write("$tempdir/1st", sub {
 					    my $fh = shift;
 					    print $fh "this is dry run mode\n";
-					}, dir => "$mnt_point/dir");
+					}, tmpdir => "$mnt_point/dir");
 	is slurp("$tempdir/1st"), $old_content, 'nothing changed in dry run mode';
 	no_leftover_tmp "$mnt_point/dir", '';
     }

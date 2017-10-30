@@ -16,7 +16,7 @@ Doit::File - commands for file creation
     $doit->file_atomic_write('/path/to/file', sub {
         my($fh, $filename) = @_;
 	$doit->system("a_system_cmd > $filename");
-    }, suffix => '.my.tmp';
+    }, tmpsuffix => '.my.tmp';
 
 =head1 DESCRIPTION
 
@@ -47,15 +47,15 @@ Options are specified as named parameters. Possible options are:
 
 =over
 
-=item C<< dir => I<dir> >>
+=item C<< tmpdir => I<directory> >>
 
 Change the directory where the temporary file is created. Default is
 the same directory as the final destination. The directory must
 already exist. Change this if a system cannot tolerate the existence
-of stray temporay files, and setting the C<suffix> option (see below)
-does not help. Example:
+of stray temporay files, and setting the C<tmpsuffix> option (see
+below) does not help. Example:
 
-    $doit->file_atomic_write('/path/to/filename', \&writer, dir => '/tmp');
+    $doit->file_atomic_write('/path/to/filename', \&writer, tmpdir => '/tmp');
 
 B<NOTE:> if the temporary file is created in another file system than
 the final destination file, then the final rename is C<not> atomic
@@ -63,7 +63,7 @@ the final destination file, then the final rename is C<not> atomic
 on many systems F</tmp> is located on a separate file system (root fs
 or a special tmpfs) than the rest of the system.
 
-=item C<< suffix => I<suffix> >>
+=item C<< tmpsuffix => I<suffix> >>
 
 Change the suffix used for the temporary file. Default is C<.tmp>.
 Change the suffix if a system may tolerate the existence of stray
@@ -97,7 +97,7 @@ simultaneously on the disk: the old version (if it's an overwrite) and
 the new version. This may be problematic if the files are large and
 the diskspace limited.
 
-The C<dir> option may be set to F</dev/full>; in this case the
+The C<tmpdir> option may be set to F</dev/full>; in this case the
 temporary file will be set to F</dev/full>. This is only useful in
 test scripts for testing the C<ENOSPC> (see L<errno(3)> or
 L<errno(2)>) case.
@@ -122,14 +122,14 @@ files from earlier runs. The rule could be time-based (.tmp files
 older than I<n> days), and maybe a check if the files are actively
 used (e.g. with L<lsof(8)>) could be done.
 
-=item C<dir> option with relative directories?
+=item C<tmpdir> option with relative directories?
 
 L<rsync(1)> creates temporary directories named C<.~tmp~> as
 subdirectories of the final destination paths. This is useful as
 atomic L<rename(2)> may always be used in this case. Specification
 could look like this:
 
-    dir => "./.~tmp~"
+    tmpdir => "./.~tmp~"
 
 In this case B<file_atomic_write> should take care of temporary
 directory creation and removal (but what if there are multiple

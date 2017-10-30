@@ -39,9 +39,9 @@ sub file_atomic_write {
     require Cwd;
     my $dest_dir = Cwd::realpath(File::Basename::dirname($file));
 
-    my $suffix = delete $opts{suffix} || '.tmp';
-    my $dir    = delete $opts{dir}; if (!defined $dir) { $dir = $dest_dir }
-    my $mode   = delete $opts{mode};
+    my $tmp_suffix = delete $opts{tmpsuffix} || '.tmp';
+    my $tmp_dir    = delete $opts{tmpdir}; if (!defined $tmp_dir) { $tmp_dir = $dest_dir }
+    my $mode       = delete $opts{mode};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my($tmp_fh,$tmp_file);
@@ -54,14 +54,14 @@ sub file_atomic_write {
 	    unlink $cleanup_file if -e $cleanup_file;
 	}
     };
-    if ($dir eq '/dev/full') {
+    if ($tmp_dir eq '/dev/full') {
 	# This is just used for testing error on close()
 	$tmp_file = '/dev/full';
 	open $tmp_fh, '>', $tmp_file
 	    or error "Can't write to $tmp_file: $!";
     } else {
 	require File::Temp;
-	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir, EXLOCK => 0);
+	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $tmp_suffix, DIR => $tmp_dir, EXLOCK => 0);
 	push @cleanup_files, $tmp_file;
 	push @cleanup_fhs, $tmp_fh;
 	if (defined $mode) {
