@@ -60,7 +60,7 @@ sub file_atomic_write_fh {
 	    or error "Can't write to $tmp_file: $!";
     } else {
 	require File::Temp;
-	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir, UNLINK => 1);
+	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir);
 	push @cleanup_files, $tmp_file;
 	push @cleanup_fhs, $tmp_fh;
     }
