@@ -88,9 +88,8 @@ sub file_atomic_write_fh {
 	    @dest_stat = stat($file)
 		or warning "Cannot stat $file: $! (cannot preserve permissions)"; # XXX should this be an error?
 	}
-	File::Copy::move($tmp_file, $file)
-	    or error "Error while renaming $tmp_file to $file: $!";
-	if (@dest_stat) {
+	$doit->move($tmp_file, $file);
+	if (@dest_stat) { # In dry-run mode effectively a noop
 	    copy_stat [@dest_stat], $file, ownership => 1, mode => 1;
 	}
     }
