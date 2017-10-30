@@ -7,6 +7,7 @@
 
 use Doit;
 use Doit::Extcmd;
+use File::Glob 'bsd_glob';
 use File::Temp 'tempdir';
 use Test::More;
 
@@ -19,10 +20,26 @@ require FindBin;
 { no warnings 'once'; push @INC, $FindBin::RealBin; }
 require TestUtil;
 
+sub no_leftover_tmp ($;$) {
+    my($dir, $suffix) = @_;
+    $suffix = '.tmp' if !defined $suffix;
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    my @files = bsd_glob("$dir/*$suffix");
+    is_deeply \@files, [], "no temporary file left-overs with suffix $suffix in $dir";
+}
+
 plan 'no_plan';
 
 my $doit = Doit->init;
 $doit->add_component('file');
+
+my $doit_dryrun = do {
+    local @ARGV = '--dry-run';
+    Doit->init;
+};
+ok $doit_dryrun->is_dry_run, 'created dry-run Doit object';
+# Accidentally it's not required to call add_component('file') here,
+# as the add_component calls affect the class, not the object.
 
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 $doit->mkdir("$tempdir/another_tmp");
@@ -54,6 +71,7 @@ $doit->mkdir("$tempdir/another_tmp");
     eval { $doit->file_atomic_write_fh("$tempdir/1st", sub { die "something failed" }) };
     like $@, qr{something failed}i, "exception in code";
     ok !-e "$tempdir/1st", "file was not created";
+    no_leftover_tmp $tempdir;
 }
 
 {
@@ -65,6 +83,7 @@ $doit->mkdir("$tempdir/another_tmp");
 
     ok -s "$tempdir/1st", 'Created file exists and is non-empty';
     is slurp_utf8("$tempdir/1st"), "\x{20ac}uro\n", 'expected content';
+    no_leftover_tmp $tempdir;
 }
 
 {
@@ -78,6 +97,7 @@ $doit->mkdir("$tempdir/another_tmp");
     is slurp("$tempdir/1st"), "changed content\n", 'content of existent file changed';
     my $mode_after = (stat("$tempdir/1st"))[2];
     is $mode_after, $mode_before, 'mode was preserved';
+    no_leftover_tmp $tempdir;
 }
 
 for my $opt_def (
@@ -91,6 +111,21 @@ for my $opt_def (
 				    print $fh $opt_spec;
 				}, @$opt_def);
     is slurp("$tempdir/1st"), $opt_spec, "atomic write with opts: $opt_spec";
+    if ($opt_def->[0] eq 'suffix') {
+	no_leftover_tmp $tempdir, $opt_def->[1];
+    } else {
+	no_leftover_tmp $tempdir;
+    }
+}
+
+{ # dry-run check
+    my $old_content = slurp("$tempdir/1st");
+    $doit_dryrun->file_atomic_write_fh("$tempdir/1st", sub {
+					   my $fh = shift;
+					   print $fh "this is dry run mode\n";
+				       });
+    is slurp("$tempdir/1st"), $old_content, 'nothing changed in dry run mode';
+    no_leftover_tmp $tempdir;
 }
 
 SKIP: {
@@ -124,6 +159,7 @@ SKIP: {
     }
     waitpid $pid, 0;
     is $?, 0, 'Write failed, probably got EFBIG';
+    no_leftover_tmp $tempdir;
 }
 
 SKIP: {
@@ -138,6 +174,7 @@ SKIP: {
     };
     like $@, qr{Error while closing temporary file}, 'Cannot write to /dev/full as expected';
     is slurp("$tempdir/1st"), $old_content, 'content still unchanged';
+    no_leftover_tmp $tempdir;
 }
 
 SKIP: {
@@ -178,6 +215,16 @@ SKIP: {
 				    print $fh "fresh file with File::Copy::move\n";
 				}, dir => "$mnt_point/dir");
     is slurp("$tempdir/fresh"), "fresh file with File::Copy::move\n", "cross-mount move with fresh file";
+
+    { # dry-run check
+	my $old_content = slurp("$tempdir/1st");
+	$doit_dryrun->file_atomic_write_fh("$tempdir/1st", sub {
+					       my $fh = shift;
+					       print $fh "this is dry run mode\n";
+					   }, dir => "$mnt_point/dir");
+	is slurp("$tempdir/1st"), $old_content, 'nothing changed in dry run mode';
+	no_leftover_tmp "$mnt_point/dir", '';
+    }
 
     $sudo->system(qw(umount), $mnt_point);
 }

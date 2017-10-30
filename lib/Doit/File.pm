@@ -18,7 +18,7 @@ use vars qw($VERSION);
 $VERSION = '0.01';
 
 use Doit::Log;
-use Doit::Util qw(copy_stat);
+use Doit::Util qw(copy_stat new_scope_cleanup);
 
 sub new { bless {}, shift }
 sub functions { qw(file_atomic_write_fh) }
@@ -44,6 +44,15 @@ sub file_atomic_write_fh {
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my($tmp_fh,$tmp_file);
+    my(@cleanup_files, @cleanup_fhs);
+    my $tempfile_scope = new_scope_cleanup {
+	for my $cleanup_fh (@cleanup_fhs) { # required on Windows, otherwise unlink won't work
+	    close $cleanup_fh if fileno($cleanup_fh);
+	}
+	for my $cleanup_file (@cleanup_files) {
+	    unlink $cleanup_file if -e $cleanup_file;
+	}
+    };
     if ($dir eq '/dev/full') {
 	# This is just used for testing error on close()
 	$tmp_file = '/dev/full';
@@ -52,6 +61,8 @@ sub file_atomic_write_fh {
     } else {
 	require File::Temp;
 	($tmp_fh,$tmp_file) = File::Temp::tempfile(SUFFIX => $suffix, DIR => $dir, UNLINK => 1);
+	push @cleanup_files, $tmp_file;
+	push @cleanup_fhs, $tmp_fh;
     }
     my $same_fs = do {
 	my $tmp_dev  = (stat($tmp_file))[0];
@@ -69,7 +80,6 @@ sub file_atomic_write_fh {
 
     eval { $code->($tmp_fh) };
     if ($@) {
-	unlink $tmp_file;
 	error $@;
     }
 
