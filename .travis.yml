@@ -47,7 +47,7 @@ addons:
       - locales
 
 script:
- - perl Build.PL && ./Build && ./Build test
+ - perl Build.PL && ./Build && ./Build test && sudo ./Build test_xt
  # Cannot install on MacOSX
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build install && ./Build test-installed; fi
 
