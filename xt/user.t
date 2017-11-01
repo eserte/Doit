@@ -55,7 +55,17 @@ $doit->user_account(
     ok !defined $pw[0], 'test user was removed';
 }
 
-chomp(my($another_shell) = split /\n/, eval { $doit->qx(qw(grep bash /etc/shells)) });
+my $another_shell = sub {
+    if (open my $fh, '/etc/shells') {
+	while(<$fh>) {
+	    chomp;
+	    if (/^(.*bash.*)$/) {
+		return $1;
+	    }
+	}
+    }
+    undef;
+}->();
 if ($another_shell) {
     Doit::Log::info("Found another shell: $another_shell");
 }
