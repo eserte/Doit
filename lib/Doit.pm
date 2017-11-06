@@ -1772,6 +1772,7 @@ use warnings;
 	my $dry_run = delete $opts{dry_run};
 	my $debug = delete $opts{debug};
 	my @components = @{ delete $opts{components} || [] };
+	my $perl = delete $opts{perl} || $^X;
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { }, $class;
@@ -1814,7 +1815,7 @@ use warnings;
 	# Run the server
 	my @cmd_worker =
 	    (
-	     'sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e",
+	     'sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e",
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
@@ -1834,7 +1835,7 @@ use warnings;
 	# Run the client --- must also run under root for socket
 	# access.
 	my($in, $out);
-	my @cmd_comm = ('sudo', @sudo_opts, $^X, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
+	my @cmd_comm = ('sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
 			q{Doit::Comm->comm_to_sock("} . $LASN_PREFIX . $sock_path . q{", debug => shift)}, !!$debug);
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
@@ -1869,6 +1870,7 @@ use warnings;
 	my $put_to_remote = delete $opts{put_to_remote} || 'rsync_put'; # XXX ideally this should be determined automatically
 	$put_to_remote =~ m{^(rsync_put|scp_put)$}
 	    or error "Valid values for put_to_remote: rsync_put or scp_put";
+	my $perl = delete $opts{perl} || 'perl';
 	error "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { host => $host, debug => $debug }, $class;
@@ -1926,7 +1928,7 @@ use warnings;
 
 	my @cmd_worker =
 	    (
-	     @cmd, "perl", "-I.doit", "-I.doit/lib", "-e",
+	     @cmd, $perl, "-I.doit", "-I.doit/lib", "-e",
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
@@ -1942,7 +1944,7 @@ use warnings;
 
 	my @cmd_comm =
 	    (
-	     @cmd, "perl", "-I.doit/lib", "-MDoit", "-e",
+	     @cmd, $perl, "-I.doit/lib", "-MDoit", "-e",
 	     q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift);},
 	     !!$debug,
 	    );
