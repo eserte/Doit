@@ -1747,10 +1747,12 @@ use warnings;
 	q|for my $component (qw(| . join(" ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } |;
     }
 
-    sub self_require {
-	if ($0 ne '-e') { # not a oneliner
+    sub self_require (;$) {
+	my $realscript = shift;
+	if (!defined $realscript) { $realscript = $0 }
+	if ($realscript ne '-e') { # not a oneliner
 	    q{$ENV{DOIT_IN_REMOTE} = 1; } .
-	    q{require "} . File::Basename::basename($0) . q{"; };
+	    q{require "} . File::Basename::basename($realscript) . q{"; };
 	} else {
 	    q{use Doit; };
 	}
@@ -1858,6 +1860,7 @@ use warnings;
     sub do_connect {
 	require File::Basename;
 	require Net::OpenSSH;
+	require FindBin;
 	my($class, $host, %opts) = @_;
 	my $dry_run = delete $opts{dry_run};
 	my @components = @{ delete $opts{components} || [] };
@@ -1893,8 +1896,9 @@ use warnings;
 	    }
 	    $ssh->system(\%ssh_run_opts, $remote_cmd);
 	}
-	if ($0 ne '-e') {
-	    $ssh->$put_to_remote({verbose => $debug}, $0, ".doit/"); # XXX verbose?
+	if ($FindBin::RealScript ne '-e') {
+	    no warnings 'once';
+	    $ssh->$put_to_remote({verbose => $debug}, "$FindBin::RealBin/$FindBin::RealScript", ".doit/"); # XXX verbose?
 	}
 	$ssh->$put_to_remote({verbose => $debug}, __FILE__, ".doit/lib/");
 	{
@@ -1929,7 +1933,7 @@ use warnings;
 	my @cmd_worker =
 	    (
 	     @cmd, $perl, "-I.doit", "-I.doit/lib", "-e",
-	     Doit::_ScriptTools::self_require() .
+	     Doit::_ScriptTools::self_require($FindBin::RealScript) .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
 	     q<sub _server_cleanup { unlink "> . $sock_path . q<" }> .

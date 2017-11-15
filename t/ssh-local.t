@@ -7,6 +7,7 @@
 
 use Cwd 'getcwd';
 use Doit;
+use File::Temp qw(tempdir);
 
 sub environment {
     my($doit) = @_;
@@ -59,5 +60,24 @@ is($ssh->exit, 'bye-bye', 'exit called'); # XXX hmmm, should this really return 
 
 eval { $ssh->system($^X, '-e', 'exit 0') };
 isnt($@, '', 'calling on ssh after exit');
+
+SKIP: {
+    Test::More::skip("Symlinks on Windows?", 1) if $^O eq 'MSWin32';
+
+    # Do a symlink test
+    my $dir = tempdir("doit_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    $d->write_binary("$dir/test-doit.pl", <<'EOF');
+use Doit;
+return 1 if caller;
+my $doit = Doit->init;
+my $ssh = $doit->do_ssh_connect((defined $ENV{USER} ? $ENV{USER}.'@' : '') . 'localhost', debug => 0, master_opts => [qw(-oPasswordAuthentication=no -oBatchMode=yes)]);
+my $ret = $ssh->info_qx('perl', '-e', 'print "yes\n"');
+print $ret;
+EOF
+    $d->chmod(0755, "$dir/test-doit.pl");
+    $d->symlink("$dir/test-doit.pl", "$dir/test-symlink.pl");
+    my $ret = $d->info_qx($^X, "$dir/test-symlink.pl");
+    Test::More::is($ret, "yes\n");
+}
 
 __END__
