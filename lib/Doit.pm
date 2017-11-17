@@ -341,9 +341,11 @@ use warnings;
     sub init {
 	my($class) = @_;
 	require Getopt::Long;
-	Getopt::Long::Configure('pass_through');
-	Getopt::Long::GetOptions('dry-run|n' => \my $dry_run);
-	Getopt::Long::Configure('no_pass_through'); # XXX or restore old value?
+	my $getopt = Getopt::Long::Parser->new;
+	$getopt->configure(qw(pass_through noauto_abbrev));
+	$getopt->getoptions(
+			    'dry-run|n' => \my $dry_run,
+			   );
 	my $doit = $class->_new;
 	if ($dry_run) {
 	    $doit->dryrunner;
