@@ -65,7 +65,17 @@ like $@, qr{Cannot find .* in file};
 
 $r->change_file("work-file",
 		{match => qr{^add_after test},
+		 replace => "replace test 1"});
+is slurp("work-file"), "a new line\nreplace test 1\nanother new line\n", 'match with regexp';
+
+$r->change_file("work-file",
+		{match => 'replace test 1',
 		 replace => "replace test"});
+is slurp("work-file"), "a new line\nreplace test\nanother new line\n", 'match with string';
+
+$r->change_file("work-file",
+		{match => "this will not match",
+		 replace => 'this should never be added'});
 is slurp("work-file"), "a new line\nreplace test\nanother new line\n";
 
 $r->change_file("work-file",
@@ -158,11 +168,6 @@ is $changes, 1, 'one change, with check';
 
 ######################################################################
 # Error checks
-eval { $r->change_file("work-file",
-		       {match => "this is not a Regexp",
-			action => sub { "dummy" }}) };
-like $@, qr{match must be a regexp};
-
 eval { $r->change_file("work-file",
 		       {match => qr{^dummy match}}) };
 like $@, qr{action or replace is missing};

@@ -1199,7 +1199,8 @@ use warnings;
 		push @unless_match_actions, $_;
 	    } elsif ($_->{match}) {
 		if (ref $_->{match} ne 'Regexp') {
-		    die "match must be a regexp";
+		    my $rx = '^' . quotemeta($_->{match}) . '$';
+		    $_->{match} = qr{$rx};
 		}
 		if ($_->{action}) {
 		    if (ref $_->{action} ne 'CODE') {
