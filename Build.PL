@@ -131,7 +131,7 @@ sub test_installed {
 }
 
 sub test_in_docker {
-    my $distro_spec = $ENV{DISTRO_SPEC};
+    my $distro_spec = $ENV{DISTRO_SPEC}; # XXX this should be a proper option!
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
@@ -335,9 +335,15 @@ sub _debian_package {
     my $version = delete $opts{'--version'};
     my $add_distro_version = delete $opts{'--add-distro-version'};
     if (!defined $version) {
-	my $git_describe = eval { $doit->info_qx('git', 'describe') }; # XXX what if this fails? Optionally made fatal?
-	if (defined $git_describe && $git_describe =~ m{^([0-9\.]+)-(\d+)-g(.*)}) {
-	    $version = $1."+git".$2."+".$3."-1"; # XXX make "1" configurable?
+	chomp(my $git_describe = eval { $doit->info_qx('git', 'describe') }); # XXX what if this fails? Optionally made fatal?
+	if (defined $git_describe) {
+	    if ($git_describe =~ m{^([0-9\.]+)$}) {
+		$version = $1;
+	    } elsif ($git_describe =~ m{^([0-9\.]+)-(\d+)-g(.*)}) {
+		$version = $1."+git".$2."+".$3."-1"; # XXX make "1" configurable?
+	    } else {
+		error "Cannot parse output from git describe: '$git_describe'";
+	    }
 	    if ($add_distro_version) {
 		chomp(my $dist_id = $doit->qx({quiet=>1}, 'lsb_release', '-si'));
 		chomp(my $rel     = $doit->qx({quiet=>1}, 'lsb_release', '-sr'));
@@ -352,6 +358,8 @@ sub _debian_package {
 		    error "No distro version support for '$dist_id'";
 		}
 	    }
+	} else {
+	    warning "No information using git-describe available --- use automatic version detection";
 	}
     }
 
@@ -369,7 +377,7 @@ sub _debian_package {
 }
 
 sub debian_package_with_docker {
-    my $distro_spec = $ENV{DISTRO_SPEC};
+    my $distro_spec = $ENV{DISTRO_SPEC}; # XXX this should be a proper option!
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
@@ -378,12 +386,18 @@ sub debian_package_with_docker {
     }
     require File::Temp;
     my $dir = File::Temp::tempdir("Doit_debian_package_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
-    $doit->add_component('git');
-    $doit->git_repo_update(
-	repository => $FindBin::RealBin,
-	directory  => $dir,
-	# no: we need the full history for correct git version calculation: clone_opts => [qw(--depth=1)],
-    );
+    my $use_workdir = $ENV{USE_WORKDIR}; # XXX this should be a proper option
+    if ($use_workdir) {
+	# no --cvs-exclude --- git-describe has to work
+	$doit->system('rsync', '-a', '--exclude=blib', '.', $dir);
+    } else {
+	$doit->add_component('git');
+	$doit->git_repo_update(
+	    repository => $FindBin::RealBin,
+	    directory  => $dir,
+	    # no: we need the full history for correct git version calculation: clone_opts => [qw(--depth=1)],
+	);
+    }
     $doit->write_binary("$dir/Dockerfile", <<"EOF");
 FROM $distro_spec
 
