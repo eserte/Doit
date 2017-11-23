@@ -262,6 +262,33 @@ sub install {
     }
 }
 
+sub git_tag {
+    $doit->add_component('git');
+
+    my $status = $doit->git_short_status;
+    if ($status eq '<<') {
+	error 'Working directory has uncomitted changes: ' . `git status`;
+    }
+    if ($status eq '*') {
+	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
+    }
+
+    my $Doit_VERSION = $Doit::VERSION;
+    if (!defined $Doit_VERSION) {
+	error 'Fatal: Doit.pm does not define a version';
+    }
+    if ($Doit_VERSION !~ m{^\d+\.\d+$}) {
+	error "Doit.pm VERSION $Doit_VERSION does not look like expected";
+    }
+
+    my $out = $doit->info_qx(qw(git tag --list), $Doit_VERSION);
+    if (defined $out && $out ne '') {
+	error "A git tag $Doit_VERSION already exists";
+    }
+
+    $doit->system(qw(git tag -a -m), "tag $Doit_VERSION release", $Doit_VERSION);
+}
+
 sub generate_META_json {
     require CPAN::Meta;
     require ExtUtils::MakeMaker;
