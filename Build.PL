@@ -420,7 +420,7 @@ EOF
 	$label = "doit-deb-$label";
 	$doit->system(qw(docker build -t), $label, qw(.));
 	$doit->system(
-		      qw(docker run), '-v', "$dir:/data", qw(-v /tmp:/pkg dh-make-perl-build),
+		      qw(docker run), '-v', "$dir:/data", qw(-v /tmp:/pkg), $label,
 		      'sh', '-c', 'cd /data && perl Build.PL && ./Build debian_package && cp *.deb /pkg'
 		     );
     } $dir;
