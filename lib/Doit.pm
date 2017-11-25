@@ -715,11 +715,11 @@ use warnings;
 
     sub cmd_open2 {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	my $quiet = delete $options->{quiet};
-	my $info = delete $options->{info};
-	my $instr = delete $options->{instr}; $instr = '' if !defined $instr;
-	error "Unhandled options: " . join(" ", %$options) if %$options;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet};
+	my $info = delete $options{info};
+	my $instr = delete $options{instr}; $instr = '' if !defined $instr;
+	error "Unhandled options: " . join(" ", %options) if %options;
 
 	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
 
@@ -749,21 +749,21 @@ use warnings;
 
     sub cmd_info_open2 {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	$options->{info} = 1;
-	$self->cmd_open2($options, @args);
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	$options{info} = 1;
+	$self->cmd_open2(\%options, @args);
     }
 
     sub cmd_open3 {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	my $quiet = delete $options->{quiet};
-	my $info = delete $options->{info};
-	my $timeout = delete $options->{timeout} || 86400;
-	my $instr = delete $options->{instr};
-	my $errref = delete $options->{errref};
-	my $statusref = delete $options->{statusref};
-	error "Unhandled options: " . join(" ", %$options) if %$options;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet};
+	my $info = delete $options{info};
+	my $timeout = delete $options{timeout} || 86400;
+	my $instr = delete $options{instr};
+	my $errref = delete $options{errref};
+	my $statusref = delete $options{statusref};
+	error "Unhandled options: " . join(" ", %options) if %options;
 
 	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
 
@@ -825,18 +825,18 @@ use warnings;
 
     sub cmd_info_open3 {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	$options->{info} = 1;
-	$self->cmd_open3($options, @args);
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	$options{info} = 1;
+	$self->cmd_open3(\%options, @args);
     }
 
     sub cmd_qx {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	my $quiet = delete $options->{quiet};
-	my $info = delete $options->{info};
-	my $statusref = delete $options->{statusref};
-	error "Unhandled options: " . join(" ", %$options) if %$options;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet};
+	my $info = delete $options{info};
+	my $statusref = delete $options{statusref};
+	error "Unhandled options: " . join(" ", %options) if %options;
 
 	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
 
@@ -866,9 +866,9 @@ use warnings;
 
     sub cmd_info_qx {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	$options->{info} = 1;
-	$self->cmd_qx($options, @args);
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	$options{info} = 1;
+	$self->cmd_qx(\%options, @args);
     }
 
     sub cmd_rmdir {
@@ -947,10 +947,10 @@ use warnings;
 
     sub cmd_system {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
 	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
-	my $show_cwd = delete $options->{show_cwd};
-	error "Unhandled options: " . join(" ", %$options) if %$options;
+	my $show_cwd = delete $options{show_cwd};
+	error "Unhandled options: " . join(" ", %options) if %options;
 	my @commands;
 	push @commands, {
 			 code => sub {
@@ -1046,9 +1046,9 @@ use warnings;
 
     sub cmd_write_binary {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	my $quiet = delete $options->{quiet} || 0;
-	error "Unhandled options: " . join(" ", %$options) if %$options;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet} || 0;
+	error "Unhandled options: " . join(" ", %options) if %options;
 	my($filename, $content) = @args;
 
 	my $doit;
@@ -1130,10 +1130,10 @@ use warnings;
 
     sub cmd_change_file {
 	my($self, @args) = @_;
-	my $options = {}; if (@args && ref $args[0] eq 'HASH') { $options = shift @args }
-	my $check = delete $options->{check};
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $check = delete $options{check};
 	if ($check && ref $check ne 'CODE') { error "check parameter should be a CODE reference" }
-	error "Unhandled options: " . join(" ", %$options) if %$options;
+	error "Unhandled options: " . join(" ", %options) if %options;
 
 	my($file, @changes) = @args;
 	if (!-e $file) {
