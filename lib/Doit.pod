@@ -51,24 +51,16 @@ I<$group> is interpreted to leave that value unchanged. This command
 is not useful on Windows systems. See L<perlfunc/chown> for more
 details.
 
-=head3 cond_run
+=head3 copy
 
-    $doit->cond_run(if      => sub { ... }, cmd => ["command", "args" ...]);
-    $doit->cond_run(unless  => sub { ... }, cmd => ["command", "args" ...]);
-    $doit->cond_run(creates => $file,       cmd => ["command", "args" ...]);
+    $doit->copy($from, $to);
 
-Conditionally run the command specified in C<cmd> (an array reference
-with command and arguments). Conditions are expressed as code
-references which should return a true or false value (options C<if>
-for a positive condition and C<unless> for a negative condition), or
-with the option C<creates> for checking the existence of the given
-I<$file> which is expected to be created by the given command.
-Conditions may be combined.
-
-The C<cmd> option may also specify a L<IPC::Run>-compatible list, for
-example:
-
-    $doit->cond_run(creates => $file, cmd => [["command", "args" ...], ">", $file]);
+Make sure that the file I<$from> is copied to I<$to> unless there's
+already a file with same contents. Copying is done with
+L<File::Copy::copy|File::Copy/copy>. File attributes are not copied
+--- this can be done using
+L<Doit::Util::copy_stat|Doit::Util/copy_stat>. The logging includes a
+diff between both files, if the L<diff(1)> utility is available.
 
 =head3 ln_nsf
 
@@ -105,6 +97,14 @@ directory already exists. See L<perlfunc/mkdir> for more details. See
 L</make_path> for a command which will also create mising intermediate
 directories.
 
+=head3 move
+
+    $doit->move($from, $to);
+
+Move file I<$from> to I<$to>. Of course, this command never converges.
+See L<File::Copy::move|File::Copy/move> for details. For an
+alternative command see L</rename>.
+
 =head3 remove_tree
 
     $doit->remove_tree($directory ...);
@@ -119,7 +119,75 @@ L<File::Path::remove_tree|File::Path/remove_tree> for details.
     $doit->rename($from, $to);
 
 Rename I<$from> to I<$to>. Of course, this command never converges.
-See L<perlfunc/rename> for details.
+See L<perlfunc/rename> for details. See L</move> for a command which
+can move a file between different filesystems.
+
+=head2 SYSTEM EXECUTION COMMANDS
+
+=head3 cond_run
+
+    $doit->cond_run(if      => sub { ... }, cmd => ["command", "args" ...]);
+    $doit->cond_run(unless  => sub { ... }, cmd => ["command", "args" ...]);
+    $doit->cond_run(creates => $file,       cmd => ["command", "args" ...]);
+
+Conditionally run the command specified in C<cmd> (an array reference
+with command and arguments). Conditions are expressed as code
+references which should return a true or false value (options C<if>
+for a positive condition and C<unless> for a negative condition), or
+with the option C<creates> for checking the existence of the given
+I<$file> which is expected to be created by the given command.
+Conditions may be combined.
+
+The C<cmd> option may also specify a L<IPC::Run>-compatible list, for
+example:
+
+    $doit->cond_run(creates => $file, cmd => [["command", "args" ...], ">", $file]);
+
+=head3 open2
+
+    my $stdout = $doit->open2("command", "args" ...);
+    my $stdout = $doit->open2({quiet => 1, info => 1, instr => $input}, "command", "args" ...);
+
+Execute a command and return the produced stdout. If C<quiet> is set
+to a true value, then no logging is done. If C<info> is set to a true
+value, then command execution happens even in dry-run mode. If
+C<instr> is specified, then it's send to the stdin of the command.
+Implementation is done with L<IPC::Open2>.
+
+=head3 info_open2
+
+    my $stdout = $doit->info_open2("command", "args" ...);
+    my $stdout = $doit->info_open2({quiet => 1, instr => $input}, "command", "args" ...);
+
+Like L</open2>, but with the option C<< info=>1 >> set.
+
+=head3 open3
+
+    my $stdout = $doit->open3("command", "args" ...);
+    my $stdout = $doit->open3({quiet     => 1, info => 1,
+                               instr     => $input,
+                               errref    => \my $stderr,
+                               statusref => \my %status, 
+                              }, "command", "args" ...);
+
+Execute a command and return the produced stdout. If C<quiet> is set
+to a true value, then no logging is done. If C<info> is set to a true
+value, then command execution happens even in dry-run mode. If
+C<instr> is specified, then it's send to the stdin of the command. If
+C<errref> is set to a scalar reference, then this is filled with the
+stderr of the command; otherwise stderr won't show up. If C<statusref>
+is set to a hash reference, then it is filled with the exit
+information of the command: C<msg>, C<errno>, C<exitcode>,
+C<signalnum>, C<coredump> (except for C<msg> fields may be missing).
+
+Implementation is done with L<IPC::Open3>.
+
+=head3 info_open3
+
+    my $stdout = $doit->info_open3("command", "args" ...);
+    my $stdout = $doit->info_open3({...}, "command", "args" ...);
+
+Like L</open3>, but with the option C<< info=>1 >> set.
 
 =head1 AUTHOR
 
