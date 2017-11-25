@@ -567,13 +567,13 @@ use warnings;
     }
 
     sub cmd_mkdir {
-	my($self, $directory, $mask) = @_;
+	my($self, $directory, $mode) = @_;
 	my @commands;
 	if (!-d $directory) {
-	    if (defined $mask) {
+	    if (defined $mode) {
 		push @commands, {
-				 code => sub { mkdir $directory, $mask or die $! },
-				 msg  => "mkdir $directory with mask $mask",
+				 code => sub { mkdir $directory, $mode or die $! },
+				 msg  => "mkdir $directory with mask $mode",
 				};
 	    } else {
 		push @commands, {

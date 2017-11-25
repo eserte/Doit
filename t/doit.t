@@ -154,6 +154,19 @@ $r->mkdir("decl-test");
 ok -d "decl-test";
 $r->mkdir("decl-test");
 ok -d "decl-test";
+{
+    my $umask = umask 0;
+    $r->mkdir("decl-test-0700", 0700);
+    ok -d "decl-test-0700";
+ SKIP: {
+	skip "mode setting effectively a no-op on Windows", 1 if $^O eq 'MSWin32';
+	my @s = stat "decl-test-0700";
+	is(($s[2] & 0777), 0700, 'mkdir call with mode');
+    }
+    $r->rmdir("decl-test-0700");
+    umask $umask;
+}
+
 $r->make_path("decl-test", "decl-deep/test");
 ok -d "decl-deep/test";
 $r->make_path("decl-test", "decl-deep/test");
