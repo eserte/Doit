@@ -172,10 +172,27 @@ if ($^O ne 'MSWin32') { # date is interactive on Windows
     }
 }
 if ($has_ipc_run) {
+    eval { $r->cond_run };
+    like $@, qr{cmd is a mandatory option for cond_run};
+
+    eval { $r->cond_run(invalid_option => 1) };
+    like $@, qr{Unhandled options: invalid_option};
+
+    eval { $r->cond_run(cmd => "a scalar") };
+    like $@, qr{cmd must be an array reference};
+
     $r->cond_run(cmd => [$^X, '-le', 'print q(unconditional cond_run)']);
     $r->cond_run(if => sub { 1 }, cmd => [$^X, '-le', 'print q(always true)']);
-    $r->cond_run(if => sub { 0 }, cmd => [$^X, '-le', 'print q(never true, should never happen!!!)']);
+    $r->cond_run(if => sub { 0 }, cmd => [$^X, '-le', 'die q(never true, should never happen!!!)']);
     $r->cond_run(if => sub { rand(1) < 0.5 }, cmd => [$^X, '-le', 'print q(yes)']);
+
+    $r->cond_run(unless => sub { 1 }, cmd => [$^X, '-le', 'die q(never true, should never happen!!!)']);
+    $r->cond_run(unless => sub { 0 }, cmd => [$^X, '-le', 'print q(always true)']);
+
+    ok !-e "cond-run-file", 'file for cond_run does not exist yet';
+    $r->cond_run(creates => "cond-run-file", cmd => [$^X, '-e', 'open my $ofh, ">", "cond-run-file"']);
+    ok  -e "cond-run-file", 'file for cond_run now exists';
+    $r->cond_run(creates => "cond-run-file", cmd => [$^X, '-e', 'die "should never happen, as file already exists"']);
 }
 
 $r->install_generic_cmd('never_executed', sub { 0 }, sub { die "never executed" });

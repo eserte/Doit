@@ -481,7 +481,14 @@ use warnings;
 	my $unless  = delete $opts{unless};
 	my $creates = delete $opts{creates};
 	my $cmd     = delete $opts{cmd};
-	die "Unhandled options: " . join(" ", %opts) if %opts;
+	error "Unhandled options: " . join(" ", %opts) if %opts;
+
+	if (!$cmd) {
+	    error "cmd is a mandatory option for cond_run";
+	}
+	if (ref $cmd ne 'ARRAY') {
+	    error "cmd must be an array reference";
+	}
 
 	my $doit = 1;
 	if ($if && !$if->()) {
