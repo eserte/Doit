@@ -149,6 +149,7 @@ $r->unlink("decl-test");
 ok ! -f "decl-test";
 ok ! -e "decl-test";
 $r->unlink("decl-test");
+
 $r->mkdir("decl-test");
 ok -d "decl-test";
 $r->mkdir("decl-test");
@@ -156,6 +157,22 @@ ok -d "decl-test";
 $r->make_path("decl-test", "decl-deep/test");
 ok -d "decl-deep/test";
 $r->make_path("decl-test", "decl-deep/test");
+$r->make_path("decl-deep/test2", {mode => 0700, verbose => 1});
+ok -d "decl-deep/test2";
+SKIP: {
+    skip "mode setting effectively a no-op on Windows", 1 if $^O eq 'MSWin32';
+    my @s = stat "decl-deep/test2";
+    is(($s[2] & 0777), 0700, 'make_path call with mode');
+}
+SKIP: {
+    skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';
+    $r->mkdir("unreadable-dir");
+    $r->chmod(0000, "unreadable-dir");
+    eval { $r->make_path("unreadable-dir/test") };
+    like $@, qr{mkdir unreadable-dir/test: }; # permission denied
+    $r->rmdir("unreadable-dir");
+}
+
 $r->rmdir("decl-test");
 ok ! -d "decl-test";
 ok ! -e "decl-test";

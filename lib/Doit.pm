@@ -558,7 +558,7 @@ use warnings;
 			     code => sub {
 				 require File::Path;
 				 File::Path::make_path(@directories_to_create, $options)
-					 or die $!;
+					 or error $!;
 			     },
 			     msg => "make_path @directories",
 			    };
