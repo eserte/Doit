@@ -595,7 +595,7 @@ use warnings;
 			     code => sub {
 				 require File::Path;
 				 File::Path::remove_tree(@directories_to_remove, $options)
-					 or die $!;
+					 or error $!;
 			     },
 			     msg => "remove_tree @directories_to_remove",
 			    };

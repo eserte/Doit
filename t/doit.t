@@ -231,8 +231,12 @@ $r->rmdir("decl-test");
 ######################################################################
 # remove_tree
 $r->remove_tree("decl-test", "decl-deep/test");
-ok ! -d "decl-deep/test";
+ok ! -d "decl-test", 'remove_tree removed simple directory';
+ok ! -d "decl-deep/test", 'remove_tree removed tree';
 $r->remove_tree("decl-test", "decl-deep/test");
+$r->mkdir("decl-test");
+$r->create_file_if_nonexisting("decl-test/file");
+$r->remove_tree("decl-test", {verbose=>1});
 
 ######################################################################
 # system, run
