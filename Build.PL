@@ -162,7 +162,11 @@ EOF
 }
 
 sub cover {
-    $doit->system(_prove_path(), '--exec', "$^X -Ilib -MDevel::Cover", 't');
+    {
+	local $ENV{PERL5LIB} .= ($ENV{PERL5LIB} ne '' ? ':' : '') . "$FindBin::RealBin/lib";
+	local $ENV{PERL5OPT} .= ($ENV{PERL5OPT} ne '' ? ' ' : '') . '-MDevel::Cover';
+	$doit->system(_prove_path(), '--exec', $^X, 't');
+    }
     $doit->system(_cover_path());
 }
 
