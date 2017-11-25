@@ -572,12 +572,12 @@ use warnings;
 	if (!-d $directory) {
 	    if (defined $mode) {
 		push @commands, {
-				 code => sub { mkdir $directory, $mode or die $! },
+				 code => sub { mkdir $directory, $mode or error "$!" },
 				 msg  => "mkdir $directory with mask $mode",
 				};
 	    } else {
 		push @commands, {
-				 code => sub { mkdir $directory or die $! },
+				 code => sub { mkdir $directory or error "$!" },
 				 msg  => "mkdir $directory",
 				};
 	    }

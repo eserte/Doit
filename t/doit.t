@@ -15,9 +15,15 @@
 use strict;
 use File::Temp 'tempdir';
 use Test::More 'no_plan';
+use Errno ();
 
 use Doit;
 use Doit::Log (); # don't import: clash with Test::More::note
+
+my %errno_string =
+    (
+     EEXIST => do { $! = Errno::EEXIST(); "$!" },
+    );
 
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 chdir $tempdir or die "Can't chdir to $tempdir: $!";
@@ -188,6 +194,11 @@ ok -d "decl-test";
     $r->rmdir("decl-test-0700");
     umask $umask;
 }
+$r->create_file_if_nonexisting('file-in-the-way');
+eval { $r->mkdir('file-in-the-way') };
+like $@, qr{ERROR.*\Q$errno_string{EEXIST}};
+eval { $r->mkdir('file-in-the-way', 0777) };
+like $@, qr{ERROR.*\Q$errno_string{EEXIST}};
 
 ######################################################################
 # make_path
