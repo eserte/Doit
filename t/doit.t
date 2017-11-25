@@ -25,8 +25,9 @@ sub with_unreadable_directory (&$);
 
 my %errno_string =
     (
+     EACCES => do { $! = Errno::EACCES(); "$!" },
      EEXIST => do { $! = Errno::EEXIST(); "$!" },
-     EACCES => do { $! = Errno::EACCES();  "$!" },
+     ENOENT => do { $! = Errno::ENOENT(); "$!" },
     );
 
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
@@ -119,11 +120,9 @@ SKIP: {
 $r->rename("decl-test", "decl-test3");
 $r->move("decl-test3", "decl-test2");
 $r->rename("decl-test2", "decl-test");
-with_unreadable_directory {
-    eval { $r->rename("decl-test", "unreadable-dir/does-not-work") };
-    like $@, qr{ERROR.*\Q$errno_string{EACCES}}, 'failed rename';
-} 'unreadable-dir';
-ok !-e "unreadable-dir/does-not-work", 'last rename really failed';
+eval { $r->rename("decl-test", "non-existent-directory/does-not-work") };
+like $@, qr{ERROR.*\Q$errno_string{ENOENT}}, 'failed rename';
+ok !-e "non-existent-directory/does-not-work", 'last rename really failed';
 ok  -e "decl-test", 'file is not renamed';
 
 ######################################################################
@@ -224,10 +223,13 @@ SKIP: {
     my @s = stat "decl-deep/test2";
     is(($s[2] & 0777), 0700, 'make_path call with mode');
 }
-with_unreadable_directory {
-    eval { $r->make_path("unreadable-dir/test") };
-    like $@, qr{mkdir unreadable-dir/test: }; # permission denied
-} "unreadable-dir";
+SKIP: {
+    skip "unreadable-dir not a problem for the superuser", 1 if $> == 0;
+    with_unreadable_directory {
+	eval { $r->make_path("unreadable-dir/test") };
+	like $@, qr{mkdir unreadable-dir/test: }; # permission denied
+    } "unreadable-dir";
+}
 
 ######################################################################
 # rmdir
