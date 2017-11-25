@@ -46,10 +46,16 @@ $r->create_file_if_nonexisting('decl-test2');
 ok -f 'decl-test2', 'create_file_if_nonexisting on a non-existent file';
 $r->unlink('decl-test2');
 
-$r->chmod(0755, "decl-test");
-$r->chmod(0755, "decl-test");
-$r->chmod(0644, "decl-test");
-$r->chmod(0644, "decl-test");
+$r->chmod(0755, "decl-test"); # change expected
+$r->chmod(0755, "decl-test"); # noop
+eval { $r->chmod(0644, "does-not-exist") };
+like $@, qr{chmod failed: };
+eval { $r->chmod(0644, "does-not-exist-1", "does-not-exist-2") };
+like $@, qr{chmod failed on all files: };
+eval { $r->chmod(0644, "decl-test", "does-not-exist") };
+like $@, qr{\Qchmod failed on some files (1/2): };
+$r->chmod(0644, "decl-test"); # noop
+
 $r->chown($>, undef, "decl-test");
 $r->chown($>, undef, "decl-test");
 my $another_group = (split / /, $))[1];

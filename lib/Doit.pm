@@ -384,12 +384,25 @@ use warnings;
 		if (($s[2] & 07777) != $mode) {
 		    push @files_to_change, $file;
 		}
+	    } else {
+		push @files_to_change, $file;
 	    }
 	}
 	my @commands;
 	if (@files_to_change) {
 	    push @commands, {
-			     code => sub { chmod $mode, @files_to_change or die $! },
+			     code => sub {
+				 my $changed_files = chmod $mode, @files_to_change;
+				 if ($changed_files != @files_to_change) {
+				     if (@files_to_change == 1) {
+					 error "chmod failed: $!";
+				     } elsif ($changed_files == 0) {
+					 error "chmod failed on all files: $!";
+				     } else {
+					 error "chmod failed on some files (" . (@files_to_change-$changed_files) . "/" . scalar(@files_to_change) . "): $!";
+				     }
+				 }
+			     },
 			     msg  => sprintf "chmod 0%o %s", $mode, join(" ", @files_to_change), # shellquote?
 			    };
 	}
