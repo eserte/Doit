@@ -659,7 +659,7 @@ use warnings;
 			code => sub {
 			    require File::Copy;
 			    File::Copy::move($from, $to)
-				    or die "Move failed: $!";
+				    or error "Move failed: $!";
 			},
 			msg => "move $from $to",
 		       };

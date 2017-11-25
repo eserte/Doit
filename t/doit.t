@@ -124,6 +124,10 @@ eval { $r->rename("decl-test", "non-existent-directory/does-not-work") };
 like $@, qr{ERROR.*\Q$errno_string{ENOENT}}, 'failed rename';
 ok !-e "non-existent-directory/does-not-work", 'last rename really failed';
 ok  -e "decl-test", 'file is not renamed';
+eval { $r->move("decl-test", "non-existent-directory/does-not-work") };
+like $@, qr{ERROR.*\Q$errno_string{ENOENT}}, 'failed rename';
+ok !-e "non-existent-directory/does-not-work", 'last rename really failed';
+ok  -e "decl-test", 'file is not renamed';
 
 ######################################################################
 # copy
