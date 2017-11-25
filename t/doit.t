@@ -113,12 +113,19 @@ TODO: {
     $r->unlink("decl-test-symlink");
     ok ! -e "decl-test-symlink", 'symlink was removed';
 
+    eval { $r->ln_nsf };
+    like $@, qr{oldfile was not specified for ln_nsf};
+    eval { $r->ln_nsf("tmp/decl-test") };
+    like $@, qr{newfile was not specified for ln_nsf};
     $r->ln_nsf("tmp/decl-test", "decl-test-symlink2");
     ok -l "decl-test-symlink2", 'symlink created with ln -nsf';
     is readlink("decl-test-symlink2"), "tmp/decl-test", 'symlink points to expected destination';
     $r->ln_nsf("tmp/decl-test", "decl-test-symlink2");
     ok -l "decl-test-symlink2", 'symlink still exists (ln -nsf)';
     is readlink("decl-test-symlink2"), "tmp/decl-test", 'symlink did not change expected destination';
+    $r->ln_nsf("decl-test", "decl-test-symlink2");
+    ok -l "decl-test-symlink2", 'new symlink (ln -nsf)';
+    is readlink("decl-test-symlink2"), "decl-test", 'symlink was changed';
     $r->unlink("decl-test-symlink2");
     ok ! -e "decl-test-symlink2", 'symlink was removed';
 
@@ -127,6 +134,12 @@ TODO: {
     eval { $r->ln_nsf("tmp/decl-test", "dir-for-ln-nsf-test") };
     like $@, qr{"dir-for-ln-nsf-test" already exists as a directory};
     ok -d "dir-for-ln-nsf-test", 'directory still exists after failed ln -nsf';
+
+    $r->mkdir("unreadable-dir");
+    $r->chmod(0000, "unreadable-dir");
+    eval { $r->ln_nsf("target", "unreadable/symlink") };
+    like $@, qr{ln -nsf target unreadable/symlink failed};
+    $r->rmdir("unreadable-dir");
 }
 $r->write_binary("decl-test", "some content\n");
 $r->write_binary("decl-test", "some content\n");
