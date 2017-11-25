@@ -19,6 +19,9 @@ use Errno ();
 
 use Doit;
 use Doit::Log (); # don't import: clash with Test::More::note
+use Doit::Util qw(new_scope_cleanup);
+
+sub with_unreadable_directory (&$);
 
 my %errno_string =
     (
@@ -111,10 +114,13 @@ SKIP: {
 }
 
 ######################################################################
-# rename, move, copy
+# rename, move
 $r->rename("decl-test", "decl-test3");
 $r->move("decl-test3", "decl-test2");
 $r->rename("decl-test2", "decl-test");
+
+######################################################################
+# copy
 $r->copy("decl-test", "decl-copy");
 ok -e "decl-copy"
     or diag qx(ls -al);
@@ -158,11 +164,10 @@ TODO: {
     like $@, qr{"dir-for-ln-nsf-test" already exists as a directory};
     ok -d "dir-for-ln-nsf-test", 'directory still exists after failed ln -nsf';
 
-    $r->mkdir("unreadable-dir");
-    $r->chmod(0000, "unreadable-dir");
-    eval { $r->ln_nsf("target", "unreadable/symlink") };
-    like $@, qr{ln -nsf target unreadable/symlink failed};
-    $r->rmdir("unreadable-dir");
+    with_unreadable_directory {
+	eval { $r->ln_nsf("target", "unreadable/symlink") };
+	like $@, qr{ln -nsf target unreadable/symlink failed};
+    } "unreadable-dir";
 }
 
 ######################################################################
@@ -212,14 +217,10 @@ SKIP: {
     my @s = stat "decl-deep/test2";
     is(($s[2] & 0777), 0700, 'make_path call with mode');
 }
-SKIP: {
-    skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';
-    $r->mkdir("unreadable-dir");
-    $r->chmod(0000, "unreadable-dir");
+with_unreadable_directory {
     eval { $r->make_path("unreadable-dir/test") };
     like $@, qr{mkdir unreadable-dir/test: }; # permission denied
-    $r->rmdir("unreadable-dir");
-}
+} "unreadable-dir";
 
 ######################################################################
 # rmdir
@@ -314,5 +315,28 @@ $r->mytest(1);
 $r->mytest(0);
 
 chdir '/'; # for File::Temp
+
+######################################################################
+# helpers
+
+sub with_unreadable_directory (&$) {
+    my($code, $unreadable_dir) = @_;
+    Doit::Log::error("not a CODE ref: $code") if ref $code ne 'CODE';
+    Doit::Log::error("missing unreadable dir") if !defined $unreadable_dir;
+
+ SKIP: {
+	skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';
+
+	$r->mkdir($unreadable_dir);
+	$r->chmod(0000, $unreadable_dir);
+
+	my $cleanup = new_scope_cleanup {
+	    $r->chmod(0700, $unreadable_dir);
+	    $r->rmdir($unreadable_dir);
+	};
+
+	$code->();
+    }
+}
 
 __END__
