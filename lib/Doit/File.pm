@@ -126,7 +126,9 @@ sub file_atomic_write {
 sub _make_writeable {
     my($doit, $file, $for) = @_;
     return if $for eq 'rename' && $^O ne 'MSWin32'; # don't need to do anything
-    my $old_mode = (stat($file))[2] & 07777;
+    my @s = stat($file);
+    return if !@s; # not stat-able -> file does not exist yet?
+    my $old_mode = $s[2] & 07777;
     return if ($old_mode & 0200); # already writable
     $doit->chmod(($old_mode | 0200), $file);
 }
