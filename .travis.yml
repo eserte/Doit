@@ -3,8 +3,8 @@ language: perl
 matrix:
   include:
 # First five
-    - perl: "5.22"
-      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1
+    - perl: "5.26"
+      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1
     - perl: "5.20"
     # Actually the perl here does not matter
     - perl: "5.18"
@@ -19,11 +19,11 @@ matrix:
       env: WITH_IPC_RUN=1
     - perl: "5.10"
     - perl: "5.8"
-      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1
+      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1
     # Actually the perl here does not matter
     - perl: "5.14"
       env: USE_SYSTEM_PERL=1
-    - perl: "5.18"
+    - perl: "5.22"
       env: WITH_IPC_RUN=1
 
 before_install:
@@ -39,6 +39,7 @@ install:
  - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_IPC_RUN" = 1 ]; then cpanm --quiet --notest IPC::Run; fi
  - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_NET_OPENSSH" = 1 ]; then cpanm --quiet --notest Net::OpenSSH; fi
  - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_BSD_RESOURCE" = 1 ]; then cpanm --quiet --notest BSD::Resource; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a "$WITH_DEVEL_HIDE" = 1 ]; then cpanm --quiet --notest Devel::Hide; fi
 
 addons:
   apt:

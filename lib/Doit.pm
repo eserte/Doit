@@ -628,20 +628,20 @@ use warnings;
 			     code => sub {
 				 require File::Copy;
 				 File::Copy::copy($from, $to)
-					 or die "Copy failed: $!";
+					 or error "Copy failed: $!";
 			     },
 			     msg => do {
 				 if (-e $real_to) {
-				     my $diff;
 				     if (eval { require IPC::Run; 1 }) {
+					 my $diff;
 					 if (eval { IPC::Run::run(['diff', '-u', $to, $from], '>', \$diff); 1 }) {
 					     "copy $from $to\ndiff:\n$diff";
 					 } else {
 					     "copy $from $to\n(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
 					 }
 				     } else {
-					 $diff = `diff -u '$to' '$from'`;
-					 "copy $from $to\ndiff:\n$diff";
+					 my $diffref = _qx('diff', '-u', $to, $from);
+					 "copy $from $to\ndiff:\n$$diffref";
 				     }
 				 } else {
 				     "copy $from $to (destination does not exist)";
@@ -830,6 +830,18 @@ use warnings;
 	$self->cmd_open3(\%options, @args);
     }
 
+    sub _qx {
+	my(@args) = @_;
+	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
+
+	open my $fh, '-|', @args
+	    or error "Error running '@args': $!";
+	local $/;
+	my $buf = <$fh>;
+	close $fh;
+	\$buf;
+    }
+
     sub cmd_qx {
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
@@ -838,14 +850,8 @@ use warnings;
 	my $statusref = delete $options{statusref};
 	error "Unhandled options: " . join(" ", %options) if %options;
 
-	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
-
 	my $code = sub {
-	    open my $fh, '-|', @args
-		or error "Error running '@args': $!";
-	    local $/;
-	    my $buf = <$fh>;
-	    close $fh;
+	    my $bufref = _qx(@args);
 	    if ($statusref) {
 		%$statusref = ( _analyze_dollar_questionmark );
 	    } else {
@@ -853,7 +859,7 @@ use warnings;
 		    _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "qx command '@args' failed: ") : ());
 		}
 	    }
-	    $buf;
+	    $$bufref;
 	};
 
 	my @commands;
@@ -1060,7 +1066,7 @@ use warnings;
 	    $need_diff = 1;
 	} else {
 	    open my $fh, '<', $filename
-		or die "Can't open $filename: $!";
+		or error "Can't open $filename: $!";
 	    binmode $fh;
 	    local $/;
 	    my $file_content = <$fh>;
@@ -1093,8 +1099,7 @@ use warnings;
 					 }
 				     } else {
 					 if ($need_diff) {
-					     # XXX use safe backtick (info_qx) -> no IPC::Run required anymore
-					     if (eval { require IPC::Run; 1 }) {
+					     if (eval { require IPC::Run; 1 }) { # no temporary file required
 						 my $diff;
 						 if (eval { IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff); 1 }) {
 						     "Replace existing file $filename with diff:\n$diff";
@@ -1107,7 +1112,8 @@ use warnings;
 						     my($tempfh,$tempfile) = File::Temp::tempfile(UNLINK => 1);
 						     print $tempfh $content;
 						     if (close $tempfh) {
-							 $diff = `diff -u '$filename' '$tempfile'`;
+							 my $diffref = _qx('diff', '-u', $filename, $tempfile);
+							 $diff = $$diffref;
 							 unlink $tempfile;
 						     } else {
 							 $diff = "(diff not available, error in tempfile creation ($!))";
