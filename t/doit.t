@@ -200,6 +200,10 @@ if ($^O ne 'MSWin32') { # date is interactive on Windows
 	$r->cond_run(creates => "cond-run-file-2", cmd => [[$^X, '-e', 'exit 0'], '>', 'cond-run-file-2']);
 	ok  -e "cond-run-file-2", "file for cond_run no exists (using IPC::Run)";
     }
+
+    ok !-e "cond-run-file-3", "file for cond_run does not exist yet";
+    $r->cond_run(if => sub { 1 }, unless => sub { 0 }, creates => "cond-run-file-3", cmd => [$^X, '-e', 'open my $ofh, ">", "cond-run-file-3"']);
+    ok  -e "cond-run-file-3", "file for cond_run does not exists, with combined condition";
 }
 
 $r->install_generic_cmd('never_executed', sub { 0 }, sub { die "never executed" });
