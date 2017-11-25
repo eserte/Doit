@@ -56,15 +56,42 @@ eval { $r->chmod(0644, "decl-test", "does-not-exist") };
 like $@, qr{\Qchmod failed on some files (1/2): };
 $r->chmod(0644, "decl-test"); # noop
 
+$r->chown(-1, -1, "decl-test");
 $r->chown($>, undef, "decl-test");
+$r->chown($>, -1, "decl-test");
 $r->chown($>, undef, "decl-test");
-my $another_group = (split / /, $))[1];
-if (defined $another_group) {
+SKIP: {
+    my $another_group = (split / /, $))[1];
+    skip "No other group available for test (we have only gids: $))", 3 if !defined $another_group;
     $r->chown(undef, $another_group, "decl-test");
     $r->chown(undef, $another_group, "decl-test");
-} else {
-    Doit::Log::info("No other group available for test (we have only gids: $))");
+
+    skip "getgrnam not available on MSWin32", 1 if $^O eq 'MSWin32';
+    my $another_groupname = getgrgid($another_group);
+    skip "Cannot get groupname for gid $another_group", 1 if !defined $another_groupname;
+    $r->chown(undef, $another_groupname, 'decl-test');
 }
+SKIP: {
+    skip "chown never fails on MSWin32", 2 if $^O eq 'MSWin32';
+    eval { $r->chown($>, undef, "does-not-exist") };
+    like $@, qr{chown failed: };
+    eval { $r->chown($>, undef, "does-not-exist-1", "does-not-exist-2") };
+    like $@, qr{chown failed on all files: };
+    # no test case for "chown failed on some files"
+}
+SKIP: {
+    skip "getpwnam and getgrnam not available on MSWin32", 1 if $^O eq 'MSWin32';
+    eval { $r->chown("user-does-not-exist", undef, "decl-test") };
+    like $@, qr{\QUser 'user-does-not-exist' does not exist };
+    eval { $r->chown(undef, "group-does-not-exist", "decl-test") };
+    like $@, qr{\QGroup 'group-does-not-exist' does not exist };
+ SKIP: {
+	my $username = (getpwuid($>))[0];
+	skip "Cannot get username for uid $>", 1 if !defined $username;
+	$r->chown($username, undef, "decl-test");
+    }
+}
+
 $r->rename("decl-test", "decl-test3");
 $r->move("decl-test3", "decl-test2");
 $r->rename("decl-test2", "decl-test");

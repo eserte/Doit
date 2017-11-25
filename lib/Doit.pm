@@ -423,16 +423,16 @@ use warnings;
 		# * do uid/gid resolution _again_ in the command if it failed here?
 		# * maintain a virtual list of created users/groups while this run, and
 		#   use this list as a fallback?
-		die "User '$uid' does not exist";
+		error "User '$uid' does not exist";
 	    }
 	    $uid = $_uid;
 	}
 	if (!defined $gid) {
 	    $gid = -1;
 	} elsif ($gid !~ /^-?\d+$/) {
-	    my $_gid = (getpwnam $gid)[2];
+	    my $_gid = (getgrnam $gid)[2];
 	    if (!defined $_gid) {
-		die "Group '$gid' does not exist";
+		error "Group '$gid' does not exist";
 	    }
 	    $gid = $_gid;
 	}
@@ -443,10 +443,12 @@ use warnings;
 		my @s = stat($file);
 		if (@s) {
 		    if ($uid != -1 && $s[4] != $uid) {
-			push @files_to_change, @files;
+			push @files_to_change, $file;
 		    } elsif ($gid != -1 && $s[5] != $gid) {
-			push @files_to_change, @files;
+			push @files_to_change, $file;
 		    }
+		} else {
+		    push @files_to_change, $file;
 		}
 	    }
 	}
@@ -454,7 +456,18 @@ use warnings;
 	my @commands;
 	if (@files_to_change) {
 	    push @commands, {
-			     code => sub { chown $uid, $gid, @files_to_change or die $! },
+			     code => sub {
+				 my $changed_files = chown $uid, $gid, @files_to_change;
+				 if ($changed_files != @files_to_change) {
+				     if (@files_to_change == 1) {
+					 error "chown failed: $!";
+				     } elsif ($changed_files == 0) {
+					 error "chown failed on all files: $!";
+				     } else {
+					 error "chown failed on some files (" . (@files_to_change-$changed_files) . "/" . scalar(@files_to_change) . "): $!";
+				     }
+				 }
+			     },
 			     msg  => "chown $uid, $gid, @files_to_change", # shellquote?
 			    };
 	}
