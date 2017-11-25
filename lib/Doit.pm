@@ -607,7 +607,7 @@ use warnings;
 	my($self, $from, $to) = @_;
 	my @commands;
 	push @commands, {
-			 code => sub { rename $from, $to or die $! },
+			 code => sub { rename $from, $to or error "$!" },
 			 msg  => "rename $from, $to",
 			};
 	Doit::Commands->new(@commands);

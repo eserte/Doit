@@ -26,6 +26,7 @@ sub with_unreadable_directory (&$);
 my %errno_string =
     (
      EEXIST => do { $! = Errno::EEXIST(); "$!" },
+     EACCES => do { $! = Errno::EACCES();  "$!" },
     );
 
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
@@ -118,6 +119,12 @@ SKIP: {
 $r->rename("decl-test", "decl-test3");
 $r->move("decl-test3", "decl-test2");
 $r->rename("decl-test2", "decl-test");
+with_unreadable_directory {
+    eval { $r->rename("decl-test", "unreadable-dir/does-not-work") };
+    like $@, qr{ERROR.*\Q$errno_string{EACCES}}, 'failed rename';
+} 'unreadable-dir';
+ok !-e "unreadable-dir/does-not-work", 'last rename really failed';
+ok  -e "decl-test", 'file is not renamed';
 
 ######################################################################
 # copy
