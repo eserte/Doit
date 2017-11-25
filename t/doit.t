@@ -25,14 +25,22 @@ chdir $tempdir or die "Can't chdir to $tempdir: $!";
 my $r = Doit->init;
 my $has_ipc_run = $r->can_ipc_run;
 
+######################################################################
+# touch
 $r->touch("decl-test");
 ok -f "decl-test";
 $r->touch("decl-test");
 ok -f "decl-test";
+
+######################################################################
+# utime
 $r->utime(undef, undef, "decl-test");
 {
     my @s = stat "decl-test"; cmp_ok $s[9], ">", 0;
 }
+
+######################################################################
+# create_file_if_nonexisting
 {
     my @s_before = stat "decl-test";
     $r->create_file_if_nonexisting("decl-test");
@@ -46,6 +54,8 @@ $r->create_file_if_nonexisting('decl-test2');
 ok -f 'decl-test2', 'create_file_if_nonexisting on a non-existent file';
 $r->unlink('decl-test2');
 
+######################################################################
+# chmod
 $r->chmod(0755, "decl-test"); # change expected
 $r->chmod(0755, "decl-test"); # noop
 eval { $r->chmod(0644, "does-not-exist") };
@@ -56,6 +66,8 @@ eval { $r->chmod(0644, "decl-test", "does-not-exist") };
 like $@, qr{\Qchmod failed on some files (1/2): };
 $r->chmod(0644, "decl-test"); # noop
 
+######################################################################
+# chown
 $r->chown(-1, -1, "decl-test");
 $r->chown($>, undef, "decl-test");
 $r->chown($>, -1, "decl-test");
@@ -92,6 +104,8 @@ SKIP: {
     }
 }
 
+######################################################################
+# rename, move, copy
 $r->rename("decl-test", "decl-test3");
 $r->move("decl-test3", "decl-test2");
 $r->rename("decl-test2", "decl-test");
@@ -100,6 +114,9 @@ ok -e "decl-copy"
     or diag qx(ls -al);
 $r->copy("decl-test", "decl-copy"); # no action
 $r->unlink("decl-copy");
+
+######################################################################
+# symlink, ln_nsf
 TODO: {
     todo_skip "symlinks not working on Windows", 11
 	if $^O eq 'MSWin32';
@@ -141,6 +158,9 @@ TODO: {
     like $@, qr{ln -nsf target unreadable/symlink failed};
     $r->rmdir("unreadable-dir");
 }
+
+######################################################################
+# write_binary
 $r->write_binary("decl-test", "some content\n");
 $r->write_binary("decl-test", "some content\n");
 $r->write_binary("decl-test", "different content\n");
@@ -150,6 +170,8 @@ ok ! -f "decl-test";
 ok ! -e "decl-test";
 $r->unlink("decl-test");
 
+######################################################################
+# mkdir
 $r->mkdir("decl-test");
 ok -d "decl-test";
 $r->mkdir("decl-test");
@@ -167,6 +189,8 @@ ok -d "decl-test";
     umask $umask;
 }
 
+######################################################################
+# make_path
 $r->make_path("decl-test", "decl-deep/test");
 ok -d "decl-deep/test";
 $r->make_path("decl-test", "decl-deep/test");
@@ -186,13 +210,21 @@ SKIP: {
     $r->rmdir("unreadable-dir");
 }
 
+######################################################################
+# rmdir
 $r->rmdir("decl-test");
 ok ! -d "decl-test";
 ok ! -e "decl-test";
 $r->rmdir("decl-test");
+
+######################################################################
+# remove_tree
 $r->remove_tree("decl-test", "decl-deep/test");
 ok ! -d "decl-deep/test";
 $r->remove_tree("decl-test", "decl-deep/test");
+
+######################################################################
+# system, run
 $r->system($^X, '-le', 'print q{hello}');
 $r->system($^X, '-le', 'print "hello"');
 if ($has_ipc_run) {
@@ -214,6 +246,9 @@ if ($^O ne 'MSWin32') { # date is interactive on Windows
 	$r->run([@hostname]);
     }
 }
+
+######################################################################
+# cond_run
 {
     eval { $r->cond_run };
     like $@, qr{cmd is a mandatory option for cond_run};
@@ -249,6 +284,8 @@ if ($^O ne 'MSWin32') { # date is interactive on Windows
     ok  -e "cond-run-file-3", "file for cond_run does not exists, with combined condition";
 }
 
+######################################################################
+# install_generic_cmd
 $r->install_generic_cmd('never_executed', sub { 0 }, sub { die "never executed" });
 $r->never_executed();
 $r->install_generic_cmd('mytest', sub {
