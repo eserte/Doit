@@ -1053,7 +1053,8 @@ use warnings;
     sub cmd_write_binary {
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
-	my $quiet = delete $options{quiet} || 0;
+	my $quiet  = delete $options{quiet} || 0;
+	my $atomic = exists $options{atomic} ? delete $options{atomic} : 1;
 	error "Unhandled options: " . join(" ", %options) if %options;
 	my($filename, $content) = @args;
 
@@ -1080,13 +1081,17 @@ use warnings;
 	if ($doit) {
 	    push @commands, {
 			     code => sub {
-				 # XXX make atomic!
-				 open my $ofh, '>', $filename
-				     or die "Can't write to $filename: $!";
+				 my $outfile = $atomic ? "$filename.$$.".time.".tmp" : $filename;
+				 open my $ofh, '>', $outfile
+				     or error "Can't write to $outfile: $!";
 				 binmode $ofh;
 				 print $ofh $content;
 				 close $ofh
-				     or die "While closing $filename: $!";
+				     or error "While closing $outfile: $!";
+				 if ($atomic) {
+				     rename $outfile, $filename
+					 or error "Error while renaming $outfile to $filename: $!";
+				 }
 			     },
 			     ($quiet >= 2
 			      ? ()

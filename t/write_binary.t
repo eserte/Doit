@@ -91,4 +91,13 @@ my $dir = tempdir(CLEANUP => 1);
     is slurp("$dir/test2"), "new testcontent\n";
 }
 
+{
+    my($stdout, $stderr) = capture {
+	$d->write_binary({atomic=>0}, "$dir/test2", "non-atomic write\n");
+    };
+    is $stdout, '';
+    isnt $stderr, '';
+    is slurp("$dir/test2"), "non-atomic write\n", 'content after non-atomic write';
+}
+
 __END__
