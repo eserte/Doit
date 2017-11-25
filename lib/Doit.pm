@@ -502,7 +502,11 @@ use warnings;
 	}
 
 	if ($doit) {
-	    $self->cmd_run(@$cmd);
+	    if (ref $cmd->[0] eq 'ARRAY') {
+		$self->cmd_run(@$cmd);
+	    } else {
+		$self->cmd_system(@$cmd);
+	    }
 	} else {
 	    Doit::Commands->new();
 	}

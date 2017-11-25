@@ -171,7 +171,7 @@ if ($^O ne 'MSWin32') { # date is interactive on Windows
 	$r->run([@hostname]);
     }
 }
-if ($has_ipc_run) {
+{
     eval { $r->cond_run };
     like $@, qr{cmd is a mandatory option for cond_run};
 
@@ -193,6 +193,13 @@ if ($has_ipc_run) {
     $r->cond_run(creates => "cond-run-file", cmd => [$^X, '-e', 'open my $ofh, ">", "cond-run-file"']);
     ok  -e "cond-run-file", 'file for cond_run now exists';
     $r->cond_run(creates => "cond-run-file", cmd => [$^X, '-e', 'die "should never happen, as file already exists"']);
+
+ SKIP: {
+	skip "Requires IPC::Run", 2 if !$has_ipc_run;
+	ok !-e "cond-run-file-2", "file for cond_run does not exist yet";
+	$r->cond_run(creates => "cond-run-file-2", cmd => [[$^X, '-e', 'exit 0'], '>', 'cond-run-file-2']);
+	ok  -e "cond-run-file-2", "file for cond_run no exists (using IPC::Run)";
+    }
 }
 
 $r->install_generic_cmd('never_executed', sub { 0 }, sub { die "never executed" });
