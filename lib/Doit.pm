@@ -759,7 +759,6 @@ use warnings;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
 	my $quiet = delete $options{quiet};
 	my $info = delete $options{info};
-	my $timeout = delete $options{timeout} || 86400;
 	my $instr = delete $options{instr};
 	my $errref = delete $options{errref};
 	my $statusref = delete $options{statusref};
@@ -785,7 +784,7 @@ use warnings;
 	    $sel->add($chld_err);
 
 	    my %buf = ($chld_out => '', $chld_err => '');
-	    while(my @ready_fhs = $sel->can_read($timeout)) {
+	    while(my @ready_fhs = $sel->can_read()) {
 		for my $ready_fh (@ready_fhs) {
 		    my $buf = '';
 		    while (sysread $ready_fh, $buf, 1024, length $buf) { }
