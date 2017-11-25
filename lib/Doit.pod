@@ -1,0 +1,143 @@
+=head1 NAME
+
+Doit - a scripting framework
+
+=head1 SYNOPSIS
+
+    use Doit; # automatically does use strict + warnings
+    my $doit = Doit->init;
+    $doit->...;
+
+Some boilerplate is needed if parts of the Doit script should be used
+on a remote machine or as another user:
+
+    use Doit;
+    sub function_which_may_run_on_remote {
+        my($doit, @args) = @_;
+        ...
+        return ...;
+    }
+    return 1 if caller;
+    my $doit = Doit->init;
+    {
+        my $ssh = $doit->do_ssh_connect('user@host'); # will sync all necessary bits to remote automatically
+        my $result = $ssh->call_with_runner('function_which_may_run_on_remote', $arg, ...);
+    }
+    {
+        my $sudo = $doit->do_sudo;
+        my result = $sudo->call_with_runner('function_which_may_run_on_remote', $arg, ...);
+    }
+
+=head1 DESCRIPTION
+
+=head2 CORE COMMANDS
+
+=head3 chmod
+
+    $doit->chmod($mode, $file ...)
+
+Make sure that the permission of the listed files is set to I<$mode>
+(which is typically expressed as an octal number. Fails if not all
+files could be changed. See L<perlfunc/chmod> details.
+
+=head3 chown
+
+    $doit->chown($user, $group, $file ...)
+
+Make sure that the owner (and group) of the listed files is set to the
+given values. The user and group may be specified as uid/gid or as
+username/groupname. A value of -1 or C<undef> for I<$user> and
+I<$group> is interpreted to leave that value unchanged. This command
+is not useful on Windows systems. See L<perlfunc/chown> for more
+details.
+
+=head3 cond_run
+
+    $doit->cond_run(if      => sub { ... }, cmd => ["command", "args" ...]);
+    $doit->cond_run(unless  => sub { ... }, cmd => ["command", "args" ...]);
+    $doit->cond_run(creates => $file,       cmd => ["command", "args" ...]);
+
+Conditionally run the command specified in C<cmd> (an array reference
+with command and arguments). Conditions are expressed as code
+references which should return a true or false value (options C<if>
+for a positive condition and C<unless> for a negative condition), or
+with the option C<creates> for checking the existence of the given
+I<$file> which is expected to be created by the given command.
+Conditions may be combined.
+
+The C<cmd> option may also specify a L<IPC::Run>-compatible list, for
+example:
+
+    $doit->cond_run(creates => $file, cmd => [["command", "args" ...], ">", $file]);
+
+=head3 ln_nsf
+
+    $doit->ln_nsf($oldfile, $newfile);
+
+Make sure that I<$newfile> is a symlink pointing to I<$oldfile>,
+possibly replacing an existing symlink. Implemented by running C<ln
+-nsf>. See L<ln(1)> for more details and L</symlink>.
+
+=head3 make_path
+
+    $doit->make_path($directory ...);
+    $doit->make_path($directory ..., { key => val ... });
+
+Make sure that the listed directories exist, together with any missing
+intermediate directories. Additional options may be specified as
+key-value pairs in a hashref, and will be passed to
+L<File::Path::make_path|File::Path/make_path>.
+
+Note that it's possible to set the directory permissions with the
+C<mode> option, but the C<make_path> command does not check if an
+already existing directory has these permission bits set.
+
+See also L</mkdir>.
+
+=head3 mkdir
+
+    $doit->mkdir($directory);
+    $doit->mkdir($directory, $mode);
+
+Make sure that the given I<$directory> exist. The I<$mode> will be
+used only if creating a new directory and not effective if the
+directory already exists. See L<perlfunc/mkdir> for more details. See
+L</make_path> for a command which will also create mising intermediate
+directories.
+
+=head3 remove_tree
+
+    $doit->remove_tree($directory ...);
+    $doit->remove_tree($directory ..., { key => $val ... });
+
+Make sure that the listed directories don't exist anymore, together
+with containing files and sub-directories. See
+L<File::Path::remove_tree|File::Path/remove_tree> for details.
+
+=head3 rename
+
+    $doit->rename($from, $to);
+
+Rename I<$from> to I<$to>. Of course, this command never converges.
+See L<perlfunc/rename> for details.
+
+=head1 AUTHOR
+
+Slaven Rezic <srezic@cpan.org>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2017 Slaven Rezic. All rights reserved.
+This module is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+L<perlfunc> - most core commands are modelled after perl builtin functions
+
+L<Doit::Log>, L<Doit::Exception>, L<Doit::ScopeCleanups>,
+L<Doit::Util>, L<Doit::Win32Util> - packages embeded in F<Doit.pm>
+
+L<make(1)>, L<slaymake(1)>, L<Slay::Makefile>, L<Commands::Guarded>
+
+=cut
