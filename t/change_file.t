@@ -172,6 +172,23 @@ is $changes, 1, 'one change, with check';
     }
 }
 
+{
+    $r->write_binary('work-file-3', <<EOF);
+hallo
+hallo
+hallo
+EOF
+    my $changes = $r->change_file('work-file-3',
+				  {match => qr{^hallo}, replace => q{hello}},
+				 );
+    is $changes, 3, 'three changes';
+    is slurp('work-file-3'), <<EOF, 'three substitutions were done';
+hello
+hello
+hello
+EOF
+}
+
 ######################################################################
 # Error checks
 eval { $r->change_file("work-file",
