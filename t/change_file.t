@@ -20,6 +20,12 @@ my $r = Doit->init;
 
 my $changes;
 
+eval { $r->change_file() };
+like $@, qr{ERROR.*\QExpecting at least a filename and one or more changes}, 'error: too less arguments';
+
+eval { $r->change_file({unhandled_option=>1}, "blubber") };
+like $@, qr{ERROR.*\QUnhandled options: unhandled_option }, 'error: unhandled option';
+
 eval { $r->change_file("blubber") };
 like $@, qr{blubber does not exist};
 

@@ -1190,8 +1190,13 @@ use warnings;
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
 	my $check = delete $options{check};
+	my $debug = delete $options{debug};
 	if ($check && ref $check ne 'CODE') { error "check parameter should be a CODE reference" }
 	error "Unhandled options: " . join(" ", %options) if %options;
+
+	if (@args < 1) {
+	    error "Expecting at least a filename and one or more changes";
+	}
 
 	my($file, @changes) = @args;
 	if (!-e $file) {
@@ -1199,12 +1204,6 @@ use warnings;
 	}
 	if (!-f $file) {
 	    error "$file is not a file";
-	}
-
-	my $debug;
-	if (@changes && $changes[0]->{debug}) {
-	    $debug = $changes[0]->{debug};
-	    shift @changes;
 	}
 
 	my @commands;
