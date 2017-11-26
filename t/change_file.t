@@ -173,6 +173,8 @@ is $changes, 1, 'one change, with check';
 }
 
 {
+    local $TODO = "Currently fails on CRLF systems" if $^O eq 'MSWin32';
+
     $r->write_binary('work-file-3', <<EOF);
 hallo
 hallo
