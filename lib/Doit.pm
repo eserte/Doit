@@ -1034,6 +1034,7 @@ use warnings;
 
     sub cmd_utime {
 	my($self, $atime, $mtime, @files) = @_;
+
 	my $now;
 	if (!defined $atime) {
 	    $atime = ($now ||= time);
@@ -1041,11 +1042,37 @@ use warnings;
 	if (!defined $mtime) {
 	    $mtime = ($now ||= time);
 	}
+
+	my @files_to_change;
+	for my $file (@files) {
+	    my @s = stat $file;
+	    if (@s) {
+		if ($s[8] != $atime || $s[9] != $mtime) {
+		    push @files_to_change, $file;
+		}
+	    } else {
+		push @files_to_change, $file; # will fail later
+	    }
+	}
+
 	my @commands;
-	push @commands, {
-			 code => sub { utime $atime, $mtime, @files or die $! },
-			 msg  => "utime $atime, $mtime, @files",
-			};
+	if (@files_to_change) {
+	    push @commands, {
+			     code => sub {
+				 my $changed_files = utime $atime, $mtime, @files;
+				 if ($changed_files != @files_to_change) {
+				     if (@files_to_change == 1) {
+					 error "utime failed: $!";
+				     } elsif ($changed_files == 0) {
+					 error "utime failed on all files: $!";
+				     } else {
+					 error "utime failed on some files (" . (@files_to_change-$changed_files) . "/" . scalar(@files_to_change) . "): $!";
+				     }
+				 }
+			     },
+			     msg  => "utime $atime, $mtime, @files",
+			    };
+	}
 	Doit::Commands->new(@commands);
     }
 

@@ -51,10 +51,32 @@ with_unreadable_directory {
 
 ######################################################################
 # utime
-$r->utime(undef, undef, "decl-test");
+$r->utime(1000, 1000, "decl-test");
 {
-    my @s = stat "decl-test"; cmp_ok $s[9], ">", 0;
+    my @s = stat "decl-test";
+    is $s[8], 1000, 'utime changed accesstime';
+    is $s[9], 1000, 'utime changed modtime';
 }
+$r->utime(1000, 1000, "decl-test"); # should not run
+$r->utime(1000, 2000, "decl-test");
+{
+    my @s = stat "decl-test";
+    is $s[8], 1000, 'accesstime still unchanged';
+    is $s[9], 2000, 'utime changed modtime';
+}
+{
+    my $now = time;
+    $r->utime(undef, undef, "decl-test");
+    my @s = stat "decl-test"; cmp_ok $s[9], ">=", $now;
+}
+eval { $r->utime(1, 2, "non-existing-file") };
+like $@, qr{ERROR.*\Qutime failed: $errno_string{ENOENT}}, 'utime on non-existing file';
+eval { $r->utime(1, 2, "non-existing-file-1", "non-existing-file-2") };
+like $@, qr{ERROR.*\Qutime failed on all files: $errno_string{ENOENT}}, 'utime on multiple non-existing files';
+$r->create_file_if_nonexisting('decl-test-2');
+eval { $r->utime(1, 2, "decl-test-2", "non-existing-file") };
+like $@, qr{ERROR.*\Qutime failed on some files (1/2): $errno_string{ENOENT}}, 'utime on multiple non-existing files';
+$r->unlink('decl-test-2');
 
 ######################################################################
 # create_file_if_nonexisting
