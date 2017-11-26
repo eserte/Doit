@@ -1082,6 +1082,9 @@ use warnings;
 	my $quiet  = delete $options{quiet} || 0;
 	my $atomic = exists $options{atomic} ? delete $options{atomic} : 1;
 	error "Unhandled options: " . join(" ", %options) if %options;
+	if (@args != 2) {
+	    error "Expecting two arguments: filename and contents";
+	}
 	my($filename, $content) = @args;
 
 	my $doit;
@@ -1107,9 +1110,15 @@ use warnings;
 	if ($doit) {
 	    push @commands, {
 			     code => sub {
+				 # XXX consider to reuse code for atomic writes:
+				 # either from Doit::File::file_atomic_write (problematic, different component)
+				 # or share code with change_file
 				 my $outfile = $atomic ? "$filename.$$.".time.".tmp" : $filename;
 				 open my $ofh, '>', $outfile
 				     or error "Can't write to $outfile: $!";
+				 if (-e $filename) {
+				     Doit::Util::copy_stat($filename, $outfile);
+				 }
 				 binmode $ofh;
 				 print $ofh $content;
 				 close $ofh

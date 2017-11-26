@@ -25,6 +25,20 @@ my $d = Doit->init;
 my $dir = tempdir(CLEANUP => 1);
 
 {
+    eval {
+	$d->write_binary;
+    };
+    like colorstrip($@), qr{^ERROR: Expecting two arguments: filename and contents}, 'not enough arguments';
+}
+
+{
+    eval {
+	$d->write_binary({unhandled_option=>1}, "unused", "unused");
+    };
+    like colorstrip($@), qr{^ERROR: Unhandled options: unhandled_option}, 'unhandled option';
+}
+
+{
     my($stdout, $stderr) = capture {
 	$d->write_binary("$dir/test", "testcontent\n");
     };
@@ -53,6 +67,19 @@ my $dir = tempdir(CLEANUP => 1);
 	like colorstrip($stderr), qr{^INFO:.*diff not available};
     }
     is slurp("$dir/test"), "new testcontent\n";
+}
+
+{
+    my($stdout, $stderr) = capture {
+	$d->write_binary("$dir/test", "testcontent new\n"); # different content, same file size
+    };
+    is $stdout, '';
+    if (is_in_path 'diff') {
+	like colorstrip($stderr), qr{^INFO: Replace existing file .*test with diff}, 'replace + diff';
+    } else {
+	like colorstrip($stderr), qr{^INFO:.*diff not available};
+    }
+    is slurp("$dir/test"), "testcontent new\n";
 }
 
 {

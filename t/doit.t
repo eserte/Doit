@@ -230,6 +230,30 @@ $r->unlink("decl-test");
 ok ! -f "decl-test";
 ok ! -e "decl-test";
 $r->unlink("decl-test");
+eval { $r->write_binary("non-existing-dir/test", "egal\n") };
+like $@, qr{ERROR.*\Q$errno_string{ENOENT}};
+SKIP: {
+    skip "permissions probably work differently on Windows", 1 if $^O eq 'MSWin32';
+    skip "non-writable file not a problem for the superuser", 1 if $> == 0;
+
+    $r->write_binary({quiet=>1}, "unwritable-file", "something\n");
+    $r->chmod(0400, "unwritable-file");
+    eval { $r->write_binary({quiet=>1, atomic=>0}, "unwritable-file", "change will fail\n") };
+    like $@, qr{ERROR:.*\QCan't write to unwritable-file: $errno_string{EACCES}}, 'fail to write to unwritable file';
+    $r->chmod(0000, "unwritable-file"); # now also unreadable
+    eval { $r->write_binary({quiet=>1}, "unwritable-file", "something\n") }; # no change, but will fail due to unreadability
+    like $@, qr{ERROR:.*\QCan't open unwritable-file: $errno_string{EACCES}}, 'fail to read from unwritable file';
+    $r->unlink("unwritable-file");
+}
+SKIP: {
+    skip "permissions work differently on Windows", 1 if $^O eq 'MSWin32';
+
+    $r->write_binary({quiet=>1}, "permission-test", "something\n");
+    $r->chmod(0751, "permission-test");
+    $r->write_binary({quiet=>1}, "permission-test", "something changed\n");
+    my @s = stat "permission-test";
+    is(($s[2]&0777), 0751, 'permissions were preserved');
+}
 
 ######################################################################
 # mkdir
