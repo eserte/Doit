@@ -975,12 +975,12 @@ use warnings;
 	for my $file (@files) {
 	    if (!-e $file) {
 		push @commands, {
-				 code => sub { open my $fh, '>>', $file or die $! },
+				 code => sub { open my $fh, '>>', $file or error "$!" },
 				 msg  => "touch non-existent file $file",
 				}
 	    } else {
 		push @commands, {
-				 code => sub { utime time, time, $file or die $! },
+				 code => sub { utime time, time, $file or error "$!" },
 				 msg  => "touch existent file $file",
 				};
 	    }

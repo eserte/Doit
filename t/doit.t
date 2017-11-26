@@ -25,7 +25,7 @@ sub with_unreadable_directory (&$);
 
 my %errno_string =
     (
-     EACCES => do { $! = Errno::EACCES(); "$!" },
+     EACCES => do { $! = Errno::EACCES(); "$!" }, # "Permission denied"
      EEXIST => do { $! = Errno::EEXIST(); "$!" },
      ENOENT => do { $! = Errno::ENOENT(); "$!" },
     );
@@ -42,6 +42,10 @@ $r->touch("decl-test");
 ok -f "decl-test";
 $r->touch("decl-test");
 ok -f "decl-test";
+with_unreadable_directory {
+    eval { $r->touch("unreadable-dir/test") };
+    like $@, qr{ERROR.*\Q$errno_string{EACCES}};
+} "unreadable-dir";
 
 ######################################################################
 # utime
