@@ -20,12 +20,13 @@ my $doit = Doit->init;
     is $ENV{TEST_SETENV}, 2, 'value was not changed';
     $doit->unsetenv('TEST_SETENV');
     ok !exists $ENV{TEST_SETENV}, 'value was deleted';
+    $doit->unsetenv('TEST_SETENV'); # noop
 }
 
 {
     local $ENV{TEST_SETENV};
     $doit->setenv(TEST_SETENV => 1);
-    is $ENV{TEST_SETENV}, 1, 'value wa changed (from previously non-existent)';
+    is $ENV{TEST_SETENV}, 1, 'value was changed (from previously non-existent)';
 }
 
 __END__
