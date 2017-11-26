@@ -68,6 +68,10 @@ $r->utime(undef, undef, "decl-test");
 $r->create_file_if_nonexisting('decl-test2');
 ok -f 'decl-test2', 'create_file_if_nonexisting on a non-existent file';
 $r->unlink('decl-test2');
+with_unreadable_directory {
+    eval { $r->create_file_if_nonexisting("unreadable-dir/test") };
+    like $@, qr{ERROR.*\Q$errno_string{EACCES}};
+} "unreadable-dir";
 
 ######################################################################
 # chmod

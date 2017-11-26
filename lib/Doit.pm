@@ -994,7 +994,7 @@ use warnings;
 	for my $file (@files) {
 	    if (!-e $file) {
 		push @commands, {
-		    code => sub { open my $fh, '>>', $file or die $! },
+		    code => sub { open my $fh, '>>', $file or error "$!" },
 		    msg  => "create empty file $file",
 		};
 	    }
