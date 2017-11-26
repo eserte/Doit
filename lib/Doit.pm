@@ -614,7 +614,15 @@ use warnings;
     }
 
     sub cmd_copy {
-	my($self, $from, $to) = @_;
+	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet};
+	error "Unhandled options: " . join(" ", %options) if %options;
+	if (@args != 2) {
+	    error "Expecting two arguments: from and to filenames";
+	}
+	my($from, $to) = @args;
+
 	my @commands;
 	my $real_to;
 	if (-d $to) {
@@ -631,20 +639,24 @@ use warnings;
 					 or error "Copy failed: $!";
 			     },
 			     msg => do {
-				 if (-e $real_to) {
-				     if (eval { require IPC::Run; 1 }) {
-					 my $diff;
-					 if (eval { IPC::Run::run(['diff', '-u', $to, $from], '>', \$diff); 1 }) {
-					     "copy $from $to\ndiff:\n$diff";
-					 } else {
-					     "copy $from $to\n(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
-					 }
-				     } else {
-					 my $diffref = _qx('diff', '-u', $to, $from);
-					 "copy $from $to\ndiff:\n$$diffref";
-				     }
+				 if (!-e $real_to) {
+				     "copy $from $real_to (destination does not exist)";
 				 } else {
-				     "copy $from $to (destination does not exist)";
+				     if ($quiet) {
+					 "copy $from $real_to";
+				     } else {
+					 if (eval { require IPC::Run; 1 }) {
+					     my $diff;
+					     if (eval { IPC::Run::run(['diff', '-u', $real_to, $from], '>', \$diff); 1 }) {
+						 "copy $from $real_to\ndiff:\n$diff";
+					     } else {
+						 "copy $from $real_to\n(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+					     }
+					 } else {
+					     my $diffref = _qx('diff', '-u', $real_to, $from);
+					     "copy $from $real_to\ndiff:\n$$diffref";
+					 }
+				     }
 				 }
 			     },
 			     rv => 1,
