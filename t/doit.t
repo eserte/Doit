@@ -29,6 +29,7 @@ my %errno_string =
      EACCES => do { $! = Errno::EACCES(); "$!" }, # "Permission denied"
      EEXIST => do { $! = Errno::EEXIST(); "$!" },
      ENOENT => do { $! = Errno::ENOENT(); "$!" },
+     ENOTEMPTY => do { $! = Errno::ENOTEMPTY(); "$!" }, # "Directory not empty"
     );
 lock_keys %errno_string;
 
@@ -104,6 +105,18 @@ ok  -f 'decl-test2';
 $r->unlink('decl-test2');
 ok !-f 'decl-test2', 'file was deleted';
 $r->unlink('non-existing-directory/test'); # not throwing exceptions, as a file check is done before
+SKIP: {
+    skip "permissions probably work differently on Windows", 1 if $^O eq 'MSWin32';
+    skip "non-writable directory not a problem for the superuser", 1 if $> == 0;
+
+    $r->mkdir("non-writable-dir");
+    $r->create_file_if_nonexisting("non-writable-dir/test");
+    $r->chmod(0500, "non-writable-dir");
+    eval { $r->unlink("non-writable-dir/test") };
+    like $@, qr{ERROR.*\Q$errno_string{EACCES}};
+    $r->chmod(0700, "non-writable-dir");
+    $r->remove_tree("non-writable-dir");
+}
 
 ######################################################################
 # chmod
@@ -215,6 +228,8 @@ TODO: {
     ok -d "dir-for-ln-nsf-test", 'directory still exists after failed ln -nsf';
 
     with_unreadable_directory {
+	eval { $r->symlink("target", "unreadable/symlink") };
+	like $@, qr{ERROR.*\Q$errno_string{ENOENT}};
 	eval { $r->ln_nsf("target", "unreadable/symlink") };
 	like $@, qr{ln -nsf target unreadable/symlink failed};
     } "unreadable-dir";
@@ -292,10 +307,9 @@ SKIP: {
     is(($s[2] & 0777), 0700, 'make_path call with mode');
 }
 SKIP: {
-    skip "unreadable-dir not a problem for the superuser", 1 if $> == 0;
     with_unreadable_directory {
 	eval { $r->make_path("unreadable-dir/test") };
-	like $@, qr{mkdir unreadable-dir/test: }; # permission denied
+	like $@, qr{mkdir unreadable-dir/test: \Q$errno_string{EACCES}}; # XXX not thrown with error()
     } "unreadable-dir";
 }
 
@@ -306,6 +320,12 @@ ok ! -d "decl-test";
 ok ! -e "decl-test";
 $r->rmdir("decl-test");
 
+$r->mkdir("non-empty-dir");
+$r->touch("non-empty-dir/test");
+eval { $r->rmdir("non-empty-dir") };
+like $@, qr{ERROR.*(?:\Q$errno_string{ENOTEMPTY}\E|\Q$errno_string{EACCES}\E)};
+$r->remove_tree("non-empty-dir");
+
 ######################################################################
 # remove_tree
 $r->remove_tree("decl-test", "decl-deep/test");
@@ -315,6 +335,13 @@ $r->remove_tree("decl-test", "decl-deep/test");
 $r->mkdir("decl-test");
 $r->create_file_if_nonexisting("decl-test/file");
 $r->remove_tree("decl-test", {verbose=>1});
+SKIP: {
+    with_unreadable_directory {
+	eval { $r->remove_tree("unreadable-dir") };
+	local $TODO = "Does not report errors on all OS"; # no error on freebsd 9 + travis-ci machines
+	like $@, qr{ERROR.*\Q$errno_string{EACCES}};
+    } "unreadable-dir";
+}
 
 ######################################################################
 # system, run
@@ -403,6 +430,7 @@ sub with_unreadable_directory (&$) {
 
  SKIP: {
 	skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';
+	skip "unreadable directories not a problem for the superuser", 1 if $> == 0;
 
 	$r->mkdir($unreadable_dir);
 	$r->chmod(0000, $unreadable_dir);

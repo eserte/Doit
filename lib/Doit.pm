@@ -595,7 +595,7 @@ use warnings;
 			     code => sub {
 				 require File::Path;
 				 File::Path::remove_tree(@directories_to_remove, $options)
-					 or error $!;
+					 or error "$!";
 			     },
 			     msg => "remove_tree @directories_to_remove",
 			    };
@@ -881,7 +881,7 @@ use warnings;
 	my @commands;
 	if (-d $directory) {
 	    push @commands, {
-			     code => sub { rmdir $directory or die $! },
+			     code => sub { rmdir $directory or error "$!" },
 			     msg  => "rmdir $directory",
 			    };
 	}
@@ -931,19 +931,19 @@ use warnings;
 	my $doit;
 	if (-l $newfile) {
 	    my $points_to = readlink $newfile
-		or die "Unexpected: readlink $newfile failed (race condition?)";
+		or error "Unexpected: readlink $newfile failed (race condition?)";
 	    if ($points_to ne $oldfile) {
 		$doit = 1;
 	    }
 	} elsif (!-e $newfile) {
 	    $doit = 1;
 	} else {
-	    warn "$newfile exists but is not a symlink, will fail later...";
+	    warning "$newfile exists but is not a symlink, will fail later...";
 	}
 	my @commands;
 	if ($doit) {
 	    push @commands, {
-			     code => sub { symlink $oldfile, $newfile or die $! },
+			     code => sub { symlink $oldfile, $newfile or error "$!" },
 			     msg  => "symlink $oldfile $newfile",
 			    };
 	}
@@ -1013,7 +1013,7 @@ use warnings;
 	my @commands;
 	if (@files_to_remove) {
 	    push @commands, {
-			     code => sub { unlink @files_to_remove or die $! },
+			     code => sub { unlink @files_to_remove or error "$!" },
 			     msg  => "unlink @files_to_remove", # shellquote?
 			    };
 	}
