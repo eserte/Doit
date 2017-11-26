@@ -16,6 +16,7 @@ use strict;
 use File::Temp 'tempdir';
 use Test::More 'no_plan';
 use Errno ();
+use Hash::Util qw(lock_keys);
 
 use Doit;
 use Doit::Log (); # don't import: clash with Test::More::note
@@ -29,6 +30,7 @@ my %errno_string =
      EEXIST => do { $! = Errno::EEXIST(); "$!" },
      ENOENT => do { $! = Errno::ENOENT(); "$!" },
     );
+lock_keys %errno_string;
 
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 chdir $tempdir or die "Can't chdir to $tempdir: $!";
@@ -72,6 +74,14 @@ with_unreadable_directory {
     eval { $r->create_file_if_nonexisting("unreadable-dir/test") };
     like $@, qr{ERROR.*\Q$errno_string{EACCES}};
 } "unreadable-dir";
+
+######################################################################
+# unlink
+$r->create_file_if_nonexisting('decl-test2');
+ok  -f 'decl-test2';
+$r->unlink('decl-test2');
+ok !-f 'decl-test2', 'file was deleted';
+$r->unlink('non-existing-directory/test'); # not throwing exceptions, as a file check is done before
 
 ######################################################################
 # chmod
