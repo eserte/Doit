@@ -127,4 +127,14 @@ my $dir = tempdir(CLEANUP => 1);
     is slurp("$dir/test2"), "non-atomic write\n", 'content after non-atomic write';
 }
 
+{
+    require Encode;
+    my($stdout, $stderr) = capture {
+	$d->write_binary("$dir/test-utf8", Encode::encode_utf8("\x{20ac}uro\n"));
+    };
+    is $stdout, '';
+    isnt $stderr, '';
+    is slurp("$dir/test-utf8"), "\342\202\254uro\n", 'testing the encode_utf8 example';
+}
+
 __END__
