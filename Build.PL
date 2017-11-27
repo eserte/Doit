@@ -258,10 +258,11 @@ sub install {
 	uninstall_shadows => $opt{uninst},
 	dir_mode          => $PERM_DIR,
     );
+    my $euii_args_dump = Data::Dumper->new([{ @euii_args }],[qw()])->Indent(1)->Useqq(1)->Sortkeys(1)->Terse(1)->Dump;
     if ($doit->is_dry_run) {
-	info "Would run ExtUtils::Install::install " . Data::Dumper::Dumper(@euii_args);
+	info "Would run ExtUtils::Install::install with parameters\n" . $euii_args_dump;
     } else {
-	info "Run ExtUtils::Install::install " . Data::Dumper::Dumper(@euii_args);
+	info "Run ExtUtils::Install::install with parameters\n" . $euii_args_dump;
 	ExtUtils::Install::install([@euii_args]);
     }
 }
