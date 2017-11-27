@@ -1224,7 +1224,7 @@ use warnings;
 			(defined $_->{add_before_last} || 0)
 			;
 		    if ($defines != 1) {
-			die "Can specify only one of the following: 'add_after', 'add_after_first', 'add_before', 'add_before_last' (change for $file)\n";
+			error "Can specify only one of the following: 'add_after', 'add_after_first', 'add_before', 'add_before_last' (change for $file)\n";
 		    }
 		    my $add;
 		    my $do_after;
@@ -1246,7 +1246,7 @@ use warnings;
 			$reverse = 1;
 			$do_after = 0;
 		    } else {
-			die "Can never happen";
+			error "Can never happen";
 		    }
 		    qr{$add}; # must be a regexp
 		    $_->{action} = sub {
@@ -1267,7 +1267,7 @@ use warnings;
 			    }
 			}
 			if (!$found) {
-			    die "Cannot find '$add' in file";
+			    error "Cannot find '$add' in file";
 			}
 		    };
 		} else {
@@ -1285,10 +1285,10 @@ use warnings;
 		    $_->{unless_match} = qr{$rx};
 		}
 		if (!$_->{action}) {
-		    die "action is missing";
+		    error "action is missing";
 		}
 		if (ref $_->{action} ne 'CODE') {
-		    die "action must be a sub reference";
+		    error "action must be a sub reference";
 		}
 		push @unless_match_actions, $_;
 	    } elsif ($_->{match}) {
@@ -1296,18 +1296,24 @@ use warnings;
 		    my $rx = '^' . quotemeta($_->{match}) . '$';
 		    $_->{match} = qr{$rx};
 		}
+		my $consequences = ($_->{action}?1:0) + (defined $_->{replace}?1:0) + (defined $_->{delete}?1:0);
+		if ($consequences != 1) {
+		    error "Exactly one of the following is missing: action, replace, or delete";
+		}
 		if ($_->{action}) {
 		    if (ref $_->{action} ne 'CODE') {
-			die "action must be a sub reference";
+			error "action must be a sub reference";
 		    }
 		} elsif (defined $_->{replace}) {
 		    # accept
+		} elsif (defined $_->{delete}) {
+		    # accept
 		} else {
-		    die "action or replace is missing";
+		    error "FATAL: should never happen";
 		}
 		push @match_actions, $_;
 	    } else {
-		die "match or unless_match is missing";
+		error "match or unless_match is missing";
 	    }
 	}
 
@@ -1316,30 +1322,37 @@ use warnings;
 	require File::Copy;
 	my($tmpfh,$tmpfile) = File::Temp::tempfile('doittemp_XXXXXXXX', UNLINK => 1, DIR => File::Basename::dirname($file));
 	File::Copy::copy($file, $tmpfile)
-		or die "failed to copy $file to temporary file $tmpfile: $!";
+		or error "failed to copy $file to temporary file $tmpfile: $!";
 	Doit::Util::copy_stat($file, $tmpfile);
 
 	require Tie::File;
 	tie my @lines, 'Tie::File', $tmpfile
-	    or die "cannot tie file $file: $!";
+	    or error "cannot tie file $file: $!";
 
 	my $no_of_changes = 0;
 	for my $match_action (@match_actions) {
 	    my $match  = $match_action->{match};
-	    for my $line (@lines) {
-		if ($debug) { info "change_file check '$line' =~ '$match'" }
-		if ($line =~ $match) {
+	    for(my $line_i=0; $line_i<=$#lines; $line_i++) {
+		if ($debug) { info "change_file check '$lines[$line_i]' =~ '$match'" }
+		if ($lines[$line_i] =~ $match) {
 		    if (exists $match_action->{replace}) {
 			my $replace = $match_action->{replace};
-			if ($line ne $replace) {
-			    push @commands, { msg => "replace '$line' with '$replace' in '$file'" };
-			    $line = $replace;
+			if ($lines[$line_i] ne $replace) {
+			    push @commands, { msg => "replace '$lines[$line_i]' with '$replace' in '$file'" };
+			    $lines[$line_i] = $replace;
+			    $no_of_changes++;
+			}
+		    } elsif (exists $match_action->{delete}) {
+			if ($match_action->{delete}) {
+			    push @commands, { msg => "delete '$lines[$line_i]' in '$file'" };
+			    splice @lines, $line_i, 1;
+			    $line_i--;
 			    $no_of_changes++;
 			}
 		    } else {
-			push @commands, { msg => "matched '$match' on line '$line' in '$file' -> execute action" };
+			push @commands, { msg => "matched '$match' on line '$lines[$line_i]' in '$file' -> execute action" };
 			my $action = $match_action->{action};
-			$action->($line);
+			$action->($lines[$line_i]);
 			$no_of_changes++;
 		    }
 		}
@@ -1372,7 +1385,7 @@ use warnings;
 					 or error "Check on file $file failed";
 				 }
 				 rename $tmpfile, $file
-				     or die "Can't rename $tmpfile to $file: $!";
+				     or error "Can't rename $tmpfile to $file: $!";
 			     },
 			     msg => do {
 				 my $diff;

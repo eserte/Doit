@@ -191,30 +191,86 @@ hello
 EOF
 }
 
+{
+    my $test_file = 'work-file-4';
+    my $sample_content = <<EOF;
+first
+second
+third
+EOF
+    if ($^O eq 'MSWin32') {
+	# XXX need CRLF content here XXX
+	open my $ofh, ">", $test_file or die $!; print $ofh $sample_content or die $!;
+    } else {
+	$r->write_binary($test_file, $sample_content);
+    }
+    {
+	my $changes = $r->change_file($test_file,
+				      {match => qr{^second}, delete => 0},
+				     );
+	is $changes, 0, 'no change --- silly example, delete is set to false';
+	is slurp($test_file), <<EOF, 'no change';
+first
+second
+third
+EOF
+    }
+
+    {
+	my $changes = $r->change_file($test_file,
+				      {match => qr{^second}, delete => 1},
+				     );
+	is $changes, 1, 'one change';
+	is slurp($test_file), <<EOF, 'deletion in the middle was done (regexp match)';
+first
+third
+EOF
+    }
+
+    {
+	my $changes = $r->change_file($test_file,
+				      {match => q{third}, delete => 1},
+				     );
+	is $changes, 1, 'one change';
+	is slurp($test_file), <<EOF, 'deletion at the end was done (string match)';
+first
+EOF
+    }
+
+    {
+	my $changes = $r->change_file($test_file,
+				      {match => qr{^first}, delete => 1},
+				     );
+	is $changes, 1, 'one change';
+	is slurp($test_file), <<EOF, 'deletion at the beginning was done (regexp match) --- file is no empty';
+EOF
+    }
+}
+
 ######################################################################
 # Error checks
 eval { $r->change_file("work-file",
 		       {match => qr{^dummy match}}) };
-like $@, qr{action or replace is missing};
+like $@, qr{ERROR.*Exactly one of the following is missing: action, replace, or delete};
 
 eval { $r->change_file("work-file",
 		       {match => qr{^dummy match},
 			action => "this is not CODE"}) };
-like $@, qr{action must be a sub reference};
+like $@, qr{ERROR.*action must be a sub reference};
 
 eval { $r->change_file("work-file",
 		       {unless_match => qr{^unless match -- this will not match}}) };
-like $@, qr{action is missing};
+like $@, qr{ERROR.*action is missing};
 
 eval { $r->change_file("work-file",
 		       {unless_match => qr{^unless match -- this will not match},
 			action => "this is not CODE",
 		       }) };
-like $@, qr{action must be a sub reference};
+like $@, qr{ERROR.*action must be a sub reference};
 
 eval { $r->change_file("work-file",
 		       {}) };
-like $@, qr{match or unless_match is missing};
+like $@, qr{ERROR.*match or unless_match is missing};
 
 eval { $r->change_file({
 			check => sub {

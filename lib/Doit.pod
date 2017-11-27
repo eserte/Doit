@@ -298,16 +298,22 @@ no line matches, then an exception will be thrown.
 Add the specified I<$line> before a the last line mathing I<$rx>. If
 no line matches, then an exception will be thrown.
 
-=item C<< { match => $rx, replace => $line } >>
+=item C<< { match => $rx_or_string, replace => $line } >>
 
-Substitute all lines matching I<$rx> with I<$line>. Instead of an
-regexp a string may be specified; in this case the complete line has
-to match.
+Substitute all lines matching I<$rx_or_string> with I<$line>.
+I<$rx_or_string> may be a regexp, or a string. In the latter case the
+complete line has to match.
+
+=item C<< { match => $rx_or_string, delete => $bool } >>
+
+All lines matching I<$rx_or_string> will be deleted if C<delete> is
+set to a true value.
 
 =item C<< { match => $rx, action => $code } >>
 
-For all lines matching I<$rx> call the specified I<$code> reference.
-In the code reference I<$_[0]> can be used to manipulate the line.
+For all lines matching I<$rx_or_string> call the specified I<$code>
+reference. In the code reference I<$_[0]> can be used to manipulate
+the line.
 
 =item C<< { unless_match ... } >>
 
