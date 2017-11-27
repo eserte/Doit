@@ -342,6 +342,11 @@ then changed using L<Tie::File>. If everything went right and changes
 had to be done, then the changed file is renamed to the final
 destination.
 
+Using C<Tie::File> has some consequences: it does not know anything
+about encodings, and it uses C<$/> to determine line endings, which by
+default is set to do the right thing for text files. In future these
+details may be streamlined or even changed.
+
 =head3 write_binary
 
     $doit->write_binary($filename, $content);
@@ -365,6 +370,9 @@ atomic=>0 >>.
 The command is modelled after
 L<File::Slurper::write_binary|File::Slurper/binary>, but implemented
 without any dependencies.
+
+Note: currently there's no C<write_text>, but maybe will be added in
+future.
 
 =head2 SYSTEM EXECUTION COMMANDS
 
