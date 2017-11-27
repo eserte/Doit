@@ -173,18 +173,24 @@ is $changes, 1, 'one change, with check';
 }
 
 {
-    local $TODO = "Currently fails on CRLF systems" if $^O eq 'MSWin32';
-
-    $r->write_binary('work-file-3', <<EOF);
+    my $test_file = 'work-file-3';
+    my $sample_content = <<EOF;
 hallo
 hallo
 hallo
 EOF
-    my $changes = $r->change_file('work-file-3',
+
+    if ($^O eq 'MSWin32') {
+	# XXX need CRLF content here XXX
+	open my $ofh, ">", $test_file or die $!; print $ofh $sample_content or die $!;
+    } else {
+	$r->write_binary($test_file, $sample_content);
+    }
+    my $changes = $r->change_file($test_file,
 				  {match => qr{^hallo}, replace => q{hello}},
 				 );
     is $changes, 3, 'three changes';
-    is slurp('work-file-3'), <<EOF, 'three substitutions were done';
+    is slurp($test_file), <<EOF, 'three substitutions were done';
 hello
 hello
 hello
