@@ -463,7 +463,7 @@ sub _Build_PL_mode {
 	if (-l "Build") { # formerly this used to be a symlink
 	    $doit->unlink("Build");
 	}
-	$doit->write_binary('Build', <<"EOF" . $argv_serialized . $Build_PL_file_contents);
+	$doit->write_binary({quiet=>1}, 'Build', <<"EOF" . $argv_serialized . $Build_PL_file_contents);
 #! $Config{perlpath}
 # MD5: $Build_PL_md5hex
 EOF
