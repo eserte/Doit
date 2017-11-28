@@ -40,7 +40,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary("$dir/test", "testcontent\n");
+	is $d->write_binary("$dir/test", "testcontent\n"), 1, 'a change, file creation';
     };
     is $stdout, '';
     like colorstrip($stderr), qr{^INFO: Create new file .*test with content:\ntestcontent\n$}, 'create file info';
@@ -49,7 +49,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary("$dir/test", "testcontent\n");
+	is $d->write_binary("$dir/test", "testcontent\n"), 0, 'no change';
     };
     is $stdout, '';
     is colorstrip($stderr), '', 'nothing happens';
@@ -58,7 +58,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary("$dir/test", "new testcontent\n");
+	is $d->write_binary("$dir/test", "new testcontent\n"), 1, 'a change, changed content';
     };
     is $stdout, '';
     if (is_in_path 'diff') {
@@ -71,7 +71,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary("$dir/test", "testcontent new\n"); # different content, same file size
+	is $d->write_binary("$dir/test", "testcontent new\n"), 1, 'different content, same file size';
     };
     is $stdout, '';
     if (is_in_path 'diff') {
@@ -84,7 +84,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary({quiet=>1}, "$dir/test2", "testcontent\n");
+	is $d->write_binary({quiet=>1}, "$dir/test2", "testcontent\n"), 1, 'quiet change, new file';
     };
     is $stdout, '';
     like colorstrip($stderr), qr{^INFO: Create new file .*test2$}, 'create new file in quiet=1 mode';
@@ -93,7 +93,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary({quiet=>1}, "$dir/test", "new2 testcontent\n");
+	is $d->write_binary({quiet=>1}, "$dir/test", "new2 testcontent\n"), 1, 'quiet change, new content';
     };
     is $stdout, '';
     like colorstrip($stderr), qr{^INFO: Replace existing file .*test$}, 'replace file in quiet=1 mode';
@@ -102,7 +102,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary({quiet=>2}, "$dir/test2", "testcontent\n");
+	is $d->write_binary({quiet=>2}, "$dir/test2", "testcontent\n"), 0, 'no change, very quiet';
     };
     is $stdout, '';
     is $stderr, '', 'insert completely quiet';
@@ -111,7 +111,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary({quiet=>2}, "$dir/test2", "new testcontent\n");
+	$d->write_binary({quiet=>2}, "$dir/test2", "new testcontent\n"), 1, 'very quiet change';
     };
     is $stdout, '';
     is $stderr, '', 'replace completely quiet';
@@ -120,7 +120,7 @@ my $dir = tempdir(CLEANUP => 1);
 
 {
     my($stdout, $stderr) = capture {
-	$d->write_binary({atomic=>0}, "$dir/test2", "non-atomic write\n");
+	is $d->write_binary({atomic=>0}, "$dir/test2", "non-atomic write\n"), 1;
     };
     is $stdout, '';
     isnt $stderr, '';
@@ -130,7 +130,7 @@ my $dir = tempdir(CLEANUP => 1);
 {
     require Encode;
     my($stdout, $stderr) = capture {
-	$d->write_binary("$dir/test-utf8", Encode::encode_utf8("\x{20ac}uro\n"));
+	is $d->write_binary("$dir/test-utf8", Encode::encode_utf8("\x{20ac}uro\n")), 1;
     };
     is $stdout, '';
     isnt $stderr, '';

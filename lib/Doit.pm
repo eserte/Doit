@@ -388,9 +388,8 @@ use warnings;
 		push @files_to_change, $file;
 	    }
 	}
-	my @commands;
 	if (@files_to_change) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 my $changed_files = chmod $mode, @files_to_change;
 				 if ($changed_files != @files_to_change) {
@@ -403,10 +402,13 @@ use warnings;
 				     }
 				 }
 			     },
-			     msg  => sprintf "chmod 0%o %s", $mode, join(" ", @files_to_change), # shellquote?
+			     msg  => sprintf("chmod 0%o %s", $mode, join(" ", @files_to_change)), # shellquote?
+			     rv   => scalar @files_to_change,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_chown {
@@ -453,9 +455,8 @@ use warnings;
 	    }
 	}
 
-	my @commands;
 	if (@files_to_change) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 my $changed_files = chown $uid, $gid, @files_to_change;
 				 if ($changed_files != @files_to_change) {
@@ -469,10 +470,12 @@ use warnings;
 				 }
 			     },
 			     msg  => "chown $uid, $gid, @files_to_change", # shellquote?
+			     rv   => scalar @files_to_change,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_cond_run {
@@ -502,13 +505,16 @@ use warnings;
 	}
 
 	if ($doit) {
+	    my $doit_commands;
 	    if (ref $cmd->[0] eq 'ARRAY') {
-		$self->cmd_run(@$cmd);
+		$doit_commands = $self->cmd_run(@$cmd);
 	    } else {
-		$self->cmd_system(@$cmd);
+		$doit_commands = $self->cmd_system(@$cmd);
 	    }
+	    $doit_commands->set_last_rv(1);
+	    $doit_commands;
 	} else {
-	    Doit::Commands->new();
+	    Doit::Commands->return_zero;
 	}
     }
 
@@ -535,72 +541,82 @@ use warnings;
 	    # probably a file, keep $doit=1
 	}
 
-	my @commands;
 	if ($doit) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 system 'ln', '-nsf', $oldfile, $newfile;
 				 error "ln -nsf $oldfile $newfile failed" if $? != 0;
 			     },
 			     msg => "ln -nsf $oldfile $newfile",
+			     rv  => 1,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_make_path {
 	my($self, @directories) = @_;
 	my $options = {}; if (ref $directories[-1] eq 'HASH') { $options = pop @directories }
 	my @directories_to_create = grep { !-d $_ } @directories;
-	my @commands;
 	if (@directories_to_create) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 require File::Path;
 				 File::Path::make_path(@directories_to_create, $options)
 					 or error $!;
 			     },
 			     msg => "make_path @directories",
+			     rv  => scalar @directories_to_create,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_mkdir {
 	my($self, $directory, $mode) = @_;
-	my @commands;
 	if (!-d $directory) {
+	    my @commands;
 	    if (defined $mode) {
 		push @commands, {
 				 code => sub { mkdir $directory, $mode or error "$!" },
 				 msg  => "mkdir $directory with mask $mode",
+				 rv   => 1,
 				};
 	    } else {
 		push @commands, {
 				 code => sub { mkdir $directory or error "$!" },
 				 msg  => "mkdir $directory",
+				 rv   => 1,
 				};
 	    }
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_remove_tree {
 	my($self, @directories) = @_;
 	my $options = {}; if (ref $directories[-1] eq 'HASH') { $options = pop @directories }
 	my @directories_to_remove = grep { -d $_ } @directories;
-	my @commands;
 	if (@directories_to_remove) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 require File::Path;
 				 File::Path::remove_tree(@directories_to_remove, $options)
 					 or error "$!";
 			     },
 			     msg => "remove_tree @directories_to_remove",
+			     rv  => scalar @directories_to_remove,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_rename {
@@ -609,6 +625,7 @@ use warnings;
 	push @commands, {
 			 code => sub { rename $from, $to or error "$!" },
 			 msg  => "rename $from, $to",
+			 rv   => 1,
 			};
 	Doit::Commands->new(@commands);
     }
@@ -623,7 +640,6 @@ use warnings;
 	}
 	my($from, $to) = @args;
 
-	my @commands;
 	my $real_to;
 	if (-d $to) {
 	    require File::Basename;
@@ -632,7 +648,7 @@ use warnings;
 	    $real_to = $to;
 	}
 	if (!-e $real_to || do { require File::Compare; File::Compare::compare($from, $real_to) != 0 }) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 require File::Copy;
 				 File::Copy::copy($from, $to)
@@ -661,8 +677,10 @@ use warnings;
 			     },
 			     rv => 1,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_move {
@@ -674,6 +692,7 @@ use warnings;
 				    or error "Move failed: $!";
 			},
 			msg => "move $from $to",
+			rv  => 1,
 		       };
 	Doit::Commands->new(@commands);
     }
@@ -890,14 +909,15 @@ use warnings;
 
     sub cmd_rmdir {
 	my($self, $directory) = @_;
-	my @commands;
 	if (-d $directory) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub { rmdir $directory or error "$!" },
 			     msg  => "rmdir $directory",
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_run {
@@ -928,14 +948,16 @@ use warnings;
 
     sub cmd_setenv {
 	my($self, $key, $val) = @_;
-	my @commands;
 	if (!defined $ENV{$key} || $ENV{$key} ne $val) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub { $ENV{$key} = $val },
-			     msg => qq{set \$ENV{$key} to "$val", previous value was } . (defined $ENV{$key} ? qq{"$ENV{$key}"} : qq{unset}),
+			     msg  => qq{set \$ENV{$key} to "$val", previous value was } . (defined $ENV{$key} ? qq{"$ENV{$key}"} : qq{unset}),
+			     rv   => 1,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_symlink {
@@ -952,14 +974,16 @@ use warnings;
 	} else {
 	    warning "$newfile exists but is not a symlink, will fail later...";
 	}
-	my @commands;
 	if ($doit) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub { symlink $oldfile, $newfile or error "$!" },
 			     msg  => "symlink $oldfile $newfile",
+			     rv   => 1,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_system {
@@ -997,7 +1021,9 @@ use warnings;
 				};
 	    }
 	}
-	Doit::Commands->new(@commands);
+	my $doit_commands = Doit::Commands->new(@commands);
+	$doit_commands->set_last_rv(scalar @files);
+	$doit_commands;
     }
 
     sub cmd_create_file_if_nonexisting {
@@ -1011,7 +1037,13 @@ use warnings;
 		};
 	    }
 	}
-	Doit::Commands->new(@commands);
+	if (@commands) {
+	    my $doit_commands = Doit::Commands->new(@commands);
+	    $doit_commands->set_last_rv(scalar @commands);
+	    $doit_commands;
+	} else {
+	    Doit::Commands->return_zero;
+	}
     }
 
     sub cmd_unlink {
@@ -1022,26 +1054,29 @@ use warnings;
 		push @files_to_remove, $file;
 	    }
 	}
-	my @commands;
 	if (@files_to_remove) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub { unlink @files_to_remove or error "$!" },
 			     msg  => "unlink @files_to_remove", # shellquote?
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_unsetenv {
 	my($self, $key) = @_;
-	my @commands;
 	if (defined $ENV{$key}) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub { delete $ENV{$key} },
-			     msg => qq{unset \$ENV{$key}, previous value was "$ENV{$key}"},
+			     msg  => qq{unset \$ENV{$key}, previous value was "$ENV{$key}"},
+			     rv   => 1,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_utime {
@@ -1067,9 +1102,8 @@ use warnings;
 	    }
 	}
 
-	my @commands;
 	if (@files_to_change) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 my $changed_files = utime $atime, $mtime, @files;
 				 if ($changed_files != @files_to_change) {
@@ -1083,9 +1117,12 @@ use warnings;
 				 }
 			     },
 			     msg  => "utime $atime, $mtime, @files",
+			     rv   => scalar @files_to_change,
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_write_binary {
@@ -1118,9 +1155,8 @@ use warnings;
 	    }
 	}
 
-	my @commands;
 	if ($doit) {
-	    push @commands, {
+	    my @commands =  {
 			     code => sub {
 				 # XXX consider to reuse code for atomic writes:
 				 # either from Doit::File::file_atomic_write (problematic, different component)
@@ -1140,6 +1176,7 @@ use warnings;
 					 or error "Error while renaming $outfile to $filename: $!";
 				 }
 			     },
+			     rv => 1,
 			     ($quiet >= 2
 			      ? ()
 			      : (msg => do {
@@ -1182,8 +1219,10 @@ use warnings;
 				 }
 			     )),
 			    };
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
 	}
-	Doit::Commands->new(@commands);
     }
 
     sub cmd_change_file {
@@ -1400,15 +1439,13 @@ use warnings;
 			     },
 			     rv => $no_of_changes,
 			    };
-	} else {
-	    # Dummy command, just to set return value to 0 (otherwise it would be undef)
-	    push @commands, {
-			     code => sub {},
-			     rv => 0,
-			    };
 	}
 
-	Doit::Commands->new(@commands);
+	if ($no_of_changes) {
+	    Doit::Commands->new(@commands);
+	} else {
+	    Doit::Commands->return_zero;
+	}
     }
 
 }
@@ -1420,7 +1457,18 @@ use warnings;
 	my $self = bless \@commands, $class;
 	$self;
     }
+    sub return_zero {
+	my $class = shift;
+	$class->new({ code => sub {}, rv => 0 });
+    }
     sub commands { @{$_[0]} }
+    sub set_last_rv {
+	my($self, $rv) = @_;
+	my @commands = $self->commands;
+	if (@commands) {
+	    $commands[-1]->{rv} = $rv;
+	}
+    }
     sub doit {
 	my($self) = @_;
 	my $rv;
