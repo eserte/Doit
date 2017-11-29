@@ -17,7 +17,7 @@ use Errno qw(ENOENT);
 
 my $r = Doit->init;
 
-$r->system($^X, '-e', 'exit 0');
+is $r->system($^X, '-e', 'exit 0'), 1;
 pass 'no exception';
 
 SKIP: {

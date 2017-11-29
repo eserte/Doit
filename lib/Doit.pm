@@ -942,6 +942,7 @@ use warnings;
 			     }
 			     join " ", @print_cmd;
 			 },
+			 rv  => 1,
 			};
 	Doit::Commands->new(@commands);
     }
@@ -1001,6 +1002,7 @@ use warnings;
 			     }
 			 },
 			 msg  => "@args" . _show_cwd($show_cwd),
+			 rv   => 1,
 			};
 	Doit::Commands->new(@commands);
     }

@@ -104,6 +104,11 @@ script, e.g. by using L<Getopt::Long> or looking into C<@ARGV>:
 
 =head2 CORE COMMANDS
 
+All core commands throw exceptions on errors. If not stated otherwise,
+then the return value is the number of changes, typically the number
+of files affected --- in dry-run mode it's the number of changes which
+would be done, and in real mode it's the number of changes performed.
+
 =head3 chmod
 
     $doit->chmod($mode, $file ...);
@@ -191,6 +196,8 @@ converging scripts without an accompanying condition. See
 L<File::Copy::move|File::Copy/move> for details. For an alternative
 command see L</rename>.
 
+Always returns C<1> (unless there's an exception).
+
 =head3 remove_tree
 
     $doit->remove_tree($directory ...);
@@ -208,6 +215,8 @@ Rename I<$from> to I<$to>. This command probably cannot be used in
 converging scripts without an accompanying condition. See
 L<perlfunc/rename> for details. See L</move> for a command which can
 move a file between different filesystems.
+
+Always returns C<1> (unless there's an exception).
 
 =head3 rmdir
 
@@ -239,6 +248,8 @@ L<touch(1)>. Non-existent files are created as empty files, and for
 existent files the access and modification are updated. This command
 does not converge; for a converging command see
 L</create_file_if_nonexisting>.
+
+Always returns the number of given files (unless there's an exception).
 
 =head3 unlink
 
@@ -424,6 +435,9 @@ example:
 
     $doit->cond_run(creates => $file, cmd => [["command", "arg" ...], ">", $file]);
 
+Return C<1> if the condition was true and the I<cmd> executed,
+otherwise C<0>.
+
 =head3 open2
 
     my $stdout = $doit->open2("command", "arg" ...);
@@ -480,6 +494,8 @@ contain pipes, redirects and everything C<IPC::Run> supports. Example:
 
     $doit->run([qw(grep pattern file)], '|', ['sort'], '|', [qw(uniq -c)], '>', 'outfile');
 
+Always returns C<1> (unless there's an exception).
+
 =head3 system
 
     $doit->system("command", "arg" ...);
@@ -489,6 +505,8 @@ Execute a command. If C<show_cwd> is set to a true value, then logging
 shows also the current working directory. See L<"system" in
 perlfunc|perlfunc/system LIST> for more details.
 
+Always returns C<1> (unless there's an exception).
+
 =head2 SYSTEM EXECUTION INFORMATIONAL COMMANDS
 
 Commands starting with C<info_> also run in dry-run mode. It is
@@ -496,7 +514,7 @@ expected that the user only runs system commands which are not doing
 any changes to the system, but just return some kind of "information".
 
 B<Note>: currently the C<info_*> commands fail on non-zero exit code.
-This is probably not very useful (just think of running a non-matching
+This behavior is probably not very useful (just think of running a non-matching
 grep) and may change in future. Currently these invocations have to be
 wrapped in an C<< eval { ... } >> if non-zero exit may happen.
 

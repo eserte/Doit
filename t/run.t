@@ -15,7 +15,7 @@ use Doit;
 
 my $r = Doit->init;
 
-$r->run($^X, '-e', 'exit 0');
+is $r->run($^X, '-e', 'exit 0'), 1;
 pass 'no exception';
 
 eval { $r->run($^X, '-e', 'exit 1') };
