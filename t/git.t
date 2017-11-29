@@ -92,6 +92,10 @@ SKIP: {
     is $d->git_config(key => "test.key"), "test.val2", 'config key now changed';
     $d->git_config(key => "test.key", val => "test.val2");
     is $d->git_config(key => "test.key"), "test.val2", 'nothing changed now';
+    $d->git_config(key => "test.key", unset => 1);
+    is $d->git_config(key => "test.key"), undef, 'config key was removed';
+    $d->git_config(key => "test.key", unset => 1);
+    is $d->git_config(key => "test.key"), undef, 'config key is still removed';
 
     is $d->git_repo_update(
 			   repository => "$workdir/.git",

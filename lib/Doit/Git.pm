@@ -280,16 +280,29 @@ sub git_config {
     my $directory = delete $opts{directory};
     my $key       = delete $opts{key};
     my $val       = delete $opts{val};
+    my $unset     = delete $opts{unset};
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
 	no warnings 'uninitialized'; # $old_val may be undef
 	chomp(my($old_val) = eval { $self->info_qx({quiet=>1}, qw(git config), $key) });
-	if (!defined $val) {
-	    $old_val;
+	if ($unset) {
+	    if ($@) {
+		if ($@->{exitcode} == 1) {
+		    # already non-existent
+		} else {
+		    error "git config $key failed with exitcode $@->{exitcode}";
+		}
+	    } else {
+		$self->system(qw(git config --unset), $key, (defined $val ? $val : ()));
+	    }
 	} else {
-	    if (!defined $old_val || $old_val ne $val) {
-		$self->system(qw(git config), $key, $val);
+	    if (!defined $val) {
+		$old_val;
+	    } else {
+		if (!defined $old_val || $old_val ne $val) {
+		    $self->system(qw(git config), $key, $val);
+		}
 	    }
 	}
     } $directory;
