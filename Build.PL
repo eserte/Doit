@@ -162,6 +162,40 @@ EOF
     } $dir;
 }
 
+sub distdir {
+    require File::Basename;
+    require File::Temp;
+    my $tempdir = File::Temp::tempdir(CLEANUP => 1);
+    my $Doit_VERSION = _get_Doit_VERSION();
+    my $distdir = "$tempdir/Doit-$Doit_VERSION";
+    $doit->mkdir($distdir);
+    for my $line (split /\n/, $doit->info_qx({quiet=>1}, 'git', 'ls-files')) {
+	next if ($line =~ m{^(\.travis\.yml|appveyor\.yml)$});
+	# XXX maybe implement also MANIFEST.SKIP?
+	my $dirname = File::Basename::dirname($line);
+	if ($dirname ne '.') {
+	    $doit->make_path("$distdir/$dirname");
+	}
+	$doit->copy($line, "$distdir/$dirname/");
+    }
+    generate_META_json("$distdir/META.json");
+    $distdir;
+}
+
+sub dist {
+    my $distdir = distdir();
+    my $Doit_VERSION = _get_Doit_VERSION();
+    require Cwd;
+    require File::Basename;
+    my $tarfile = Cwd::getcwd() . "/Doit-" . $Doit_VERSION . ".tar.gz";
+    if (-e $tarfile) {
+	error "$tarfile already exists";
+    }
+    in_directory {
+	$doit->system('tar', 'cfvz', $tarfile, File::Basename::basename($distdir));
+    } "$distdir/..";
+}
+
 sub cover {
     {
 	no warnings 'uninitialized';
@@ -280,13 +314,7 @@ sub git_tag {
 	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
     }
 
-    my $Doit_VERSION = $Doit::VERSION;
-    if (!defined $Doit_VERSION) {
-	error 'Fatal: Doit.pm does not define a version';
-    }
-    if ($Doit_VERSION !~ m{^\d+\.\d+$}) {
-	error "Doit.pm VERSION $Doit_VERSION does not look like expected";
-    }
+    my $Doit_VERSION = _get_Doit_VERSION();
 
     my $out = $doit->info_qx(qw(git tag --list), $Doit_VERSION);
     if (defined $out && $out ne '') {
@@ -296,7 +324,20 @@ sub git_tag {
     $doit->system(qw(git tag -a -m), "tag $Doit_VERSION release", $Doit_VERSION);
 }
 
+sub _get_Doit_VERSION {
+    my $Doit_VERSION = $Doit::VERSION;
+    if (!defined $Doit_VERSION) {
+	error 'Fatal: Doit.pm does not define a version';
+    }
+    if ($Doit_VERSION !~ m{^\d+\.\d+$}) {
+	error "Doit.pm VERSION $Doit_VERSION does not look like expected";
+    }
+    $Doit_VERSION;
+}
+
 sub generate_META_json {
+    my $destfile = shift || 'META.json';
+
     require CPAN::Meta;
     require ExtUtils::MakeMaker;
     my $meta = CPAN::Meta->new({
@@ -315,7 +356,7 @@ sub generate_META_json {
 	    },
 	},
     });
-    $meta->save("META.json");
+    $meta->save($destfile);
 }
 
 # XXX the debian package build functionality should go into
