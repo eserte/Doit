@@ -17,8 +17,9 @@ use strict;
 use warnings;
 
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
+use Doit::Log;
 use Doit::Util qw(in_directory);
 
 sub new { bless {}, shift }
@@ -30,6 +31,7 @@ sub git_repo_update {
     my @repository_aliases = @{ delete $opts{repository_aliases} || [] };
     my $directory  = delete $opts{directory};
     my $origin     = delete $opts{origin} || 'origin';
+    my $allow_remote_url_change = delete $opts{allow_remote_url_change};
     my $clone_opts = delete $opts{clone_opts};
     my $quiet      = delete $opts{quiet};
     die "Unhandled options: " . join(" ", %opts) if %opts;
@@ -54,7 +56,17 @@ sub git_repo_update {
 	in_directory {
 	    chomp(my $actual_repository = eval { $self->info_qx({quiet=>1}, qw(git config --get), "remote.$origin.url") });
 	    if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
-		die "In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n";
+		my @change_cmd = ('git', 'remote', 'set-url', $origin, $repository);
+		if ($allow_remote_url_change) {
+		    info "Need to change remote URL for $origin";
+		    $self->system(@change_cmd);
+		} else {
+		    error
+			"In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n" .
+			"Please run manually\n" .
+			"    @change_cmd\n" .
+			"or specify allow_remote_url_change=>1\n";
+		}
 	    }
 	    if ($quiet) {
 		# XXX there's no quiet option for system, misuse qx instead
