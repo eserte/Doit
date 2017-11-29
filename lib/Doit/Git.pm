@@ -34,7 +34,7 @@ sub git_repo_update {
     my $allow_remote_url_change = delete $opts{allow_remote_url_change};
     my $clone_opts = delete $opts{clone_opts};
     my $quiet      = delete $opts{quiet};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my $has_changes = 0;
     my $do_clone;
@@ -42,13 +42,13 @@ sub git_repo_update {
 	$do_clone = 1;
     } else {
 	if (!-d $directory) {
-	    die "'$directory' exists, but is not a directory\n";
+	    error "'$directory' exists, but is not a directory\n";
 	}
 	if (!-d "$directory/.git") {
 	    if (_is_dir_empty($directory)) {
 		$do_clone = 1;
 	    } else {
-		die "No .git directory found in non-empty '$directory', refusing to clone...\n";
+		error "No .git directory found in non-empty '$directory', refusing to clone...\n";
 	    }
 	}
     }
@@ -95,7 +95,7 @@ sub git_repo_update {
 sub git_short_status {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my $untracked_files = 'normal'; # XXX or "no"? make it configurable?
 
@@ -105,7 +105,7 @@ sub git_short_status {
 	{
 	    my @cmd = ("git", "status", "--untracked-files=$untracked_files", "--porcelain");
 	    open my $fh, "-|", @cmd
-		or die "Can't run '@cmd': $!";
+		or error "Can't run '@cmd': $!";
 	    my $has_untracked;
 	    my $has_uncommitted;
 	    while (<$fh>) {
@@ -133,7 +133,7 @@ sub git_short_status {
 	{
 	    my @cmd = ("git", "status", "--untracked-files=no");
 	    open my $fh, "-|", @cmd
-		or die "Can't run '@cmd': $!";
+		or error "Can't run '@cmd': $!";
 	    my $l;
 	    $l = <$fh>;
 	    $l = <$fh>;
@@ -189,7 +189,7 @@ sub git_short_status {
 sub git_root {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
 	chomp(my $dir = `git rev-parse --show-toplevel`);
@@ -200,7 +200,7 @@ sub git_root {
 sub git_get_commit_hash {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
 	chomp(my $commit = `git log -1 --format=%H`);
@@ -212,13 +212,13 @@ sub git_get_commit_files {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
     my $commit    = delete $opts{commit}; if (!defined $commit) { $commit = 'HEAD' }
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my @files;
     in_directory {
 	my @cmd = ('git', 'show', $commit, '--pretty=format:', '--name-only');
 	open my $fh, '-|', @cmd
-	    or die "Error running @cmd: $!";
+	    or error "Error running @cmd: $!";
 	my $first = <$fh>;
 	if ($first ne "\n") { # first line is empty for older git versions (e.g. 1.7.x)
 	    chomp $first;
@@ -229,7 +229,7 @@ sub git_get_commit_files {
 	    push @files, $_;
 	}
 	close $fh
-	    or die "Error while running @cmd: $!";
+	    or error "Error while running @cmd: $!";
     } $directory;
     @files;
 }
@@ -241,14 +241,14 @@ sub git_get_changed_files {
     in_directory {
 	my @cmd = qw(git status --porcelain);
 	open my $fh, '-|', @cmd
-	    or die "Error running @cmd: $!";
+	    or error "Error running @cmd: $!";
 	while(<$fh>) {
 	    chomp;
 	    s{^...}{};
 	    push @files, $_;
 	}
 	close $fh
-	    or die "Error while running @cmd: $!";
+	    or error "Error while running @cmd: $!";
     } $directory;
     @files;
 }
@@ -256,7 +256,7 @@ sub git_get_changed_files {
 sub git_is_shallow {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my $git_root = $self->git_root(directory => $directory);
     -f "$git_root/.git/shallow" ? 1 : 0;
@@ -265,7 +265,7 @@ sub git_is_shallow {
 sub git_current_branch {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
 	my $git_root = $self->git_root;
@@ -281,7 +281,7 @@ sub git_config {
     my $key       = delete $opts{key};
     my $val       = delete $opts{val};
     my $unset     = delete $opts{unset};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
 	no warnings 'uninitialized'; # $old_val may be undef
@@ -313,7 +313,7 @@ sub _is_dir_empty {
     my ($dir) = @_;
 
     opendir my $h, $dir
-        or die "Cannot open directory: '$dir': $!";
+        or error "Cannot open directory: '$dir': $!";
 
     while (defined (my $entry = readdir $h)) {
         return unless $entry =~ /^[.][.]?\z/;

@@ -144,11 +144,11 @@ sub run_tests {
     $d->mkdir("$dir/exists");
     $d->create_file_if_nonexisting("$dir/exists/make_directory_non_empty");
     eval { $d->git_repo_update(repository => $repository, directory => "$dir/exists") };
-    like $@, qr{No .git directory found in};
+    like $@, qr{ERROR.*No .git directory found in};
 
     $d->touch("$dir/file");
     eval { $d->git_repo_update(repository => $repository, directory => "$dir/file") };
-    like $@, qr{exists, but is not a directory};
+    like $@, qr{ERROR.*exists, but is not a directory};
 }
 
 sub _git_commit_with_author {
