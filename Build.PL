@@ -20,6 +20,7 @@ use Config;
 use Digest::MD5 qw(md5_hex);
 use File::Basename;
 use Doit;
+use Doit::Extcmd qw(is_in_path);
 use Doit::Log;
 use Doit::Util qw(in_directory);
 
@@ -163,6 +164,7 @@ EOF
 
 sub cover {
     {
+	no warnings 'uninitialized';
 	local $ENV{PERL5LIB} .= ($ENV{PERL5LIB} ne '' ? ':' : '') . "$FindBin::RealBin/lib";
 	local $ENV{PERL5OPT} .= ($ENV{PERL5OPT} ne '' ? ' ' : '') . '-MDevel::Cover';
 	$doit->system(_prove_path(), '--exec', $^X, 't');
@@ -172,7 +174,7 @@ sub cover {
 
 sub show_cover {
     cover();
-    my $browser = $^O eq 'darwin' ? 'open' : 'firefox';
+    my $browser = $^O eq 'darwin' ? 'open' : is_in_path('xdg-open') ? 'xdg-open' : 'firefox';
     $doit->system($browser, "$FindBin::RealBin/cover_db/coverage.html");
 }
 
