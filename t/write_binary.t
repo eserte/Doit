@@ -137,4 +137,13 @@ my $dir = tempdir(CLEANUP => 1);
     is slurp("$dir/test-utf8"), "\342\202\254uro\n", 'testing the encode_utf8 example';
 }
 
+{
+    $d->write_binary("$dir/test3", "ancient file\n");
+    $d->utime(1234, 1234, "$dir/test3");
+    $d->write_binary("$dir/test3", "overwrite file\n");
+    my @s = stat "$dir/test3";
+    cmp_ok $s[8], ">=", time, 'atime was modified';
+    cmp_ok $s[9], ">=", time, 'mtime was modified';
+}
+
 __END__

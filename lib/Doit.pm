@@ -1167,7 +1167,7 @@ use warnings;
 				 open my $ofh, '>', $outfile
 				     or error "Can't write to $outfile: $!";
 				 if (-e $filename) {
-				     Doit::Util::copy_stat($filename, $outfile);
+				     Doit::Util::copy_stat($filename, $outfile, ownership => 1, mode => 1);
 				 }
 				 binmode $ofh;
 				 print $ofh $content;
