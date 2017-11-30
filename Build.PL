@@ -98,6 +98,7 @@ if (@ARGV) {
 
 sub build {
     $doit->make_path('blib/lib');
+    $doit->make_path('blib/arch'); # not used, but keep ExtUtils::Install quiet
     require File::Find;
     my @pm_files;
     File::Find::find(sub { no warnings 'once'; push @pm_files, $File::Find::name if /\.pm$/ && -f $_ }, "lib");
