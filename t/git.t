@@ -6,7 +6,7 @@
 #
 
 use strict;
-use Cwd qw(realpath);
+use Cwd qw(realpath getcwd);
 use File::Temp qw(tempdir);
 use Test::More;
 
@@ -25,6 +25,12 @@ $d->add_component('git');
 
 # realpath() needed on darwin
 my $dir = realpath(tempdir('doit-git-XXXXXXXX', CLEANUP => 1, TMPDIR => 1));
+
+# A private git-short-status script; should behave the same.
+my $my_git_short_status;
+if (-x "$ENV{HOME}/bin/sh/git-short-status") {
+    $my_git_short_status = "$ENV{HOME}/bin/sh/git-short-status";
+}
 
 # Tests with the Doit repository (if checked out)
 SKIP: {
@@ -47,31 +53,31 @@ SKIP: {
     # after init checks
     is $d->git_root, $workdir, 'git_root in root directory';
     is_deeply [$d->git_get_changed_files], [], 'no changed files in fresh empty directory';
-    is $d->git_short_status, '', 'empty directory, not dirty';
+    git_short_status_check($d, '', 'empty directory, not dirty');
     is $d->git_current_branch, 'master';
 
     # dirty
     $d->touch('testfile');
     is_deeply [$d->git_get_changed_files], ['testfile'], 'new file detected';
-    is $d->git_short_status, '*', 'untracked file detected';
+    git_short_status_check($d, '*', 'untracked file detected');
 
     # git-add
     $d->system(qw(git add testfile));
-    is $d->git_short_status, '<<', 'uncommitted file detected';
+    git_short_status_check($d, '<<', 'uncommitted file detected');
 
     # git-commit
     _git_commit_with_author('test commit');
     is_deeply [$d->git_get_changed_files], [], 'no changed files after commit';
     is_deeply [$d->git_get_commit_files], ['testfile'], 'git_get_commit_files';
     is_deeply [$d->git_get_commit_files(commit => 'HEAD')], ['testfile'], 'git_get_commit_files with explicit commit';
-    is $d->git_short_status, ''; # there's no upstream, so no '<'
+    git_short_status_check($d, '', "there's no upstream, so no '<'");
 
     $d->change_file('testfile', {add_if_missing => 'some content'});
-    is $d->git_short_status, '<<', 'dirty after change';
+    git_short_status_check($d, '<<', 'dirty after change');
 
     $d->system(qw(git add testfile));
     _git_commit_with_author('actually some content');
-    is $d->git_short_status, '';
+    git_short_status_check($d, '', 'freshly committed');
 
     my $workdir2 = "$dir/newworkdir2";
     run_tests($workdir, $workdir2);
@@ -114,7 +120,7 @@ sub run_tests {
     my($repository, $directory) = @_;
 
     is $d->git_repo_update(repository => $repository, directory => $directory), 1, "first call is a clone of $repository";
-    is $d->git_short_status(directory => $directory), '', 'not dirty after clone';
+    git_short_status_check({directory => $directory}, $d, '', 'not dirty after clone');
     my $commit_hash = $d->git_get_commit_hash(directory => $directory);
     like $commit_hash, qr{^[0-9a-f]{40}$}, 'a sha1';
     ok -d $directory;
@@ -125,17 +131,17 @@ sub run_tests {
 
     in_directory {
 	$d->system(qw(git reset --hard HEAD^));
-	is $d->git_short_status, '>', 'remote is now newer';
+	git_short_status_check($d, '>', 'remote is now newer');
 
 	is $d->git_repo_update(repository => $repository, directory => $directory), 1, 'doing a fetch';
 	is $d->git_get_commit_hash, $commit_hash, 'again at the old commit hash'; # ... and without specifying $workdir
-	is $d->git_short_status, '';
+	git_short_status_check($d, '', 'freshly fetched');
 
 	$d->touch('new_file');
-	is $d->git_short_status, '*';
+	git_short_status_check($d, '*', 'file was touched');
 	$d->system(qw(git add new_file));
 	_git_commit_with_author('test commit in clone');
-	is $d->git_short_status, '<', 'ahead of origin';
+	git_short_status_check($d, '<', 'ahead of origin');
 
 	$d->system(qw(git checkout -b new_branch));
 	is $d->git_current_branch, 'new_branch';
@@ -158,6 +164,23 @@ sub _git_commit_with_author {
     local $ENV{GIT_AUTHOR_NAME} = "Some Body";
     local $ENV{GIT_AUTHOR_EMAIL} = 'somebody@example.org';
     $d->system(qw(git commit), '-m', $msg);
+}
+
+sub git_short_status_check {
+    my %options;
+    if (ref $_[0] eq 'HASH') {
+	%options = %{ shift @_ };
+    }
+    my($doit, $expected, $testname) = @_;
+    my $doit_result = $doit->git_short_status(%options);
+    is $doit_result, $expected, $testname;
+    if ($my_git_short_status) {
+	my $directory = $options{directory} ? $options{directory} : getcwd;
+	in_directory {
+	    chomp(my $script_result = $doit->info_qx({quiet=>1}, $my_git_short_status, '-with-untracked'));
+	    is $script_result, $doit_result, "$testname (against $my_git_short_status)";
+	} $directory;
+    }
 }
 
 __END__
