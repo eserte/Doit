@@ -8,14 +8,19 @@
 use strict;
 use FindBin;
 use Test::More;
+use Cwd 'realpath';
 
-plan 'skip_all' => "CPAN::Meta not available"
+my $meta_json = realpath("$FindBin::RealBin/.."). "/META.json";
+
+plan skip_all => "CPAN::Meta not available"
     if !eval { require CPAN::Meta; 1 };
-plan 'skip_all' => "CPAN::Meta::Validator not available"
+plan skip_all => "CPAN::Meta::Validator not available"
     if !eval { require CPAN::Meta::Validator; 1 };
+plan skip_all => "$meta_json does not exist"
+    if !-e $meta_json;
 plan tests => 1;
 
-my $meta = CPAN::Meta->load_file("$FindBin::RealBin/../META.json");
+my $meta = CPAN::Meta->load_file($meta_json);
 my $struct = $meta->as_struct;
 my $cmv = CPAN::Meta::Validator->new($struct);
 ok $cmv->is_valid

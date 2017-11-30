@@ -157,9 +157,23 @@ EOF
 	$doit->system(qw(docker build -t doit-test .));
 	$doit->system(
 		      qw(docker run), '-v', "$FindBin::RealBin:/data:ro", qw(doit-test),
-		      'sh', '-c', 'rsync -a --cvs-exclude --exclude=blib /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build test && ./Build test_xt'
+		      'sh', '-c', 'rsync -a --cvs-exclude --exclude=blib /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build generate_META_json && ./Build test && ./Build test_xt'
 		     );
     } $dir;
+}
+
+sub test_kwalitee ($) {
+    my($distdir) = @_;
+    # If cwd is used then more tests fail,
+    # because META files are not available here.
+    $distdir = $FindBin::RealBin if !defined $distdir;
+
+    if (eval { require Test::Kwalitee; 1 }) {
+	in_directory {
+	    local $ENV{RELEASE_TESTING} = 1;
+	    eval { $doit->system($^X, '-MTest::More', '-MTest::Kwalitee=kwalitee_ok', '-e', 'kwalitee_ok(qw(-has_manifest)); done_testing') };
+	} $distdir;
+    }
 }
 
 sub distdir {
@@ -178,7 +192,12 @@ sub distdir {
 	}
 	$doit->copy($line, "$distdir/$dirname/");
     }
+
     generate_META_json("$distdir/META.json");
+    generate_META_yml("$distdir/META.yml" );
+
+    test_kwalitee($distdir);
+
     $distdir;
 }
 
@@ -324,7 +343,7 @@ sub git_tag {
     $doit->system(qw(git tag -a -m), "tag $Doit_VERSION release", $Doit_VERSION);
 }
 
-sub _get_Doit_VERSION {
+sub _get_Doit_VERSION () {
     my $Doit_VERSION = $Doit::VERSION;
     if (!defined $Doit_VERSION) {
 	error 'Fatal: Doit.pm does not define a version';
@@ -335,8 +354,8 @@ sub _get_Doit_VERSION {
     $Doit_VERSION;
 }
 
-sub generate_META_json {
-    my $destfile = shift || 'META.json';
+sub _generate_META ($;$) {
+    my($destfile, $version) = @_;
 
     require CPAN::Meta;
     require ExtUtils::MakeMaker;
@@ -356,7 +375,21 @@ sub generate_META_json {
 	    },
 	},
     });
-    $meta->save($destfile);
+    if ($doit->is_dry_run) {
+	info "Would create $destfile" . (defined $version ? " (version $version)" : "") . " (dry-run)";
+    } else {
+	$meta->save($destfile, (defined $version ? { version => $version } : ()));
+    }
+}
+
+sub generate_META_json (;$) {
+    my $destfile = shift || 'META.json';
+    _generate_META $destfile;
+}
+
+sub generate_META_yml (;$) {
+    my $destfile = shift || 'META.yml';
+    _generate_META $destfile, 1;
 }
 
 # XXX the debian package build functionality should go into
@@ -369,16 +402,11 @@ sub debian_package {
 sub _debian_package {
     my(%opts) = @_;
 
-    for my $tool (qw(dh-make-perl rsync)) { # XXX maybe add git here?
+    for my $tool (qw(dh-make-perl)) { # XXX maybe add git here?
 	$doit->qx('which', $tool); # existence check
     }
 
-    # XXX optionally support inplace operation without rsync ---
-    # useful e.g. for docker builds
-    require File::Temp;
-    require File::Glob;
-    my $dir = File::Temp::tempdir("Doit_debian_package_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
-    $doit->system('rsync', '-a', '--exclude=.git', "$FindBin::RealBin/", "$dir/Doit/");
+    my $distdir = distdir();
 
     my $version = delete $opts{'--version'};
     my $add_distro_version = delete $opts{'--add-distro-version'};
@@ -414,13 +442,14 @@ sub _debian_package {
     my $deb;
     in_directory {
 	$doit->system(qw(dh-make-perl --build --vcs none), (defined $version ? ('--version', $version) : ()), %opts);
-	my(@debs) = File::Glob::bsd_glob("$dir/*.deb");
+	require File::Glob;
+	my(@debs) = File::Glob::bsd_glob("$distdir/../*.deb");
 	if (@debs != 1) {
 	    error "Expecting exactly one generated .deb, but got: <@debs>\n";
 	}
 	$deb = $debs[0];
-    } "$dir/Doit";
-    $doit->system('cp', $deb, basename($deb));
+    } $distdir;
+    $doit->copy($deb, basename($deb));
     print basename($deb), "\n";
 }
 
@@ -507,10 +536,12 @@ sub _Build_PL_mode {
 	if (-l "Build") { # formerly this used to be a symlink
 	    $doit->unlink("Build");
 	}
-	$doit->write_binary({quiet=>1}, 'Build', <<"EOF" . $argv_serialized . $Build_PL_file_contents);
+	my $preamble = <<"EOF";
 #! $Config{perlpath}
 # MD5: $Build_PL_md5hex
 EOF
+	$preamble .= $argv_serialized;
+	$doit->write_binary({quiet=>1}, 'Build', $preamble . qq{# line 1 "Build.PL"\n} . $Build_PL_file_contents);
 	$doit->chmod(0755, 'Build');
     }
     exit;
