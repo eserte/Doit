@@ -53,31 +53,42 @@ SKIP: {
     # after init checks
     is $d->git_root, $workdir, 'git_root in root directory';
     is_deeply [$d->git_get_changed_files], [], 'no changed files in fresh empty directory';
-    git_short_status_check($d, '', 'empty directory, not dirty');
+    git_short_status_check(                         $d, '', 'empty directory, not dirty');
+    git_short_status_check({untracked_files=>'no'}, $d, '', 'empty directory, not dirty');
     is $d->git_current_branch, 'master';
 
     # dirty
     $d->touch('testfile');
     is_deeply [$d->git_get_changed_files], ['testfile'], 'new file detected';
-    git_short_status_check($d, '*', 'untracked file detected');
+    git_short_status_check(                         $d, '*', 'untracked file detected');
+    git_short_status_check({untracked_files=>'no'}, $d, '',  'no detection of untracked files');
 
     # git-add
     $d->system(qw(git add testfile));
-    git_short_status_check($d, '<<', 'uncommitted file detected');
+    git_short_status_check(                         $d, '<<', 'uncommitted file detected');
+    git_short_status_check({untracked_files=>'no'}, $d, '<<', 'uncommitted file detected');
+
+    $d->touch('untracked-file');
+    git_short_status_check(                         $d, '<<*', 'uncommitted and untracked files detected');
+    git_short_status_check({untracked_files=>'no'}, $d, '<<',  'no detection of untracked files');
+    $d->unlink('untracked-file');
 
     # git-commit
     _git_commit_with_author('test commit');
     is_deeply [$d->git_get_changed_files], [], 'no changed files after commit';
     is_deeply [$d->git_get_commit_files], ['testfile'], 'git_get_commit_files';
     is_deeply [$d->git_get_commit_files(commit => 'HEAD')], ['testfile'], 'git_get_commit_files with explicit commit';
-    git_short_status_check($d, '', "there's no upstream, so no '<'");
+    git_short_status_check(                         $d, '', "there's no upstream, so no '<'");
+    git_short_status_check({untracked_files=>'no'}, $d, '', "there's no upstream, so no '<'");
 
     $d->change_file('testfile', {add_if_missing => 'some content'});
-    git_short_status_check($d, '<<', 'dirty after change');
+    git_short_status_check(                         $d, '<<', 'dirty after change');
+    git_short_status_check({untracked_files=>'no'}, $d, '<<', 'dirty after change');
 
     $d->system(qw(git add testfile));
     _git_commit_with_author('actually some content');
-    git_short_status_check($d, '', 'freshly committed');
+    git_short_status_check(                         $d, '', 'freshly committed');
+    git_short_status_check({untracked_files=>'no'}, $d, '', 'freshly committed');
 
     my $workdir2 = "$dir/newworkdir2";
     run_tests($workdir, $workdir2);
@@ -120,7 +131,8 @@ sub run_tests {
     my($repository, $directory) = @_;
 
     is $d->git_repo_update(repository => $repository, directory => $directory), 1, "first call is a clone of $repository";
-    git_short_status_check({directory => $directory}, $d, '', 'not dirty after clone');
+    git_short_status_check({                       directory => $directory}, $d, '', 'not dirty after clone');
+    git_short_status_check({untracked_files=>'no', directory => $directory}, $d, '', 'not dirty after clone');
     my $commit_hash = $d->git_get_commit_hash(directory => $directory);
     like $commit_hash, qr{^[0-9a-f]{40}$}, 'a sha1';
     ok -d $directory;
@@ -131,17 +143,44 @@ sub run_tests {
 
     in_directory {
 	$d->system(qw(git reset --hard HEAD^));
-	git_short_status_check($d, '>', 'remote is now newer');
+	git_short_status_check(                         $d, '>', 'remote is now newer');
+	git_short_status_check({untracked_files=>'no'}, $d, '>', 'remote is now newer');
+
+	$d->touch('untracked-file');
+	git_short_status_check(                         $d, '*>', 'remote is now newer and an untracked file');
+	git_short_status_check({untracked_files=>'no'}, $d, '>',  'remote is now newer, but untracked files are ignored');
+	$d->unlink('untracked-file');
+
+	$d->touch('diverging_now');
+	$d->system(qw(git add diverging_now));
+	_git_commit_with_author('test commit in clone');
+	git_short_status_check(                         $d, '<>', 'diverged');
+	git_short_status_check({untracked_files=>'no'}, $d, '<>', 'diverged');
+
+	$d->touch('untracked-file');
+	git_short_status_check(                         $d, '<*>', 'diverged and an untracked file');
+	git_short_status_check({untracked_files=>'no'}, $d, '<>',  'diverged, but untracked files are ignored');
+	$d->unlink('untracked-file');
+
+	$d->system(qw(git reset --hard HEAD^)); # resolve diverged state
 
 	is $d->git_repo_update(repository => $repository, directory => $directory), 1, 'doing a fetch';
 	is $d->git_get_commit_hash, $commit_hash, 'again at the old commit hash'; # ... and without specifying $workdir
-	git_short_status_check($d, '', 'freshly fetched');
+	git_short_status_check(                         $d, '', 'freshly fetched');
+	git_short_status_check({untracked_files=>'no'}, $d, '', 'freshly fetched');
 
 	$d->touch('new_file');
-	git_short_status_check($d, '*', 'file was touched');
+	git_short_status_check(                         $d, '*', 'file was touched');
+	git_short_status_check({untracked_files=>'no'}, $d, '',  'file was touched, but untracked files are ignored');
 	$d->system(qw(git add new_file));
 	_git_commit_with_author('test commit in clone');
-	git_short_status_check($d, '<', 'ahead of origin');
+	git_short_status_check(                         $d, '<', 'ahead of origin');
+	git_short_status_check({untracked_files=>'no'}, $d, '<', 'ahead of origin');
+
+	$d->touch('untracked-file');
+	git_short_status_check(                         $d, '<*', 'ahead of origin and an untracked file');
+	git_short_status_check({untracked_files=>'no'}, $d, '<',  'ahead of origin, but untracked files are ignored');
+	$d->unlink('untracked-file');
 
 	$d->system(qw(git checkout -b new_branch));
 	is $d->git_current_branch, 'new_branch';
@@ -176,8 +215,13 @@ sub git_short_status_check {
     is $doit_result, $expected, $testname;
     if ($my_git_short_status) {
 	my $directory = $options{directory} ? $options{directory} : getcwd;
+	my @git_short_status_opts;
+	if (($options{untracked_files}||'') eq 'no') {
+	} else {
+	    push @git_short_status_opts, '-with-untracked';
+	}
 	in_directory {
-	    chomp(my $script_result = $doit->info_qx({quiet=>1}, $my_git_short_status, '-with-untracked'));
+	    chomp(my $script_result = $doit->info_qx({quiet=>1}, $my_git_short_status, @git_short_status_opts));
 	    is $script_result, $doit_result, "$testname (against $my_git_short_status)";
 	} $directory;
     }

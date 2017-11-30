@@ -94,14 +94,19 @@ sub git_repo_update {
 
 sub git_short_status {
     my($self, %opts) = @_;
-    my $directory = delete $opts{directory};
+    my $directory       = delete $opts{directory};
+    my $untracked_files = delete $opts{untracked_files};
+    if (!defined $untracked_files) {
+	$untracked_files = 'normal';
+    } elsif ($untracked_files !~ m{^(normal|no)$}) {
+	error "only values 'normal' or 'no' supported for untracked_files";
+    }
     error "Unhandled options: " . join(" ", %opts) if %opts;
-
-    my $untracked_files = 'normal'; # XXX or "no"? make it configurable?
 
     in_directory {
 	local $ENV{LC_ALL} = 'C';
 
+	my $untracked_marker = '';
 	{
 	    my @cmd = ("git", "status", "--untracked-files=$untracked_files", "--porcelain");
 	    open my $fh, "-|", @cmd
@@ -126,7 +131,8 @@ sub git_short_status {
 	    if ($has_uncommitted) {
 		return '<<';
 	    } elsif ($has_untracked) {
-		return '*';
+		$untracked_marker = '*'; # will be combined later
+		last;
 	    }
 	}
 
@@ -138,11 +144,11 @@ sub git_short_status {
 	    $l = <$fh>;
 	    $l = <$fh>;
 	    if      ($l =~ m{^(# )?Your branch is ahead}) {
-		return '<';
+		return '<'.$untracked_marker;
 	    } elsif ($l =~ m{^(# )?Your branch is behind}) {
-		return '>';
+		return $untracked_marker.'>';
 	    } elsif ($l =~ m{^(# )?Your branch and .* have diverged}) {
-		return '<>';
+		return '<'.$untracked_marker.'>';
 	    }
 	}
 
@@ -168,11 +174,11 @@ sub git_short_status {
 			    }
 			}
 			if ($remote_is_newer && $local_is_newer) {
-			    return '<>';
+			    return '<'.$untracked_marker.'>';
 			} elsif ($remote_is_newer) {
-			    return '>';
+			    return $untracked_marker.'>';
 			} elsif ($local_is_newer) {
-			    return '<';
+			    return '<'.$untracked_marker;
 			} else {
 			    return '?'; # Should never happen
 			}
@@ -181,7 +187,7 @@ sub git_short_status {
 	    }
 	}
 
-	return '';
+	return $untracked_marker;
 
     } $directory;
 }
