@@ -43,6 +43,16 @@ SKIP: {
     run_tests($self_git, $workdir);
 }
 
+# Error cases
+eval { $d->git_repo_update('unhandled-option' => 1) };
+like $@, qr{ERROR.*Unhandled options: unhandled-option}, 'unhandled option';
+
+eval { $d->git_short_status('unhandled-option' => 1) };
+like $@, qr{ERROR.*Unhandled options: unhandled-option}, 'unhandled option';
+
+eval { $d->git_short_status('untracked_files' => 'blubber') };
+like $@, qr{ERROR.*only values 'normal' or 'no' supported for untracked_files};
+
 # Tests with a freshly created git repository
 {
     my $workdir = "$dir/newworkdir";
@@ -80,6 +90,12 @@ SKIP: {
     is_deeply [$d->git_get_commit_files(commit => 'HEAD')], ['testfile'], 'git_get_commit_files with explicit commit';
     git_short_status_check(                         $d, '', "there's no upstream, so no '<'");
     git_short_status_check({untracked_files=>'no'}, $d, '', "there's no upstream, so no '<'");
+
+    $d->touch('multiple-files-1');
+    $d->touch('multiple-files-2');
+    $d->system(qw(git add multiple-files-1 multiple-files-2));
+    _git_commit_with_author('two files in commit');
+    is_deeply [$d->git_get_commit_files], [qw(multiple-files-1 multiple-files-2)], 'git_get_commit_files with multiple files';
 
     $d->change_file('testfile', {add_if_missing => 'some content'});
     git_short_status_check(                         $d, '<<', 'dirty after change');
@@ -120,9 +136,71 @@ SKIP: {
 			   directory => $workdir2,
 			  ), 0, "handling repository_aliases";
 
+    is $d->git_repo_update(
+			   repository => $workdir,
+			   repository_aliases => ["unused-repository-alias"],
+			   directory => $workdir2,
+			  ), 0, "unused repository_aliases";
+
+    eval {
+	$d->git_repo_update(
+			    repository => "another-remote-url",
+			    directory => $workdir2,
+			   );
+    };
+    like $@, qr{ERROR:.*remote origin does not point to};
+
+    eval {
+	$d->git_repo_update(
+			    repository => "another-remote-url",
+			    repository_aliases => ['more-unmatching-aliases'],
+			    directory => $workdir2,
+			   );
+    };
+    like $@, qr{ERROR:.*remote origin does not point to.*or any of the following aliases: more-unmatching-aliases};
+
     $d->mkdir("$dir/empty_exists");
     $d->git_repo_update(repository => "$workdir/.git", directory => "$dir/empty_exists");
     ok -d "$dir/empty_exists/.git";
+
+    {
+	my $workdir3 = "$dir/newworkdir3";
+	is $d->git_repo_update(
+			       repository => "$workdir/.git",
+			       origin     => 'my_origin',
+			       directory  => $workdir3,
+			      ), 1, "origin option";
+	in_directory {
+	    is $d->git_config(key => 'remote.my_origin.url'), "$workdir/.git", 'my_origin remote exists';
+	    ok !$d->git_config(key => 'remote.origin.url'),    'no origin remote';
+	} $workdir3;
+
+	is $d->git_repo_update(
+			       repository => $workdir2,
+			       origin     => 'my_origin',
+			       directory  => $workdir3,
+			       allow_remote_url_change => 1,
+			      ), 1, "allow_remote_url_change";
+	in_directory {
+	    is $d->git_config(key => 'remote.my_origin.url'), $workdir2, 'my_origin changed';
+	} $workdir3;
+    }
+
+    {
+	my $workdir4 = "$dir/newworkdir4";
+	is $d->git_repo_update(
+			       repository => "file://$workdir", # "--depth is ignored in local clones; use file:// instead."
+			       directory  => $workdir4,
+			       clone_opts => ['--depth=1'],
+			      ), 1, "with clone_opts";
+	in_directory {
+	    my @history = split /\n/, $d->info_qx({quiet=>1}, qw(git log --oneline));
+	    like $history[0], qr{actually some content};
+	    is scalar(@history), 1, '--depth=1 was effective'
+		or diag explain(\@history);
+	} $workdir4;
+    }
+
 }
 
 chdir "/"; # for File::Temp cleanup
