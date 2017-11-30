@@ -201,6 +201,42 @@ like $@, qr{ERROR.*only values 'normal' or 'no' supported for untracked_files};
 	} $workdir4;
     }
 
+    {
+	my $repo1 = "$dir/newworkdir5";
+	my $repo2 = "$dir/newworkdir6";
+
+	is $d->git_repo_update(
+			       repository => $workdir,
+			       directory  => $repo1,
+			      ), 1;
+	is $d->git_repo_update(
+			       repository => $repo1,
+			       directory  => $repo2,
+			      ), 1;
+
+	in_directory {
+	    $d->touch("new-file");
+	    $d->system(qw(git add new-file));
+	    _git_commit_with_author('new file');
+	} $repo1;
+
+	$d->write_binary("$repo2/new-file", "untracked content\n");
+	eval {
+	    $d->git_repo_update(
+				repository => $repo1,
+				directory  => $repo2,
+			       );
+	};
+	like $@, qr{Command exited with exit code};
+	$d->unlink("$repo2/new-file");
+
+	$d->touch("$repo2/untracked");
+	is $d->git_repo_update(
+			       repository => $repo1,
+			       directory  => $repo2,
+			      ), 1, 'update works, even with untracked files';
+    }
+
 }
 
 chdir "/"; # for File::Temp cleanup

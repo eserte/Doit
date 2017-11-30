@@ -74,8 +74,10 @@ sub git_repo_update {
 	    } else {
 		$self->system({show_cwd=>1}, qw(git fetch));
 	    }
-	    my $status = $self->git_short_status;
-	    if ($status eq '>') {
+	    my $status = $self->git_short_status(untracked_files => 'no');
+	    if ($status =~ m{>$}) {
+		# may actually fail if diverged (status=<>)
+		# or untracked/changed files would get overwritten
 		$self->system({show_cwd=>1}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
 		$has_changes = 1;
 	    } # else: ahead, diverged, or something else
