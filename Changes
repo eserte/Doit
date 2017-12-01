@@ -1,5 +1,8 @@
 Revision history for Doit.
 
+0.021_51 2017-12-01
+	- test fixes for git 1.7.x and perl 5.8.x
+
 0.021_50 2017-12-01
 	- first devel release
  
