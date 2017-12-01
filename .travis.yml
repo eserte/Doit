@@ -6,6 +6,7 @@ matrix:
     - perl: "5.26"
       env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1
     - perl: "5.20"
+      env: DO_DIST_INSTALL=1
     # Actually the perl here does not matter
     - perl: "5.18"
       env: USE_SYSTEM_PERL=1
@@ -50,7 +51,8 @@ addons:
 script:
  - perl Build.PL && ./Build && ./Build test && sudo ./Build test_xt
  # Cannot install on MacOSX
- - if [ "$TRAVIS_OS_NAME" = "linux" ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build install && ./Build test-installed; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a "$DO_DIST_INSTALL" = "" ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build install && ./Build test-installed; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a "$DO_DIST_INSTALL" = 1  ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build dist_install_and_test; fi
 
 branches:
   except:
