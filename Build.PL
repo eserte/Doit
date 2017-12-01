@@ -205,17 +205,35 @@ sub distdir {
 }
 
 sub dist {
-    my $distdir = distdir();
-    my $Doit_VERSION = _get_Doit_VERSION();
-    require Cwd;
-    require File::Basename;
-    my $tarfile = Cwd::getcwd() . "/Doit-" . $Doit_VERSION . ".tar.gz";
+    my $tarfile = _get_tarfilename();
     if (-e $tarfile) {
 	error "$tarfile already exists";
     }
+    my $distdir = distdir();
+    require File::Basename;
     in_directory {
 	$doit->system('tar', 'cfvz', $tarfile, File::Basename::basename($distdir));
     } "$distdir/..";
+}
+
+sub dist_install_and_test {
+    my $tarfile = _get_tarfilename();
+    if (!-e $tarfile) {
+	dist();
+    }
+    require File::Temp;
+    my $dir = File::Temp::tempdir("Doit_dist_install_and_test_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    my $Doit_VERSION = _get_Doit_VERSION();
+    in_directory {
+	$doit->system('tar', 'xfz', $tarfile);
+	in_directory {
+	    $doit->system($^X, 'Build.PL');
+	    $doit->system('./Build');
+	    $doit->system('./Build', 'test');
+	    $doit->system('./Build', 'install');
+	    $doit->system('./Build', 'test-installed');
+	} "Doit-$Doit_VERSION";
+    } $dir;
 }
 
 sub cover {
@@ -355,6 +373,12 @@ sub _get_Doit_VERSION () {
 	error "Doit.pm VERSION $Doit_VERSION does not look like expected";
     }
     $Doit_VERSION;
+}
+
+sub _get_tarfilename () {
+    my $Doit_VERSION = _get_Doit_VERSION();
+    require Cwd;
+    Cwd::getcwd() . "/Doit-" . $Doit_VERSION . ".tar.gz";
 }
 
 sub _generate_META ($;$) {
