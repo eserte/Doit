@@ -311,7 +311,7 @@ use warnings;
 {
     package Doit;
 
-    our $VERSION = '0.02';
+    our $VERSION = '0.021_50';
 
     sub import {
 	warnings->import;
