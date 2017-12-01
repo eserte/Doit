@@ -172,8 +172,10 @@ sub test_kwalitee ($) {
     if (eval { require Test::Kwalitee; 1 }) {
 	in_directory {
 	    local $ENV{RELEASE_TESTING} = 1;
-	    eval { $doit->system($^X, '-MTest::More', '-MTest::Kwalitee=kwalitee_ok', '-e', 'kwalitee_ok(qw(-has_manifest)); done_testing') };
+	    eval { $doit->system($^X, '-MTest::More', '-MTest::Kwalitee=kwalitee_ok', '-e', 'kwalitee_ok(qw(-has_manifest -has_meta_yml)); done_testing') };
 	} $distdir;
+    } else {
+	warning "Test::Kwalitee is not installed";
     }
 }
 
