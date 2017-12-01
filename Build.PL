@@ -369,7 +369,7 @@ sub _get_Doit_VERSION () {
     if (!defined $Doit_VERSION) {
 	error 'Fatal: Doit.pm does not define a version';
     }
-    if ($Doit_VERSION !~ m{^\d+\.\d+$}) {
+    if ($Doit_VERSION !~ m{^\d+\.[\d_]+$}) {
 	error "Doit.pm VERSION $Doit_VERSION does not look like expected";
     }
     $Doit_VERSION;
@@ -530,6 +530,53 @@ EOF
     } $dir;
 }
 
+sub release {
+    my $Doit_VERSION = _get_Doit_VERSION();
+    for my $existing_tag (split /\n/, $doit->info_qx({quiet=>1}, 'git', 'tag')) {
+	if ($Doit_VERSION eq $existing_tag) {
+	    error "The version $Doit_VERSION is already tagged --- probably the release was already done";
+	}
+    }
+
+ FIND_VERSION: {
+	open my $cfh, '<', 'Changes'
+	    or error "Can't open Changes: $!";
+	while(<$cfh>) {
+	    if (/^\Q$Doit_VERSION\E\s/) {
+		last FIND_VERSION;
+	    }
+	}
+	error "Cannot find version $Doit_VERSION in Changes";
+    }
+
+    $doit->system('git', 'fetch');
+
+    $doit->add_component('git');
+    my $git_status = $doit->git_short_status;
+    if ($git_status ne '' && $git_status ne '<') {
+	error "Please check the git status";
+    }
+
+    # XXX TODO: check first if the current version already exists at CPAN
+    my $tarfile = _get_tarfilename();
+    if (!-e $tarfile) {
+        dist();
+    } else {
+	info "Use existing tarball $tarfile";
+    }
+
+    print STDERR "Upload $tarfile? (y/n) ";
+    if (!y_or_n()) {
+	error "exiting release process";
+    }
+
+    require File::Basename;
+    $doit->system('cpan-upload', File::Basename::basename($tarfile));
+
+    $doit->system('git', 'tag', '-a', '-m', "* $Doit_VERSION", $Doit_VERSION);
+    $doit->system('git', 'push', 'origin', 'master', $Doit_VERSION);
+}
+
 sub _prove_path {
     my @candidates = ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}");
     if ($^O eq 'MSWin32') {
@@ -573,5 +620,39 @@ EOF
     }
     exit;
 }
+
+# REPO BEGIN
+# REPO NAME y_or_n /home/eserte/src/srezic-repository 
+# REPO MD5 146cfcf8f954555fe0117a55b0ddc9b1
+
+#=head2 y_or_n
+#
+#Accept user input. Return true on 'y', return false on 'n', otherwise
+#ask again.
+#
+#A default may be supplied as an optional argument:
+#
+#    y_or_n 'y';
+#    y_or_n 'n';
+#
+#=cut
+
+sub y_or_n (;$) {
+    my $default = shift;
+    while () {
+        chomp(my $yn = <STDIN>);
+	if ($yn eq '' && defined $default) {
+	    $yn = $default;
+	}
+        if (lc $yn eq 'y') {
+            return 1;
+        } elsif (lc $yn eq 'n') {
+	    return 0;
+        } else {
+            print STDERR "Please answer y or n: ";
+        }
+    }
+}
+# REPO END
 
 __END__
