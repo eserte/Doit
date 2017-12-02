@@ -230,6 +230,19 @@ sub test_kwalitee ($) {
     }
 }
 
+sub test_pod ($) {
+    my($distdir) = @_;
+    $distdir = $FindBin::RealBin if !defined $distdir;
+
+    if (eval { require Test::Pod; 1 }) {
+	in_directory {
+	    eval { $doit->system($^X, '-MTest::Pod', '-e', 'all_pod_files_ok()') };
+	} $distdir;
+    } else {
+	warning "Test::Pod is not installed";
+    }
+}
+
 sub distdir {
     my(%options) = @_;
     my $temporary = delete $options{temporary};
@@ -258,6 +271,7 @@ sub distdir {
     generate_META_yml("$distdir/META.yml" );
 
     test_kwalitee($distdir);
+    test_pod($distdir);
 
     # If not temporary, then it is assumed that the
     # interactive distdir action is called, and
