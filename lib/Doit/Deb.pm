@@ -15,7 +15,9 @@ package Doit::Deb; # Convention: all commands here should be prefixed with 'deb_
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
+
+use Doit::Util 'get_sudo_cmd';
 
 sub new { bless {}, shift }
 sub functions { qw(deb_install_packages deb_missing_packages deb_install_key) }
@@ -24,7 +26,7 @@ sub deb_install_packages {
     my($self, @packages) = @_;
     my @missing_packages = $self->deb_missing_packages(@packages); # XXX cmd vs. info???
     if (@missing_packages) {
-	$self->system('apt-get', '-y', 'install', @missing_packages);
+	$self->system(get_sudo_cmd(), 'apt-get', '-y', 'install', @missing_packages);
     }
     @missing_packages;
 }
@@ -124,9 +126,9 @@ sub deb_install_key {
     my $changed = 0;
     if (!$found_key) {
 	if ($keyserver) {
-	    $self->system('apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
+	    $self->system(get_sudo_cmd(), 'apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
 	} elsif ($url) {
-	    $self->run(['curl', '-fsSL', $url], '|', ['apt-key', 'add', '-']);
+	    $self->run(['curl', '-fsSL', $url], '|', [get_sudo_cmd(), 'apt-key', 'add', '-']);
 	} else {
 	    die "Shouldn't happen";
 	}

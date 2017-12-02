@@ -155,7 +155,7 @@ use warnings;
 {
     package Doit::Util;
     use Exporter 'import';
-    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup copy_stat) }
+    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup copy_stat get_sudo_cmd) }
     $INC{'Doit/Util.pm'} = __FILE__; # XXX hack
     use Doit::Log;
 
@@ -219,6 +219,11 @@ use warnings;
 		scalar(localtime $stat[9]) .
 		": $!";
 	}
+    }
+
+    sub get_sudo_cmd () {
+	return () if $> == 0;
+	return ('sudo');
     }
 
 }
