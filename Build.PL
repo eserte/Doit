@@ -214,7 +214,7 @@ EOF
     } $dir;
 }
 
-sub test_kwalitee ($) {
+sub test_kwalitee (;$) {
     my($distdir) = @_;
     # If cwd is used then more tests fail,
     # because META files are not available here.
@@ -230,7 +230,7 @@ sub test_kwalitee ($) {
     }
 }
 
-sub test_pod ($) {
+sub test_pod (;$) {
     my($distdir) = @_;
     $distdir = $FindBin::RealBin if !defined $distdir;
 
