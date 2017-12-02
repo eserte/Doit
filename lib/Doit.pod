@@ -735,6 +735,8 @@ The following components are available:
 
 =item * L<Doit::Locale> - handle locale installation
 
+=item * L<Doit::Lwp> - WWW access
+
 =item * L<Doit::User> - user management
 
 =back
