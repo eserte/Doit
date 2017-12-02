@@ -27,6 +27,18 @@ plan 'no_plan';
 my $doit = Doit->init;
 $doit->add_component('lwp');
 
+eval { $doit->lwp_mirror };
+like $@, qr{ERROR.*url is mandatory};
+
+eval { $doit->lwp_mirror("http://example.com") };
+like $@, qr{ERROR.*filename is mandatory};
+
+eval { $doit->lwp_mirror("http://example.com", "/tmp/filename", refresh => 'invalid') };
+like $@, qr{ERROR.*refresh may be 'always' or 'never'};
+
+eval { $doit->lwp_mirror("http://example.com", "/tmp/filename", unhandled_option => 1) };
+like $@, qr{ERROR.*Unhandled options: unhandled_option};
+
 my $tmpdir = tempdir("doit-lwp-XXXXXXXX", CLEANUP => 1, TMPDIR => 1);
 
 in_directory {
@@ -52,8 +64,11 @@ EOF
     is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "mirrored.txt", refresh => 'never'), 0, 'no mirror with refresh => never';
     ok File::Compare::compare("test.txt", "mirrored.txt") != 0, 'file was not changed';
 
-    is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "mirrored.txt", debug => 0), 1, 'mirror with default refresh (always)';
+    is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "mirrored.txt", debug => 1), 1, 'mirror with default refresh (always)';
     ok File::Compare::compare("test.txt", "mirrored.txt") == 0, 'file was refreshed';
+
+    eval { $doit->lwp_mirror('file://' . $tmpurl . '/does-not-exist', 'mirrored.txt') };
+    like $@, qr{ERROR.*mirroring failed: 404 };
 
 } $tmpdir;
 

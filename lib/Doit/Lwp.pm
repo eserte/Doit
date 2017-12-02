@@ -56,17 +56,31 @@ sub lwp_mirror {
     } else {
 	info "mirror $url -> $filename";
 	my $resp = $ua->mirror($url, $filename);
-	if ($debug) {
-	    info "Response: " . $resp->as_string;
-	}
-	if ($resp->code == 304) {
-	    return 0;
-	} elsif (!$resp->is_success) {
-	    error "mirroring failed: " . $resp->status_line;
-	} elsif ($resp->header('X-Died')) {
-	    error "mirroring failed: " . $resp->header('X-Died');
+	if (ref $ua eq 'HTTP::Tiny') {
+	    if ($debug) {
+		require Data::Dumper;
+		info "Response: " . Data::Dumper->new([$resp],[qw()])->Indent(1)->Useqq(1)->Sortkeys(1)->Terse(1)->Dump;
+	    }
+	    if (!$resp->{success}) {
+		error "mirroring failed: $resp->{status} $resp->{reason}";
+	    } elsif ($resp->{status} == 304) {
+		return 0;
+	    } else {
+		return 1;
+	    }
 	} else {
-	    return 1;
+	    if ($debug) {
+		info "Response: " . $resp->as_string;
+	    }
+	    if ($resp->code == 304) {
+		return 0;
+	    } elsif (!$resp->is_success) {
+		error "mirroring failed: " . $resp->status_line;
+	    } elsif ($resp->header('X-Died')) {
+		error "mirroring failed: " . $resp->header('X-Died');
+	    } else {
+		return 1;
+	    }
 	}
     }
 }
