@@ -377,7 +377,7 @@ if ($^O ne 'MSWin32') { # date is interactive on Windows
 }
 {
     my @hostname = ('hostname');
-    if ($^O ne 'MSWin32') {
+    if ($^O =~ m{^(linux|freebsd|darwin|gnukfreebsd)$}) {
 	push @hostname, '-f';
     }
     $r->system(@hostname);
