@@ -20,3 +20,4 @@ build_script:
   - perl Build test
   - perl Build install
   - perl Build test_installed
+  - perl Build dist_install_and_test
