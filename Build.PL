@@ -229,9 +229,13 @@ sub test_kwalitee ($) {
 }
 
 sub distdir {
+    my(%options) = @_;
+    my $temporary = $options{temporary};
+    error "Unhandled options: " . join(" ", %options) if %options;
+
     require File::Basename;
     require File::Temp;
-    my $tempdir = File::Temp::tempdir(CLEANUP => 1);
+    my $tempdir = File::Temp::tempdir("Doit_distdir_XXXXXXXX", TMPDIR => 1, LEANUP => $temporary);
     my $Doit_VERSION = _get_Doit_VERSION();
     my $distdir = "$tempdir/Doit-$Doit_VERSION";
     $doit->mkdir($distdir);
@@ -250,6 +254,13 @@ sub distdir {
 
     test_kwalitee($distdir);
 
+    # If not temporary, then it is assumed that the
+    # interactive distdir action is called, and
+    # provide information to the user.
+    if (!$temporary) {
+	info "Distribution directory is $distdir";
+    }
+
     $distdir;
 }
 
@@ -258,7 +269,7 @@ sub dist {
     if (-e $tarfile) {
 	error "$tarfile already exists";
     }
-    my $distdir = distdir();
+    my $distdir = distdir(temporary => 1);
     require File::Basename;
     in_directory {
 	$doit->system('tar', 'cfvz', $tarfile, File::Basename::basename($distdir));
@@ -450,6 +461,9 @@ sub _generate_META ($;$) {
 		},
 	    },
 	},
+	resources => {
+	    repository => 'git://github.com/eserte/Doit',
+	},
     });
     if ($doit->is_dry_run) {
 	info "Would create $destfile" . (defined $version ? " (version $version)" : "") . " (dry-run)";
@@ -465,7 +479,7 @@ sub generate_META_json (;$) {
 
 sub generate_META_yml (;$) {
     my $destfile = shift || 'META.yml';
-    _generate_META $destfile, 1;
+    _generate_META $destfile, 1.4;
 }
 
 # XXX the debian package build functionality should go into
@@ -482,7 +496,7 @@ sub _debian_package {
 	$doit->qx('which', $tool); # existence check
     }
 
-    my $distdir = distdir();
+    my $distdir = distdir(temporary => 1);
 
     my $version = delete $opts{'--version'};
     my $add_distro_version = delete $opts{'--add-distro-version'};
