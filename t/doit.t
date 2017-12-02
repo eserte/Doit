@@ -41,10 +41,10 @@ my $has_ipc_run = $r->can_ipc_run;
 
 ######################################################################
 # touch
-is $r->touch("decl-test"), 1;
-ok -f "decl-test";
-is $r->touch("decl-test"), 1;
-ok -f "decl-test";
+is $r->touch("doit-test"), 1;
+ok -f "doit-test";
+is $r->touch("doit-test"), 1;
+ok -f "doit-test";
 with_unreadable_directory {
     eval { $r->touch("unreadable-dir/test") };
     like $@, qr{ERROR.*\Q$errno_string{EACCES}};
@@ -54,32 +54,32 @@ $r->unlink("doit-a", "doit-b", "doit-c");
 
 ######################################################################
 # utime
-is $r->utime(1000, 1000, "decl-test"), 1;
+is $r->utime(1000, 1000, "doit-test"), 1;
 {
-    my @s = stat "decl-test";
+    my @s = stat "doit-test";
     is $s[8], 1000, 'utime changed accesstime';
     is $s[9], 1000, 'utime changed modtime';
 }
-is $r->utime(1000, 1000, "decl-test"), 0; # should not run
-is $r->utime(1000, 2000, "decl-test"), 1;
+is $r->utime(1000, 1000, "doit-test"), 0; # should not run
+is $r->utime(1000, 2000, "doit-test"), 1;
 {
-    my @s = stat "decl-test";
+    my @s = stat "doit-test";
     is $s[8], 1000, 'accesstime still unchanged';
     is $s[9], 2000, 'utime changed modtime';
 }
 {
     my $now = time;
-    is $r->utime(undef, undef, "decl-test"), 1;
-    my @s = stat "decl-test"; cmp_ok $s[9], ">=", $now;
+    is $r->utime(undef, undef, "doit-test"), 1;
+    my @s = stat "doit-test"; cmp_ok $s[9], ">=", $now;
 }
 eval { $r->utime(1, 2, "non-existing-file") };
 like $@, qr{ERROR.*\Qutime failed: $errno_string{ENOENT}}, 'utime on non-existing file';
 eval { $r->utime(1, 2, "non-existing-file-1", "non-existing-file-2") };
 like $@, qr{ERROR.*\Qutime failed on all files: $errno_string{ENOENT}}, 'utime on multiple non-existing files';
-$r->create_file_if_nonexisting('decl-test-2');
-eval { $r->utime(1, 2, "decl-test-2", "non-existing-file") };
+$r->create_file_if_nonexisting('doit-test-2');
+eval { $r->utime(1, 2, "doit-test-2", "non-existing-file") };
 like $@, qr{ERROR.*\Qutime failed on some files (1/2): $errno_string{ENOENT}}, 'utime on multiple non-existing files';
-$r->unlink('decl-test-2');
+$r->unlink('doit-test-2');
 $r->touch('doit-a', 'doit-b', 'doit-c');
 is $r->utime(1000, 1000, 'doit-a', 'doit-b', 'doit-c'), 3, 'three files were changed';
 $r->unlink('doit-a', 'doit-b', 'doit-c');
@@ -87,30 +87,30 @@ $r->unlink('doit-a', 'doit-b', 'doit-c');
 ######################################################################
 # create_file_if_nonexisting
 {
-    my @s_before = stat "decl-test";
-    is $r->create_file_if_nonexisting("decl-test"), 0; # already exists
-    my @s_after = stat "decl-test";
+    my @s_before = stat "doit-test";
+    is $r->create_file_if_nonexisting("doit-test"), 0; # already exists
+    my @s_after = stat "doit-test";
     # unfortunately perl has integer timestamps, so this test is
     # unlikely to fail, even if we had a problem:
     is $s_after[9], $s_before[9], 'mtime should not change';
 }
 
-is $r->create_file_if_nonexisting('decl-test2'), 1;
-ok -f 'decl-test2', 'create_file_if_nonexisting on a non-existent file';
-$r->unlink('decl-test2');
+is $r->create_file_if_nonexisting('doit-test2'), 1;
+ok -f 'doit-test2', 'create_file_if_nonexisting on a non-existent file';
+$r->unlink('doit-test2');
 with_unreadable_directory {
     eval { $r->create_file_if_nonexisting("unreadable-dir/test") };
     like $@, qr{ERROR.*\Q$errno_string{EACCES}};
 } "unreadable-dir";
-is $r->create_file_if_nonexisting('decl-test', 'doit-a', 'doit-b'), 2, 'only two files were missing';
+is $r->create_file_if_nonexisting('doit-test', 'doit-a', 'doit-b'), 2, 'only two files were missing';
 $r->unlink('doit-a', 'doit-b');
 
 ######################################################################
 # unlink
-$r->create_file_if_nonexisting('decl-test2');
-ok  -f 'decl-test2';
-is $r->unlink('decl-test2'), 1;
-ok !-f 'decl-test2', 'file was deleted';
+$r->create_file_if_nonexisting('doit-test2');
+ok  -f 'doit-test2';
+is $r->unlink('doit-test2'), 1;
+ok !-f 'doit-test2', 'file was deleted';
 is $r->unlink('non-existing-directory/test'), 0; # not throwing exceptions, as a file check is done before
 SKIP: {
     skip "permissions probably work differently on Windows", 1 if $^O eq 'MSWin32';
@@ -129,41 +129,41 @@ is $r->unlink('not-existing', 'doit-a', 'doit-b', 'doit-c'), 3, 'three of four f
 
 ######################################################################
 # chmod
-$r->create_file_if_nonexisting('decl-test2');
-is $r->chmod(0755, "decl-test", "decl-test2"), 2; # changes expected
-is $r->chmod(0644, "decl-test2"), 1; # one change expected
+$r->create_file_if_nonexisting('doit-test2');
+is $r->chmod(0755, "doit-test", "doit-test2"), 2; # changes expected
+is $r->chmod(0644, "doit-test2"), 1; # one change expected
 {
     local $TODO = "No noop on Windows" if $^O eq 'MSWin32';
-    is $r->chmod(0755, "decl-test"), 0; # noop
+    is $r->chmod(0755, "doit-test"), 0; # noop
 }
 eval { $r->chmod(0644, "does-not-exist") };
 like $@, qr{chmod failed: };
 eval { $r->chmod(0644, "does-not-exist-1", "does-not-exist-2") };
 like $@, qr{chmod failed on all files: };
-eval { $r->chmod(0644, "decl-test", "does-not-exist") };
+eval { $r->chmod(0644, "doit-test", "does-not-exist") };
 like $@, qr{\Qchmod failed on some files (1/2): };
 {
     local $TODO = "No noop on Windows" if $^O eq 'MSWin32';
-    is $r->chmod(0644, "decl-test"), 0; # noop
+    is $r->chmod(0644, "doit-test"), 0; # noop
 }
 
 ######################################################################
 # chown
-is $r->chown(-1, -1, "decl-test"), 0;
-is $r->chown($>, undef, "decl-test"), 0;
-is $r->chown($>, -1, "decl-test"), 0;
-is $r->chown($>, undef, "decl-test"), 0;
+is $r->chown(-1, -1, "doit-test"), 0;
+is $r->chown($>, undef, "doit-test"), 0;
+is $r->chown($>, -1, "doit-test"), 0;
+is $r->chown($>, undef, "doit-test"), 0;
 SKIP: {
     my @groups = split / /, $);
     my $another_group = $groups[1];
     skip "No other group available for test (we have only gids: $))", 3 if !defined $another_group || $groups[0] eq $another_group;
-    is $r->chown(undef, $another_group, "decl-test"), 1;
-    is $r->chown(undef, $another_group, "decl-test"), 0;
+    is $r->chown(undef, $another_group, "doit-test"), 1;
+    is $r->chown(undef, $another_group, "doit-test"), 0;
 
     skip "getgrnam not available on MSWin32", 1 if $^O eq 'MSWin32';
     my $another_groupname = getgrgid($another_group);
     skip "Cannot get groupname for gid $another_group", 1 if !defined $another_groupname;
-    is $r->chown(undef, $another_groupname, 'decl-test'), 0;
+    is $r->chown(undef, $another_groupname, 'doit-test'), 0;
 }
 SKIP: {
     skip "chown never fails on MSWin32", 2 if $^O eq 'MSWin32';
@@ -175,38 +175,38 @@ SKIP: {
 }
 SKIP: {
     skip "getpwnam and getgrnam not available on MSWin32", 1 if $^O eq 'MSWin32';
-    eval { $r->chown("user-does-not-exist", undef, "decl-test") };
+    eval { $r->chown("user-does-not-exist", undef, "doit-test") };
     like $@, qr{\QUser 'user-does-not-exist' does not exist };
-    eval { $r->chown(undef, "group-does-not-exist", "decl-test") };
+    eval { $r->chown(undef, "group-does-not-exist", "doit-test") };
     like $@, qr{\QGroup 'group-does-not-exist' does not exist };
  SKIP: {
 	my $username = (getpwuid($>))[0];
 	skip "Cannot get username for uid $>", 1 if !defined $username;
-	is $r->chown($username, undef, "decl-test"), 0;
+	is $r->chown($username, undef, "doit-test"), 0;
     }
 }
 
 ######################################################################
 # rename, move
-is $r->rename("decl-test", "decl-test3"), 1;
-$r->move("decl-test3", "decl-test2");
-is $r->rename("decl-test2", "decl-test"), 1;
-eval { $r->rename("decl-test", "non-existent-directory/does-not-work") };
+is $r->rename("doit-test", "doit-test3"), 1;
+$r->move("doit-test3", "doit-test2");
+is $r->rename("doit-test2", "doit-test"), 1;
+eval { $r->rename("doit-test", "non-existent-directory/does-not-work") };
 like $@, qr{ERROR.*\Q$errno_string{ENOENT}}, 'failed rename';
 ok !-e "non-existent-directory/does-not-work", 'last rename really failed';
-ok  -e "decl-test", 'file is not renamed';
-eval { $r->move("decl-test", "non-existent-directory/does-not-work") };
+ok  -e "doit-test", 'file is not renamed';
+eval { $r->move("doit-test", "non-existent-directory/does-not-work") };
 like $@, qr{ERROR.*\Q$errno_string{ENOENT}}, 'failed rename';
 ok !-e "non-existent-directory/does-not-work", 'last rename really failed';
-ok  -e "decl-test", 'file is not renamed';
+ok  -e "doit-test", 'file is not renamed';
 
 ######################################################################
 # copy
-is $r->copy("decl-test", "decl-copy"), 1;
-ok -e "decl-copy"
+is $r->copy("doit-test", "doit-copy"), 1;
+ok -e "doit-copy"
     or diag qx(ls -al);
-is $r->copy("decl-test", "decl-copy"), 0; # no action
-$r->unlink("decl-copy");
+is $r->copy("doit-test", "doit-copy"), 0; # no action
+$r->unlink("doit-copy");
 
 ######################################################################
 # symlink, ln_nsf
@@ -214,34 +214,34 @@ TODO: {
     todo_skip "symlinks not working on Windows", 11
 	if $^O eq 'MSWin32';
 
-    is $r->symlink("tmp/decl-test", "decl-test-symlink"), 1;
-    ok -l "decl-test-symlink", 'symlink created';
-    is readlink("decl-test-symlink"), "tmp/decl-test", 'symlink points to expected destination';
-    is $r->symlink("tmp/decl-test", "decl-test-symlink"), 0;
-    ok -l "decl-test-symlink", 'symlink still exists';
-    is readlink("decl-test-symlink"), "tmp/decl-test", 'symlink did not change expected destination';
-    $r->unlink("decl-test-symlink");
-    ok ! -e "decl-test-symlink", 'symlink was removed';
+    is $r->symlink("tmp/doit-test", "doit-test-symlink"), 1;
+    ok -l "doit-test-symlink", 'symlink created';
+    is readlink("doit-test-symlink"), "tmp/doit-test", 'symlink points to expected destination';
+    is $r->symlink("tmp/doit-test", "doit-test-symlink"), 0;
+    ok -l "doit-test-symlink", 'symlink still exists';
+    is readlink("doit-test-symlink"), "tmp/doit-test", 'symlink did not change expected destination';
+    $r->unlink("doit-test-symlink");
+    ok ! -e "doit-test-symlink", 'symlink was removed';
 
     eval { $r->ln_nsf };
     like $@, qr{oldfile was not specified for ln_nsf};
-    eval { $r->ln_nsf("tmp/decl-test") };
+    eval { $r->ln_nsf("tmp/doit-test") };
     like $@, qr{newfile was not specified for ln_nsf};
-    is $r->ln_nsf("tmp/decl-test", "decl-test-symlink2"), 1;
-    ok -l "decl-test-symlink2", 'symlink created with ln -nsf';
-    is readlink("decl-test-symlink2"), "tmp/decl-test", 'symlink points to expected destination';
-    is $r->ln_nsf("tmp/decl-test", "decl-test-symlink2"), 0;
-    ok -l "decl-test-symlink2", 'symlink still exists (ln -nsf)';
-    is readlink("decl-test-symlink2"), "tmp/decl-test", 'symlink did not change expected destination';
-    is $r->ln_nsf("decl-test", "decl-test-symlink2"), 1;
-    ok -l "decl-test-symlink2", 'new symlink (ln -nsf)';
-    is readlink("decl-test-symlink2"), "decl-test", 'symlink was changed';
-    $r->unlink("decl-test-symlink2");
-    ok ! -e "decl-test-symlink2", 'symlink was removed';
+    is $r->ln_nsf("tmp/doit-test", "doit-test-symlink2"), 1;
+    ok -l "doit-test-symlink2", 'symlink created with ln -nsf';
+    is readlink("doit-test-symlink2"), "tmp/doit-test", 'symlink points to expected destination';
+    is $r->ln_nsf("tmp/doit-test", "doit-test-symlink2"), 0;
+    ok -l "doit-test-symlink2", 'symlink still exists (ln -nsf)';
+    is readlink("doit-test-symlink2"), "tmp/doit-test", 'symlink did not change expected destination';
+    is $r->ln_nsf("doit-test", "doit-test-symlink2"), 1;
+    ok -l "doit-test-symlink2", 'new symlink (ln -nsf)';
+    is readlink("doit-test-symlink2"), "doit-test", 'symlink was changed';
+    $r->unlink("doit-test-symlink2");
+    ok ! -e "doit-test-symlink2", 'symlink was removed';
 
     $r->mkdir("dir-for-ln-nsf-test");
     ok -d "dir-for-ln-nsf-test";
-    eval { $r->ln_nsf("tmp/decl-test", "dir-for-ln-nsf-test") };
+    eval { $r->ln_nsf("tmp/doit-test", "dir-for-ln-nsf-test") };
     like $@, qr{"dir-for-ln-nsf-test" already exists as a directory};
     ok -d "dir-for-ln-nsf-test", 'directory still exists after failed ln -nsf';
 
@@ -255,14 +255,14 @@ TODO: {
 
 ######################################################################
 # write_binary
-$r->write_binary("decl-test", "some content\n");
-$r->write_binary("decl-test", "some content\n");
-$r->write_binary("decl-test", "different content\n");
-$r->write_binary("decl-test", "different content\n");
-$r->unlink("decl-test");
-ok ! -f "decl-test";
-ok ! -e "decl-test";
-$r->unlink("decl-test");
+$r->write_binary("doit-test", "some content\n");
+$r->write_binary("doit-test", "some content\n");
+$r->write_binary("doit-test", "different content\n");
+$r->write_binary("doit-test", "different content\n");
+$r->unlink("doit-test");
+ok ! -f "doit-test";
+ok ! -e "doit-test";
+$r->unlink("doit-test");
 eval { $r->write_binary("non-existing-dir/test", "egal\n") };
 like $@, qr{ERROR.*\Q$errno_string{ENOENT}};
 SKIP: {
@@ -290,20 +290,20 @@ SKIP: {
 
 ######################################################################
 # mkdir
-is $r->mkdir("decl-test"), 1;
-ok -d "decl-test";
-is $r->mkdir("decl-test"), 0;
-ok -d "decl-test";
+is $r->mkdir("doit-test"), 1;
+ok -d "doit-test";
+is $r->mkdir("doit-test"), 0;
+ok -d "doit-test";
 {
     my $umask = umask 0;
-    is $r->mkdir("decl-test-0700", 0700), 1;
-    ok -d "decl-test-0700";
+    is $r->mkdir("doit-test-0700", 0700), 1;
+    ok -d "doit-test-0700";
  SKIP: {
 	skip "mode setting effectively a no-op on Windows", 1 if $^O eq 'MSWin32';
-	my @s = stat "decl-test-0700";
+	my @s = stat "doit-test-0700";
 	is(($s[2] & 0777), 0700, 'mkdir call with mode');
     }
-    $r->rmdir("decl-test-0700");
+    $r->rmdir("doit-test-0700");
     umask $umask;
 }
 $r->create_file_if_nonexisting('file-in-the-way');
@@ -314,14 +314,14 @@ like $@, qr{ERROR.*\Q$errno_string{EEXIST}};
 
 ######################################################################
 # make_path
-is $r->make_path("decl-test", "decl-deep/test"), 1; # decl-test already exists, so it's just 1
-ok -d "decl-deep/test";
-is $r->make_path("decl-test", "decl-deep/test"), 0;
-is $r->make_path("decl-deep/test2", {mode => 0700, verbose => 1}), 1;
-ok -d "decl-deep/test2";
+is $r->make_path("doit-test", "doit-deep/test"), 1; # doit-test already exists, so it's just 1
+ok -d "doit-deep/test";
+is $r->make_path("doit-test", "doit-deep/test"), 0;
+is $r->make_path("doit-deep/test2", {mode => 0700, verbose => 1}), 1;
+ok -d "doit-deep/test2";
 SKIP: {
     skip "mode setting effectively a no-op on Windows", 1 if $^O eq 'MSWin32';
-    my @s = stat "decl-deep/test2";
+    my @s = stat "doit-deep/test2";
     is(($s[2] & 0777), 0700, 'make_path call with mode');
 }
 SKIP: {
@@ -333,10 +333,10 @@ SKIP: {
 
 ######################################################################
 # rmdir
-is $r->rmdir("decl-test"), 1;
-ok ! -d "decl-test";
-ok ! -e "decl-test";
-is $r->rmdir("decl-test"), 0;
+is $r->rmdir("doit-test"), 1;
+ok ! -d "doit-test";
+ok ! -e "doit-test";
+is $r->rmdir("doit-test"), 0;
 
 $r->mkdir("non-empty-dir");
 $r->touch("non-empty-dir/test");
@@ -346,14 +346,14 @@ $r->remove_tree("non-empty-dir");
 
 ######################################################################
 # remove_tree
-$r->mkdir("decl-test"); # decl-deep/test still exists
-is $r->remove_tree("decl-test", "decl-deep/test"), 2;
-ok ! -d "decl-test", 'remove_tree removed simple directory';
-ok ! -d "decl-deep/test", 'remove_tree removed tree';
-is $r->remove_tree("decl-test", "decl-deep/test"), 0;
-$r->mkdir("decl-test");
-$r->create_file_if_nonexisting("decl-test/file");
-is $r->remove_tree("decl-test", {verbose=>1}), 1;
+$r->mkdir("doit-test"); # doit-deep/test still exists
+is $r->remove_tree("doit-test", "doit-deep/test"), 2;
+ok ! -d "doit-test", 'remove_tree removed simple directory';
+ok ! -d "doit-deep/test", 'remove_tree removed tree';
+is $r->remove_tree("doit-test", "doit-deep/test"), 0;
+$r->mkdir("doit-test");
+$r->create_file_if_nonexisting("doit-test/file");
+is $r->remove_tree("doit-test", {verbose=>1}), 1;
 SKIP: {
     with_unreadable_directory {
 	eval { $r->remove_tree("unreadable-dir") };
