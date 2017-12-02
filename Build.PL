@@ -230,7 +230,7 @@ sub test_kwalitee ($) {
 
 sub distdir {
     my(%options) = @_;
-    my $temporary = $options{temporary};
+    my $temporary = delete $options{temporary};
     error "Unhandled options: " . join(" ", %options) if %options;
 
     require File::Basename;
