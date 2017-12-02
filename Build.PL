@@ -142,9 +142,54 @@ sub test_in_docker {
     }
     require File::Temp;
     my $dir = File::Temp::tempdir("Doit_test_in_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
-    $doit->write_binary("$dir/Dockerfile", <<"EOF");
+    my $dockerfile = <<"EOF";
 FROM $distro_spec
 
+EOF
+    if ($distro_spec =~ m{^centos:}) {
+	######################################################################
+	# CentOS
+	# From https://fedoraproject.org/wiki/EPEL/FAQ#How_can_I_install_the_packages_from_the_EPEL_software_repository.3F
+	if      ($distro_spec =~ m{:6$}) {
+	    $dockerfile .= <<"EOF";
+RUN rpm -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
+EOF
+	} elsif ($distro_spec =~ m{:7$}) {
+	    $dockerfile .= <<"EOF";
+RUN yum -y install epel-release
+EOF
+	} else {
+	    info "No EPEL support for $distro_spec";
+	}
+	$dockerfile .= <<"EOF";
+RUN yum -y install \\
+    "perl(IPC::Run)" \\
+    "perl(Net::OpenSSH)" \\
+    sudo \\
+    rsync \\
+    "perl(ExtUtils::MakeMaker)" \\
+    "perl(Digest::MD5)" \\
+    "perl(Test::More)" \\
+    make
+
+EOF
+	if ($distro_spec =~ m{:6$}) {
+	    $dockerfile .= <<"EOF";
+RUN curl -L https://cpanmin.us | perl - App::cpanminus
+
+# Not available as an RPM
+RUN cpanm --quiet --notest CPAN::Meta
+EOF
+	} else {
+	    $dockerfile .= <<"EOF";
+RUN yum -y install \\
+    "perl(CPAN::Meta)"
+EOF
+	}
+    } else {
+	######################################################################
+	# Debian-like (Debian, Ubuntu, LinuxMint ...)
+	$dockerfile .= <<"EOF";
 ENV DEBIAN_FRONTEND noninteractive 
 
 RUN apt-get update && apt-get install -y --no-install-recommends \\
@@ -154,10 +199,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     rsync
 
 EOF
+    }
+    $doit->write_binary("$dir/Dockerfile", $dockerfile);
     in_directory {
-	$doit->system(qw(docker build -t doit-test .));
+	(my $tag = $distro_spec) =~ s{:}{-}g;
+	$tag = 'doit-test-' . $tag;
+	$doit->system(qw(docker build -t), $tag, qw(.));
 	$doit->system(
-		      qw(docker run), '-v', "$FindBin::RealBin:/data:ro", qw(doit-test),
+		      qw(docker run), '-v', "$FindBin::RealBin:/data:ro", $tag,
 		      'sh', '-c', 'rsync -a --cvs-exclude --exclude=blib /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build generate_META_json && ./Build test && ./Build test_xt'
 		     );
     } $dir;
