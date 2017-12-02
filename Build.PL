@@ -240,7 +240,10 @@ sub distdir {
     my $distdir = "$tempdir/Doit-$Doit_VERSION";
     $doit->mkdir($distdir);
     for my $line (split /\n/, $doit->info_qx({quiet=>1}, 'git', 'ls-files')) {
-	next if ($line =~ m{^(\.travis\.yml|appveyor\.yml)$});
+	next if ($line =~ m{^(   \.travis\.yml
+			     |   appveyor\.yml
+			     |   \.gitignore
+			     )$}x);
 	# XXX maybe implement also MANIFEST.SKIP?
 	my $dirname = File::Basename::dirname($line);
 	if ($dirname ne '.') {
