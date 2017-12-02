@@ -15,11 +15,11 @@ package TestUtil;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 use Exporter 'import';
 use vars qw(@EXPORT);
-@EXPORT = qw(get_sudo);
+@EXPORT = qw(get_sudo module_exists);
 
 use Doit::Log;
 
@@ -59,6 +59,31 @@ sub in_linux_container ($) {
     }
     return 0;
 }
+
+# REPO BEGIN
+# REPO NAME module_exists /home/slaven.rezic/src/srezic-repository 
+# REPO MD5 1ea9ee163b35d379d89136c18389b022
+
+#=head2 module_exists($module)
+#
+#Return true if the module exists in @INC or if it is already loaded.
+#
+#=cut
+
+sub module_exists {
+    my($filename) = @_;
+    $filename =~ s{::}{/}g;
+    $filename .= ".pm";
+    return 1 if $INC{$filename};
+    foreach my $prefix (@INC) {
+	my $realfilename = "$prefix/$filename";
+	if (-r $realfilename) {
+	    return 1;
+	}
+    }
+    return 0;
+}
+# REPO END
 
 1;
 

@@ -6,12 +6,17 @@
 #
 
 use strict;
+use FindBin;
+use lib $FindBin::RealBin;
+
 use File::Compare ();
 use File::Temp qw(tempdir);
 use Test::More;
 
 use Doit;
 use Doit::Util qw(in_directory);
+
+use TestUtil qw(module_exists);
 
 if (!module_exists('LWP::UserAgent')) {
     plan skip_all => 'LWP::UserAgent not installed';
@@ -51,30 +56,5 @@ EOF
     ok File::Compare::compare("test.txt", "mirrored.txt") == 0, 'file was refreshed';
 
 } $tmpdir;
-
-# REPO BEGIN
-# REPO NAME module_exists /home/slaven.rezic/src/srezic-repository 
-# REPO MD5 1ea9ee163b35d379d89136c18389b022
-
-#=head2 module_exists($module)
-#
-#Return true if the module exists in @INC or if it is already loaded.
-#
-#=cut
-
-sub module_exists {
-    my($filename) = @_;
-    $filename =~ s{::}{/}g;
-    $filename .= ".pm";
-    return 1 if $INC{$filename};
-    foreach my $prefix (@INC) {
-	my $realfilename = "$prefix/$filename";
-	if (-r $realfilename) {
-	    return 1;
-	}
-    }
-    return 0;
-}
-# REPO END
 
 __END__
