@@ -586,7 +586,6 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \\
     dh-make-perl \\
     lsb-release \\
-    rsync \\
     git
 
 # XXX This is depending on the current perl module and should be configurable
