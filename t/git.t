@@ -340,6 +340,7 @@ sub git_short_status_check {
 	    push @git_short_status_opts, '-with-untracked';
 	}
 	in_directory {
+	    local $ENV{PERL5OPT} = ''; # i.e. disable Devel::Cover
 	    chomp(my $script_result = $doit->info_qx({quiet=>1}, $my_git_short_status, @git_short_status_opts));
 	    is $script_result, $doit_result, "$testname (against $my_git_short_status)";
 	} $directory;

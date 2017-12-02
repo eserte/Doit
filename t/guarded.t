@@ -40,7 +40,7 @@ $d->add_component('guarded');
 	ensure => sub { $var == 3.14 },
 	using  => sub {
 	    my $d = shift;
-	    $var = $d->qx('perl', '-e', 'print 3.14');
+	    $var = $d->qx($^X, '-e', 'print 3.14');
 	},
     );
     is $var, 3.14, 'Doit method successfully run';
