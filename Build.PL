@@ -272,7 +272,12 @@ sub dist {
     my $distdir = distdir(temporary => 1);
     require File::Basename;
     in_directory {
-	$doit->system('tar', 'cfvz', $tarfile, File::Basename::basename($distdir));
+	# Note: tar cfvz C:/... ... does not seem to work on Windows
+	# (for all or some tar versions?). Error message is:
+	#     tar (child): Cannot connect to C: resolve failed
+	# So create in cwd first, and move to final location.
+	$doit->system('tar', 'cfvz', File::Basename::basename($tarfile), File::Basename::basename($distdir));
+	$doit->move(basename($tarfile), $tarfile);
     } "$distdir/..";
 }
 
@@ -281,17 +286,21 @@ sub dist_install_and_test {
     if (!-e $tarfile) {
 	dist();
     }
+    require File::Basename;
     require File::Temp;
     my $dir = File::Temp::tempdir("Doit_dist_install_and_test_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
     my $Doit_VERSION = _get_Doit_VERSION();
     in_directory {
-	$doit->system('tar', 'xfz', $tarfile);
+	# Note: see above for tar under Windows problems
+	$doit->move($tarfile, File::Basename::basename($tarfile));
+	$doit->system('tar', 'xfz', File::Basename::basename($tarfile));
 	in_directory {
 	    $doit->system($^X, 'Build.PL');
-	    $doit->system('./Build');
-	    $doit->system('./Build', 'test');
-	    $doit->system('./Build', 'install');
-	    $doit->system('./Build', 'test-installed');
+	    my @Build = $^O eq 'MSWin32' ? ($^X, 'Build') : ('./Build');
+	    $doit->system(@Build);
+	    $doit->system(@Build, 'test');
+	    $doit->system(@Build, 'install');
+	    $doit->system(@Build, 'test-installed');
 	} "Doit-$Doit_VERSION";
     } $dir;
 }
