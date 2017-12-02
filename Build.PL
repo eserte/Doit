@@ -515,13 +515,14 @@ sub _debian_package {
     if (!defined $version) {
 	chomp(my $git_describe = eval { $doit->info_qx('git', 'describe') }); # XXX what if this fails? Optionally made fatal?
 	if (defined $git_describe) {
-	    if ($git_describe =~ m{^([0-9\.]+)$}) {
+	    if ($git_describe =~ m{^([0-9\._]+)$}) {
 		$version = $1;
-	    } elsif ($git_describe =~ m{^([0-9\.]+)-(\d+)-g(.*)}) {
+	    } elsif ($git_describe =~ m{^([0-9\._]+)-(\d+)-g(.*)}) {
 		$version = $1."+git".$2."+".$3."-1"; # XXX make "1" configurable?
 	    } else {
 		error "Cannot parse output from git describe: '$git_describe'";
 	    }
+	    $version =~ s{_}{-}; # replace "devel" version specifier
 	    if ($add_distro_version) {
 		chomp(my $dist_id = $doit->qx({quiet=>1}, 'lsb_release', '-si'));
 		chomp(my $rel     = $doit->qx({quiet=>1}, 'lsb_release', '-sr'));
