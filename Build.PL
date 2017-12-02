@@ -209,7 +209,7 @@ EOF
 	$doit->system(qw(docker build -t), $tag, qw(.));
 	$doit->system(
 		      qw(docker run), '-v', "$FindBin::RealBin:/data:ro", $tag,
-		      'sh', '-c', 'rsync -a --exclude=blib /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build generate_META_json && ./Build test && ./Build test_xt && ./Build dist_install_and_test'
+		      'sh', '-c', 'rsync -a --exclude=blib "--exclude=Doit-*.tar.gz" /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build generate_META_json && ./Build test && ./Build test_xt && ./Build dist_install_and_test'
 		     );
     } $dir;
 }
