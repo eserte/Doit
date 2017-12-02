@@ -12,6 +12,15 @@ use Doit;
 my $d = Doit->init;
 $d->add_component('guarded');
 
+eval { $d->guarded_step };
+like $@, qr{ERROR.*ensure is missing};
+
+eval { $d->guarded_step("name", ensure => sub{}) };
+like $@, qr{ERROR.*using is missing};
+
+eval { $d->guarded_step("name", ensure => sub{}, using => sub{}, unhandled_option => 1) };
+like $@, qr{ERROR.*Unhandled options: unhandled_option };
+
 {
     my $var = 0;
     my $called = 0;

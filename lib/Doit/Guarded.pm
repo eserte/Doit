@@ -20,10 +20,10 @@ sub new { bless {}, shift }
 sub functions { qw(guarded_step) }
 
 sub guarded_step {
-    my($doit, $name, %args) = @_;
-    my $ensure = delete $args{ensure} || die "ensure missing";
-    my $using  = delete $args{using}  || die "using missing";
-    Doit::Log::error("Unhandled arguments: " . join(" ", %args)) if %args;
+    my($doit, $name, %opts) = @_;
+    my $ensure = delete $opts{ensure} || Doit::Log::error("ensure is missing");
+    my $using  = delete $opts{using}  || Doit::Log::error("using is missing");
+    Doit::Log::error("Unhandled options: " . join(" ", %opts)) if %opts;
 
     if (!$ensure->($doit)) {
 	if ($doit->is_dry_run) {
