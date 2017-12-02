@@ -308,6 +308,15 @@ sub dist_install_and_test {
     } $dir;
 }
 
+sub dist_install_with_cpanm {
+    my $tarfile = _get_tarfilename();
+    if (!-e $tarfile) {
+	dist();
+    }
+    $doit->system('cpanm', $tarfile);
+    test_installed();
+}
+
 sub cover {
     {
 	no warnings 'uninitialized';
