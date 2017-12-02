@@ -1,5 +1,19 @@
 Revision history for Doit.
 
+0.021_52 2017-12-02
+	- remove Doit::Log::note (BACKWARD INCOMPATIBILITY)
+	- documentation for Doit::Log
+	- build improvements
+	  - new action dist_install_with_cpanm
+	  - debian_package may deal with devel versions
+	  - add repository to META
+	  - skip .gitignore when building dist
+	  - dist_install_and_test works on Windows
+	  - test_in_docker works for centos
+	- test fixes on netbsd (hostname without -f)
+	- ci testing improvements
+	  - run dist_install_and_test on appveyor
+
 0.021_51 2017-12-01
 	- test fixes for git 1.7.x and perl 5.8.x
 
