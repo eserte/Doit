@@ -19,7 +19,7 @@ use Errno ();
 use Hash::Util qw(lock_keys);
 
 use Doit;
-use Doit::Log (); # don't import: clash with Test::More::note
+use Doit::Log;
 use Doit::Util qw(new_scope_cleanup);
 
 sub with_unreadable_directory (&$);
@@ -445,8 +445,8 @@ chdir '/'; # for File::Temp
 
 sub with_unreadable_directory (&$) {
     my($code, $unreadable_dir) = @_;
-    Doit::Log::error("not a CODE ref: $code") if ref $code ne 'CODE';
-    Doit::Log::error("missing unreadable dir") if !defined $unreadable_dir;
+    error "not a CODE ref: $code" if ref $code ne 'CODE';
+    error "missing unreadable dir" if !defined $unreadable_dir;
 
  SKIP: {
 	skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';

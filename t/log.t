@@ -13,7 +13,7 @@ BEGIN {
 }
 
 use Doit;
-use Doit::Log qw(info warning error); # "note" unfortunately collides with Test::More's note
+use Doit::Log;
 
 plan 'no_plan';
 
@@ -35,12 +35,6 @@ SKIP: {
 	if !Doit::Log::_can_coloring();
     isnt $stderr, colorstrip($stderr), 'message is colored';
 }
-
-($stdout, $stderr) = capture {
-    Doit::Log::note "note message";
-};
-is $stdout, '';
-is colorstrip($stderr), "NOTE: note message\n";
 
 ($stdout, $stderr) = capture {
     warning "warning message";

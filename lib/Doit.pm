@@ -22,11 +22,10 @@ use warnings;
 	no warnings 'redefine';
 	*colored_error = sub ($) { Term::ANSIColor::colored($_[0], 'red on_black')};
 	*colored_info  = sub ($) { Term::ANSIColor::colored($_[0], 'green on_black')};
-	*colored_note  = sub ($) { Term::ANSIColor::colored($_[0], 'yellow on_black')};
     }
     sub _no_coloring {
 	no warnings 'redefine';
-	*colored_error = *colored_info = *colored_note = sub ($) { $_[0] };
+	*colored_error = *colored_info = sub ($) { $_[0] };
     }
     {
 	my $can_coloring;
@@ -49,14 +48,13 @@ use warnings;
     }
 
     use Exporter 'import';
-    our @EXPORT; BEGIN { @EXPORT = qw(info note warning error) }
+    our @EXPORT; BEGIN { @EXPORT = qw(info warning error) }
 
     BEGIN { $INC{'Doit/Log.pm'} = __FILE__ } # XXX hack
 
     my $current_label = '';
 
     sub info ($)    { print STDERR colored_info("INFO$current_label:"), " ", $_[0], "\n" }
-    sub note ($)    { print STDERR colored_note("NOTE$current_label:"), " ", $_[0], "\n" }
     sub warning ($) { print STDERR colored_error("WARN$current_label:"), " ", $_[0], "\n" }
     sub error ($)   { require Carp; Carp::croak(colored_error("ERROR$current_label:"), " ", $_[0]) }
 
