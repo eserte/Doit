@@ -333,6 +333,16 @@ sub dist_install_with_cpanm {
     test_installed();
 }
 
+sub look {
+    my $distdir = distdir(temporary => 1);
+    in_directory {
+	info "Spawning $ENV{SHELL} in $distdir...";
+	local $ENV{DOIT_BUILD_SHELL_LEVEL} = $ENV{DOIT_BUILD_SHELL_LEVEL};
+	$ENV{DOIT_BUILD_SHELL_LEVEL}++;
+	$doit->system($ENV{SHELL});
+    } $distdir;
+}
+
 sub cover {
     {
 	no warnings 'uninitialized';
