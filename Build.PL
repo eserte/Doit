@@ -479,12 +479,11 @@ sub _get_tarfilename () {
 }
 
 sub _generate_META ($;$) {
-    my($destfile, $version) = @_;
+    my($destfile, $meta_version) = @_;
 
     require CPAN::Meta;
     require ExtUtils::MakeMaker;
     my $meta = CPAN::Meta->new({
-	version  => 1.4,
 	name     => 'Doit',
 	author   => 'Slaven Rezic <srezic@cpan.org>',
 	abstract => 'a scripting framework',
@@ -499,13 +498,13 @@ sub _generate_META ($;$) {
 	    },
 	},
 	resources => {
-	    repository => 'git://github.com/eserte/Doit',
+	    repository => { url => 'git://github.com/eserte/Doit' },
 	},
     });
     if ($doit->is_dry_run) {
-	info "Would create $destfile" . (defined $version ? " (version $version)" : "") . " (dry-run)";
+	info "Would create $destfile" . (defined $meta_version ? " (version $meta_version)" : "") . " (dry-run)";
     } else {
-	$meta->save($destfile, (defined $version ? { version => $version } : ()));
+	$meta->save($destfile, (defined $meta_version ? { version => $meta_version } : ()));
     }
 }
 
