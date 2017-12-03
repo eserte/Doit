@@ -250,7 +250,7 @@ sub distdir {
 
     require File::Basename;
     require File::Temp;
-    my $tempdir = File::Temp::tempdir("Doit_distdir_XXXXXXXX", TMPDIR => 1, LEANUP => $temporary);
+    my $tempdir = File::Temp::tempdir("Doit_distdir_XXXXXXXX", TMPDIR => 1, CLEANUP => $temporary);
     my $Doit_VERSION = _get_Doit_VERSION();
     my $distdir = "$tempdir/Doit-$Doit_VERSION";
     $doit->mkdir($distdir);
