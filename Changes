@@ -1,5 +1,14 @@
 Revision history for Doit.
 
+0.021_53 2017-12-03
+	- Doit::Lwp: support for HTTP::Tiny ua
+	- Doit::Deb: automatically use sudo if needed
+	- documentation for Doit::Deb and Doit::Lwp
+	- installation fix: don't ignore Pod files
+	- build improvements
+	  - new action test_pod
+	- more tests
+
 0.021_52 2017-12-02
 	- remove Doit::Log::note (BACKWARD INCOMPATIBILITY)
 	- documentation for Doit::Log
