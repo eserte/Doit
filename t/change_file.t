@@ -253,6 +253,38 @@ EOF
     }
 }
 
+{
+    my $test_file = 'work-file-5';
+    my $sample_content = <<EOF;
+AAA
+AAA
+BBB
+BBB
+CCC
+CCC
+EOF
+    if ($^O eq 'MSWin32') {
+	# XXX need CRLF content here XXX
+	open my $ofh, ">", $test_file or die $!; print $ofh $sample_content or die $!;
+    } else {
+	$r->write_binary($test_file, $sample_content);
+    }
+    {
+	my $changes = $r->change_file($test_file,
+				      {match => qr{^AAA}, delete => 1},
+				      {match => qr{^BBB}, replace => 'DDD'},
+				      {match => qr{^CCC}, action => sub { $_[0] .= 'EEE' }},
+				     );
+	is $changes, 6, 'two lines were deleted, two replaced, two appended';
+	is slurp($test_file), <<EOF;
+DDD
+DDD
+CCCEEE
+CCCEEE
+EOF
+    }
+}
+
 ######################################################################
 # Error checks
 eval { $r->change_file("work-file",
