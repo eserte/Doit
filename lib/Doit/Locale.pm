@@ -16,7 +16,7 @@ package Doit::Locale;
 use strict;
 use warnings;
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 use Doit::Log;
 
@@ -31,40 +31,80 @@ sub locale_enable_locale {
     } else {
 	%locale = ($locale => 1);
     }
-    open my $fh, '-|', 'locale', '-a'
-	or error "Error while running 'locale -a': $!";
-    while(<$fh>) {
-	chomp;
-	if ($locale{$_}) {
-	    return 0;
-	}
-    }
-    close $fh
-	or error "Error while running 'locale -a': $!";
 
+    ######################################################################
+    # Is locale already present?
+    my $is_locale_present = sub {
+	open my $fh, '-|', 'locale', '-a'
+	    or error "Error while running 'locale -a': $!";
+	while(<$fh>) {
+	    chomp;
+	    if ($locale{$_}) {
+		return 1;
+	    }
+	}
+	close $fh
+	    or error "Error while running 'locale -a': $!";
+	return 0;
+    };
+
+    if ($is_locale_present->()) {
+	return 0; # no change
+    }
+
+    ######################################################################
+    # locale-gen (e.g. Ubuntu 12.03)
     if (-x "/usr/sbin/locale-gen" && !-e "/etc/locale.gen") {
-	# e.g. Ubuntu 12.04
 	$self->system('locale-gen', $locale->[0]);
 	return 1;
     }
 
-    if (!-e "/etc/locale.gen") { # Debian and Debian-like
-	error "Don't know how to enable locales on this system";
+    ######################################################################
+    # /etc/locale.gen (e.g. Debian and Debian-like)
+    if (-e "/etc/locale.gen") {
+	my $all_locales = '(' . join('|', map { quotemeta $_ } keys %locale) . ')';
+	my $changes = $self->change_file("/etc/locale.gen",
+					 {match  => qr{^#\s+$all_locales(\s|$)},
+					  action => sub { $_[0] =~ s{^#\s+}{}; },
+					 },
+					);
+	if (!$changes) {
+	    error "Cannot find prepared locale '$locale' in /etc/locale.gen";
+	}
+	$self->system('locale-gen');
+	return 1;
     }
 
-    my $all_locales = '(' . join('|', map { quotemeta $_ } keys %locale) . ')';
-    my $changes = $self->change_file("/etc/locale.gen",
-				     {match  => qr{^#\s+$all_locales(\s|$)},
-				      action => sub { $_[0] =~ s{^#\s+}{}; },
-				     },
-				    );
-    if (!$changes) {
-	error "Cannot find prepared locale '$locale' in /etc/locale.gen";
+    ######################################################################
+    # localedef (e.g RedHat, CentOS)
+    if (-x "/usr/bin/localedef" && -e "/etc/redhat-release") {
+	# It also exists on Debian-based systems, but works differently there.
+    TRY_LOCALE: {
+	    my @errors;
+	    for my $try_locale (sort keys %locale) {
+		if (my($lang_country, $charset) = $try_locale =~ m{^(.*)\.(.*)$}) {
+		    my $stderr;
+		    eval { $self->open3({errref => \$stderr}, '/usr/bin/localedef', '-c', '-i', $lang_country, '-f', $charset, $try_locale) };
+		    if (!$@) {
+			last TRY_LOCALE;
+		    }
+		    # an error, but maybe successful?
+		    if ($is_locale_present->()) {
+			last TRY_LOCALE;
+		    }
+		    push @errors, "Can't add '$try_locale': $stderr";
+		} else {
+		    push @errors, "Can't parse '$try_locale' as lang_COUNTRY.charset";
+		}
+	    }
+	    error "Can't install locale. Errors:\n" . join("\n", @errors);
+	}
+	return 1;
     }
 
-    $self->system('locale-gen');
-
-    1;
+    ######################################################################
+    # not implemented elsewhere
+    error "Don't know how to enable locales on this system";
 }
 
 1;
