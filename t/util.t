@@ -8,6 +8,7 @@
 use Cwd 'getcwd';
 use Doit;
 use Doit::Util;
+use Doit::Log;
 use File::Temp qw(tempdir);
 use Test::More;
 
@@ -24,6 +25,8 @@ require TestUtil;
 
 plan 'no_plan';
 
+######################################################################
+# in_directory
 {
     my $change_dir = $^O eq 'MSWin32' ? 'C:/' : '/';
     my $orig_dir = getcwd;
@@ -80,6 +83,8 @@ SKIP: {
     is getcwd, $orig_dir, 'everything\'s restored again';
 }
 
+######################################################################
+# new_scope_cleanup
 {
     my $scope_cleanup_one_called;
     my $scope_cleanup_two_called;
@@ -104,6 +109,41 @@ SKIP: {
     ok !$scope_cleanup_two_called, '2nd callback not called';
 }
 
+{
+    my $scope_cleanup_called;
+    eval {
+	my $scope_cleanup = new_scope_cleanup { $scope_cleanup_called++ };
+	error "Failing while in scope cleanup";
+    };
+    like $@, qr{ERROR.*Failing while in scope cleanup}, 'scope cleanup after failure, in eval';
+    is $scope_cleanup_called, 1, 'scope cleanup called';
+}
+
+{
+    my $scope_cleanup_called;
+    eval {
+	my $scope_cleanup = new_scope_cleanup { $scope_cleanup_called++ };
+	die "Failing while in scope cleanup";
+    };
+    like $@, qr{^Failing while in scope cleanup}, 'scope cleanup after failure, with die, in eval';
+    is $scope_cleanup_called, 1, 'scope cleanup called';
+}
+
+SKIP: {
+    skip "No fork on Windows", 1 if $^O eq 'MSWin32';
+    my $pid = fork;
+    error "Can't fork: $!" if !defined $pid;
+    if ($pid == 0) {
+	my $scope_cleanup = new_scope_cleanup { "do something" };
+	error "Failing while in scope cleanup";
+	CORE::exit(0); # never reached --- and exitcode=0 would be considered an error in this test
+    }
+    waitpid $pid, 0;
+    isnt $?, 0, 'scope cleanup after failure, in separate process';
+}
+
+######################################################################
+# copy_stat
 {
     my $doit = Doit->init;
     my %sudo_info;
