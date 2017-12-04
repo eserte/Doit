@@ -11,6 +11,8 @@ use Test::More;
 use Doit;
 use Doit::User 'as_user';
 
+######################################################################
+# Functions run as sudo
 sub can_run_test {
     defined $ENV{SUDO_USER};
 }
@@ -23,12 +25,14 @@ sub run {
     as_user {
 	chomp(my $uname = `id -nu`);
 	chomp(my $homedir = `sh -c 'echo ~'`);
+	my($perlhomedir) = <~>;
 
-	$res{uname}   = $uname;
-	$res{homedir} = $homedir;
-	$res{homeenv} = $ENV{HOME};
-	$res{userenv} = $ENV{USER};
-	$res{lognameenv} = $ENV{LOGNAME};
+	$res{uname}       = $uname;
+	$res{homedir}     = $homedir;
+	$res{perlhomedir} = $perlhomedir;
+	$res{homeenv}     = $ENV{HOME};
+	$res{userenv}     = $ENV{USER};
+	$res{lognameenv}  = $ENV{LOGNAME};
     } $ENV{SUDO_USER};
 
     \%res;
@@ -36,32 +40,40 @@ sub run {
 
 return 1 if caller;
 
-my $d = Doit->init;
-my $sudo = eval { $d->do_sudo(sudo_opts => ['-n']) };
-plan skip_all => "Cannot run sudo at all (not installed?)" if !$sudo;
-my $res = eval { $sudo->call('can_run_test') };
-plan skip_all => "Cannot run sudo password-less" if $@;
-plan skip_all => "Cannot run test for other reasons" if !$res;
+######################################################################
+# MAIN
+
+# Check if password-less sudo is available
+require FindBin;
+unshift @INC, $FindBin::RealBin;
+require TestUtil;
+
+my $sudo;
+{
+    my $doit = Doit->init;
+    $sudo = TestUtil::get_sudo($doit, info => \my %info);
+    if (!$sudo) {
+	plan skip_all => $info{error};
+    }
+}
 
 plan 'no_plan';
 
-$res = $sudo->call('run');
+my $res = $sudo->call('run');
 
-is $res->{uname}, $res->{SUDO_USER}, 'expected numeric user id (through id command)';
-is $res->{homedir}, $ENV{HOME}, 'expected home directory (through tilde expansion)';
-is $res->{homeenv}, $ENV{HOME}, 'expected home directory (through environment)';
+is $res->{uname},       $res->{SUDO_USER}, q{expected numeric user id (through id command)};
+is $res->{homedir},     $ENV{HOME},        q{expected home directory (through tilde expansion with shell's glob)};
+is $res->{perlhomedir}, $ENV{HOME},        q{expected home directory (through tilde expansion with perl's glob)};
+is $res->{homeenv},     $ENV{HOME},        q{expected home directory (through environment)};
 SKIP: {
     skip "USER environment variable not set", 1
 	if !$ENV{USER}; # e.g. in docker
-    is $res->{userenv}, $ENV{USER}, 'expected user (through environment)';
+    is $res->{userenv}, $ENV{USER}, q{expected user (through environment)};
 }
 SKIP: {
     skip "LOGNAME environment variable not set", 1
 	if !$ENV{LOGNAME}; # e.g. in docker
-    is $res->{lognameenv}, $ENV{LOGNAME}, 'expected logname (through environment)';
+    is $res->{lognameenv}, $ENV{LOGNAME}, q{expected logname (through environment)};
 }
-
-## not needed anymore
-#$sudo->exit;
 
 __END__
