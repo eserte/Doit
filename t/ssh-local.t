@@ -8,6 +8,7 @@
 use Cwd 'getcwd';
 use Doit;
 use File::Temp qw(tempdir);
+use Test::More;
 
 sub environment {
     my($doit) = @_;
@@ -29,24 +30,26 @@ sub stdout_test {
 
 return 1 if caller;
 
-require Test::More;
-Test::More->import;
+plan skip_all => "Net::OpenSSH does not work on Windows" if $^O eq 'MSWin32'; # but it can still be installed
 
-my $d = Doit->init;
-my $ssh = eval { $d->do_ssh_connect((defined $ENV{USER} ? $ENV{USER}.'@' : '') . 'localhost', debug => 0, master_opts => [qw(-oPasswordAuthentication=no -oBatchMode=yes)]) };
+my $doit = Doit->init;
+my $ssh = eval { $doit->do_ssh_connect((defined $ENV{USER} ? $ENV{USER}.'@' : '') . 'localhost', debug => 0, master_opts => [qw(-oPasswordAuthentication=no -oBatchMode=yes)]) };
 if (!$ssh) {
-    plan(skip_all => "Cannot do ssh localhost: $@");
+    plan skip_all => "Cannot do ssh localhost: $@";
 }
-isa_ok($ssh, 'Doit::SSH');
-plan('no_plan');
+plan 'no_plan';
+isa_ok $ssh, 'Doit::SSH';
+
 my $ret = $ssh->info_qx('perl', '-e', 'print "yes\n"');
-is($ret, "yes\n", 'run command via local ssh connection');
+is $ret, "yes\n", 'run command via local ssh connection';
+
 my $env = $ssh->call_with_runner('environment');
-is($env->{cwd}, $ENV{HOME}, 'expected cwd is current home directory');
+is $env->{cwd}, $ENV{HOME}, 'expected cwd is current home directory';
+
 ## XXX Actually it's unclear what $FindBin::RealBin should return here
 #is($env->{original_realbin}, '???');
 #is($env->{refreshed_realbin}, '???');
-is($env->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env set');
+is $env->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env set';
 
 # XXX currently the output is not visible ---
 # to work around this problem $|=1 has to be set in the function
@@ -56,17 +59,17 @@ is($env->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env set');
 # Also, this should be a proper test, e.g. using Capture::Tiny
 $ssh->call_with_runner('stdout_test');
 
-is($ssh->exit, 'bye-bye', 'exit called'); # XXX hmmm, should this really return "bye-bye"?
+is $ssh->exit, 'bye-bye', 'exit called'; # XXX hmmm, should this really return "bye-bye"?
 
 eval { $ssh->system($^X, '-e', 'exit 0') };
-isnt($@, '', 'calling on ssh after exit');
+isnt $@, '', 'calling on ssh after exit';
 
 SKIP: {
-    Test::More::skip("Symlinks on Windows?", 1) if $^O eq 'MSWin32';
+    skip "Symlinks on Windows?", 1 if $^O eq 'MSWin32';
 
     # Do a symlink test
     my $dir = tempdir("doit_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
-    $d->write_binary("$dir/test-doit.pl", <<'EOF');
+    $doit->write_binary("$dir/test-doit.pl", <<'EOF');
 use Doit;
 return 1 if caller;
 my $doit = Doit->init;
@@ -74,10 +77,10 @@ my $ssh = $doit->do_ssh_connect((defined $ENV{USER} ? $ENV{USER}.'@' : '') . 'lo
 my $ret = $ssh->info_qx('perl', '-e', 'print "yes\n"');
 print $ret;
 EOF
-    $d->chmod(0755, "$dir/test-doit.pl");
-    $d->symlink("$dir/test-doit.pl", "$dir/test-symlink.pl");
-    my $ret = $d->info_qx($^X, "$dir/test-symlink.pl");
-    Test::More::is($ret, "yes\n");
+    $doit->chmod(0755, "$dir/test-doit.pl");
+    $doit->symlink("$dir/test-doit.pl", "$dir/test-symlink.pl");
+    my $ret = $doit->info_qx($^X, "$dir/test-symlink.pl");
+    is $ret, "yes\n";
 }
 
 __END__
