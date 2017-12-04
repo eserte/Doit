@@ -536,12 +536,18 @@ sub _generate_META ($;$) {
 	    configure => {
 		requires => {
 		    'Digest::MD5' => 0,
+		    'Exporter'    => 5.57, # use Exporter "import"
+		    'File::Path'  => 2.0,  # make_path
 		},
 	    },
 	    runtime => {
 		recommends => {
 		    'IPC::Run'     => 0,
 		    'Net::OpenSSH' => 0,
+		},
+		requires => {
+		    'Exporter'    => 5.57, # use Exporter "import"
+		    'File::Path'  => 2.0,  # make_path
 		},
 	    },
 	    test => {
