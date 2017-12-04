@@ -140,10 +140,11 @@ my $dir = tempdir(CLEANUP => 1);
 {
     $d->write_binary("$dir/test3", "ancient file\n");
     $d->utime(1234, 1234, "$dir/test3");
+    my $now = time;
     $d->write_binary("$dir/test3", "overwrite file\n");
     my @s = stat "$dir/test3";
-    cmp_ok $s[8], ">=", time, 'atime was modified';
-    cmp_ok $s[9], ">=", time, 'mtime was modified';
+    cmp_ok $s[8], ">=", $now, 'atime was modified';
+    cmp_ok $s[9], ">=", $now, 'mtime was modified';
 }
 
 __END__
