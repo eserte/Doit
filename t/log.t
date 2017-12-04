@@ -46,7 +46,7 @@ is colorstrip($stderr), "WARN: warning message\n";
 eval {
     error "error message";
 };
-like colorstrip($@), qr{^ERROR: error message at .* line \d+\.\n\z};
+like colorstrip($@), qr{^ERROR: error message at .* line \d+\.?\n\z};
 
 # Labels
 Doit::Log::set_label('label');
