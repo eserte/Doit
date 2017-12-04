@@ -137,6 +137,7 @@ sub test_in_docker {
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
+    my $more_testing = $ENV{XXX_MORE_TESTING}; # XXX this will be a proper option in future!
     for my $tool (qw(docker)) {
 	$doit->qx('which', $tool); # existence check
     }
@@ -187,6 +188,25 @@ RUN yum -y install \\
     "perl(CPAN::Meta)"
 EOF
 	}
+	if ($more_testing) {
+	    $dockerfile .= <<"EOF";
+RUN yum -y install \\
+    "perl(Capture::Tiny)" \\
+    "perl(Term::ANSIColor)" \\
+    "perl(BSD::Resource)" \\
+    "perl(CPAN::Meta::Validator)"
+
+ENV TRAVIS 1
+
+EOF
+	    if ($distro_spec =~ m{:6$}) {
+		$dockerfile .= <<"EOF";
+# Term::ANSIColor exists, but is too old (no colorstrip function)
+RUN cpanm --quiet --notest "Term::ANSIColor~>=2.01"
+
+EOF
+	    }
+	}
     } else {
 	######################################################################
 	# Debian-like (Debian, Ubuntu, LinuxMint ...)
@@ -201,6 +221,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     git
 
 EOF
+	if ($more_testing) {
+	    $dockerfile .= <<"EOF";
+RUN apt-get install -y --no-install-recommends \\
+    libbsd-resource-perl \\
+    libcapture-tiny-perl \\
+    libcpan-meta-perl \\
+    perl-modules \\
+    locales
+
+ENV TRAVIS 1
+
+EOF
+	}
     }
     $doit->write_binary("$dir/Dockerfile", $dockerfile);
     in_directory {
