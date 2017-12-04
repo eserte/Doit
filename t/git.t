@@ -6,6 +6,9 @@
 #
 
 use strict;
+use FindBin;
+use lib $FindBin::RealBin;
+
 use Cwd qw(realpath getcwd);
 use File::Temp qw(tempdir);
 use Test::More;
@@ -13,6 +16,8 @@ use Test::More;
 use Doit;
 use Doit::Extcmd qw(is_in_path);
 use Doit::Util qw(in_directory);
+
+use TestUtil qw(is_dir_eq);
 
 if (!is_in_path('git')) {
     plan skip_all => 'git not in PATH';
@@ -28,7 +33,7 @@ my $dir = realpath(tempdir('doit-git-XXXXXXXX', CLEANUP => 1, TMPDIR => 1));
 
 # A private git-short-status script; should behave the same.
 my $my_git_short_status;
-if (-x "$ENV{HOME}/bin/sh/git-short-status") {
+if ($ENV{HOME} && -x "$ENV{HOME}/bin/sh/git-short-status") {
     $my_git_short_status = "$ENV{HOME}/bin/sh/git-short-status";
 }
 
@@ -61,7 +66,7 @@ like $@, qr{ERROR.*only values 'normal' or 'no' supported for untracked_files};
     $d->system(qw(git init));
 
     # after init checks
-    is $d->git_root, $workdir, 'git_root in root directory';
+    is_dir_eq $d->git_root, $workdir, 'git_root in root directory';
     is_deeply [$d->git_get_changed_files], [], 'no changed files in fresh empty directory';
     git_short_status_check(                         $d, '', 'empty directory, not dirty');
     git_short_status_check({untracked_files=>'no'}, $d, '', 'empty directory, not dirty');
@@ -111,11 +116,11 @@ like $@, qr{ERROR.*only values 'normal' or 'no' supported for untracked_files};
 
     $d->mkdir('subdir');
     in_directory {
-	is $d->git_root, $workdir, 'git_root in subdirectory';
+	is_dir_eq $d->git_root, $workdir, 'git_root in subdirectory';
     } 'subdir';
 
     Doit::Util::in_directory(sub {
-	is $d->git_root, $workdir, 'in_directory call without prototype';
+	is_dir_eq $d->git_root, $workdir, 'in_directory call without prototype';
     }, 'subdir');
 
     is $d->git_config(key => "test.key"), undef, 'config key does not exist yet';

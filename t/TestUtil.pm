@@ -15,11 +15,11 @@ package TestUtil;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 use Exporter 'import';
 use vars qw(@EXPORT);
-@EXPORT = qw(get_sudo module_exists);
+@EXPORT = qw(get_sudo module_exists is_dir_eq);
 
 use Doit::Log;
 
@@ -84,6 +84,20 @@ sub module_exists {
     return 0;
 }
 # REPO END
+
+sub is_dir_eq ($$;$) {
+    my($dir1, $dir2, $testname) = @_;
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    if ($dir1 eq $dir2) {
+	Test::More::pass($testname);
+    } else {
+	if ($^O eq 'MSWin32' && defined &Win32::GetShortPathName) {
+	    Test::More::is(Win32::GetShortPathName($dir1), Win32::GetShortPathName($dir2), $testname);
+	} else {
+	    Test::More::is($dir1, $dir2, $testname); # fails;
+	}
+    }
+}
 
 1;
 
