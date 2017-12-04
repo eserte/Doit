@@ -1212,13 +1212,18 @@ use warnings;
 							 my $diffref = _qx('diff', '-u', $filename, $tempfile);
 							 $diff = $$diffref;
 							 unlink $tempfile;
+							 if (length $diff) {
+							     $diff = "Replace existing file $filename with diff:\n$diff";
+							 } else {
+							     $diff = "(diff not available, probably no diff utility installed)";
+							 }
 						     } else {
 							 $diff = "(diff not available, error in tempfile creation ($!))";
 						     }
 						 } else {
 						     $diff = "(diff not available, neither IPC::Run nor File::Temp available)";
 						 }
-						 "Replace existing file $filename with diff:\n$diff";
+						 $diff;
 					     }
 					 } else {
 					     "Create new file $filename with content:\n$content";

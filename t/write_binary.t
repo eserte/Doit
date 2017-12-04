@@ -64,7 +64,10 @@ my $dir = tempdir(CLEANUP => 1);
     if (is_in_path 'diff') {
 	like colorstrip($stderr), qr{^INFO: Replace existing file .*test with diff}, 'replace + diff';
     } else {
-	like colorstrip($stderr), qr{^INFO:.*diff not available};
+	# On Windows, something like
+	#    'diff' is not recognized as an internal or external command, ...
+	# appears also in STDERR
+	like colorstrip($stderr), qr{INFO:.*diff not available};
     }
     is slurp("$dir/test"), "new testcontent\n";
 }
@@ -77,7 +80,7 @@ my $dir = tempdir(CLEANUP => 1);
     if (is_in_path 'diff') {
 	like colorstrip($stderr), qr{^INFO: Replace existing file .*test with diff}, 'replace + diff';
     } else {
-	like colorstrip($stderr), qr{^INFO:.*diff not available};
+	like colorstrip($stderr), qr{INFO:.*diff not available};
     }
     is slurp("$dir/test"), "testcontent new\n";
 }
