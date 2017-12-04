@@ -500,10 +500,20 @@ sub _generate_META ($;$) {
 	license  => 'perl',
 	version  => MM->parse_version("$FindBin::RealBin/lib/Doit.pm"),
 	prereqs  => {
+	    configure => {
+		requires => {
+		    'Digest::MD5' => 0,
+		},
+	    },
 	    runtime => {
 		recommends => {
 		    'IPC::Run'     => 0,
 		    'Net::OpenSSH' => 0,
+		},
+	    },
+	    test => {
+		requires => {
+		    'Test::More' => 0,
 		},
 	    },
 	},
