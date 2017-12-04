@@ -30,6 +30,11 @@ sub get_sudo ($;@) {
     my @sudo_opts = @{ delete $opts{sudo_opts} || [] };
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
+    if (!$ENV{DOIT_TEST_WITH_SUDO}) {
+	$info_ref->{error} = 'don\'t run sudo tests without DOIT_TEST_WITH_SUDO=1 set' if $info_ref;
+	return undef;
+    }
+
     my $sudo = eval { $doit->do_sudo(sudo_opts => ['-n', @sudo_opts], debug => $debug) };
     if (!$sudo) {
 	$info_ref->{error} = 'cannot run sudo password-less, or sudo is not available at all' if $info_ref;

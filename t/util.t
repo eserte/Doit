@@ -184,13 +184,13 @@ SKIP: {
 
 	$stat[8] = $stat[9] = 86400*3;
 	copy_stat(\@stat, 'target', 'time' => 1);
-	is((stat('target'))[8], 86400*3, 'explicit preserve option');
-	is((stat('target'))[9], 86400*3);
+	is((stat('target'))[8], 86400*3, 'explicit preserve option (atime)');
+	is((stat('target'))[9], 86400*3, 'explicit preserve option (mtime)');
 
 	$stat[8] = $stat[9] = 86400*4;
 	copy_stat(\@stat, 'target', 'mode' => 1);
-	is((stat('target'))[8], 86400*3, 'unchanged mtime, non-matching preserve option');
-	is((stat('target'))[9], 86400*3);
+	is((stat('target'))[8], 86400*3, 'unchanged atime, non-matching preserve option');
+	is((stat('target'))[9], 86400*3, 'unchanged mtime, non-matching preserve option');
 
 	# Must be last in this block --- source+target are deleted
     SKIP: {

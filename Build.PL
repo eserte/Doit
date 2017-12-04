@@ -197,6 +197,7 @@ RUN yum -y install \\
     "perl(CPAN::Meta::Validator)"
 
 ENV TRAVIS 1
+ENV DOIT_TEST_WITH_SUDO 1
 
 EOF
 	    if ($distro_spec =~ m{:6$}) {
@@ -231,6 +232,7 @@ RUN apt-get install -y --no-install-recommends \\
     locales
 
 ENV TRAVIS 1
+ENV DOIT_TEST_WITH_SUDO 1
 
 EOF
 	}
