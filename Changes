@@ -1,5 +1,9 @@
 Revision history for Doit.
 
+0.022	 2017-12-04
+	- new Build action "look"
+	- really add repository to META
+
 0.021_53 2017-12-03
 	- Doit::Lwp: support for HTTP::Tiny ua
 	- Doit::Deb: automatically use sudo if needed
@@ -29,6 +33,6 @@ Revision history for Doit.
 0.021_50 2017-12-01
 	- first devel release
  
-0.02	2017-11-23
+0.02	 2017-11-23
 	- still awaiting first release
 
