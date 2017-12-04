@@ -1,5 +1,22 @@
 Revision history for Doit.
 
+0.022_50 2017-12-05
+	- Doit::Locale: implementation for RedHat/CentOS
+	- write_binary: better message on missing diff
+	- META.*: specify missing requirements
+	- Doit package with $VERSION is now on top of file
+	- test fixes
+	  - don't run sudo by default
+	    (DOIT_TEST_WITH_SUDO=1 has now to be set)
+	  - fix timing problem in write_binary.t
+	  - better diagnostics on too old Term::ANSIColor
+	  - fix log.t test with older Carp,pm
+	  - skip ssh tests completely on Windows
+	  - fix possible Win32 short pathname problems
+	- more tests
+	  - scope cleanups and exceptions
+	- test more in docker with XXX_MORE_TESTING
+
 0.022	 2017-12-04
 	- new Build action "look"
 	- really add repository to META
