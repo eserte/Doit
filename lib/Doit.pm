@@ -16,6 +16,11 @@ use strict;
 use warnings;
 
 {
+    package Doit;
+    our $VERSION = '0.022';
+}
+
+{
     package Doit::Log;
 
     sub _use_coloring {
@@ -313,8 +318,6 @@ use warnings;
 
 {
     package Doit;
-
-    our $VERSION = '0.022';
 
     sub import {
 	warnings->import;
