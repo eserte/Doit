@@ -9,7 +9,8 @@ use strict;
 use Test::More;
 BEGIN {
     plan skip_all => 'No Capture::Tiny available' if !eval { require Capture::Tiny; Capture::Tiny->import('capture'); 1 };
-    plan skip_all => 'No Term::ANSIColor available' if !eval { require Term::ANSIColor; Term::ANSIColor->import('colorstrip'); 1 };
+    plan skip_all => 'No Term::ANSIColor available' if !eval { require Term::ANSIColor; 1 };
+    plan skip_all => 'Term::ANSIColor probably too old (no colorstrip function)' if !eval { Term::ANSIColor->import('colorstrip'); 1 };
 }
 
 use Doit;
