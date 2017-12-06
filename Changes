@@ -1,5 +1,11 @@
 Revision history for Doit.
 
+0.023	 2017-12-06
+	- Doit::User: fix: call endgrent
+	- Doit::Git: new option refresh
+	- workaround for list pipe open on Win32 and older perls
+	- debian_package_with_docker: propagate some env vars
+
 0.022_50 2017-12-05
 	- Doit::Locale: implementation for RedHat/CentOS
 	- write_binary: better message on missing diff

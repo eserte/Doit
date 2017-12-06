@@ -17,7 +17,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION);
-$VERSION = '0.02';
+$VERSION = '0.021';
 
 use Doit::Log;
 use Doit::Util qw(in_directory);
