@@ -22,6 +22,8 @@ $VERSION = '0.02';
 use Doit::Log;
 use Doit::Util qw(in_directory);
 
+sub _pipe_open (@);
+
 sub new { bless {}, shift }
 sub functions { qw(git_repo_update git_short_status git_root git_get_commit_hash git_get_commit_files git_get_changed_files git_is_shallow git_current_branch git_config) }
 
@@ -115,7 +117,7 @@ sub git_short_status {
 	my $untracked_marker = '';
 	{
 	    my @cmd = ("git", "status", "--untracked-files=$untracked_files", "--porcelain");
-	    open my $fh, "-|", @cmd
+	    my $fh = _pipe_open(@cmd)
 		or error "Can't run '@cmd': $!";
 	    my $has_untracked;
 	    my $has_uncommitted;
@@ -144,7 +146,7 @@ sub git_short_status {
 
 	{
 	    my @cmd = ("git", "status", "--untracked-files=no");
-	    open my $fh, "-|", @cmd
+	    my $fh = _pipe_open(@cmd)
 		or error "Can't run '@cmd': $!";
 	    my $l;
 	    $l = <$fh>;
@@ -168,13 +170,13 @@ sub git_short_status {
 		    chomp(my $sha1_local = <$fh_local>);
 		    if ($sha1_remote ne $sha1_local) {
 			my $remote_is_newer;
-			if (open my $log_fh, '-|', 'git', 'log', '--pretty=format:%H', 'master..remotes/trunk') {
+			if (my $log_fh = _pipe_open('git', 'log', '--pretty=format:%H', 'master..remotes/trunk')) {
 			    if (scalar <$log_fh>) {
 				$remote_is_newer = 1;
 			    }
 			}
 			my $local_is_newer;
-			if (open my $log_fh, '-|', 'git', 'log', '--pretty=format:%H', 'remotes/trunk..master') {
+			if (my $log_fh = _pipe_open('git', 'log', '--pretty=format:%H', 'remotes/trunk..master')) {
 			    if (scalar <$log_fh>) {
 				$local_is_newer = 1;
 			    }
@@ -229,7 +231,7 @@ sub git_get_commit_files {
     my @files;
     in_directory {
 	my @cmd = ('git', 'show', $commit, '--pretty=format:', '--name-only');
-	open my $fh, '-|', @cmd
+	my $fh = _pipe_open(@cmd)
 	    or error "Error running @cmd: $!";
 	my $first = <$fh>;
 	if ($first ne "\n") { # first line is empty for older git versions (e.g. 1.7.x)
@@ -252,7 +254,7 @@ sub git_get_changed_files {
     my @files;
     in_directory {
 	my @cmd = qw(git status --porcelain);
-	open my $fh, '-|', @cmd
+	my $fh = _pipe_open(@cmd)
 	    or error "Error running @cmd: $!";
 	while(<$fh>) {
 	    chomp;
@@ -332,6 +334,19 @@ sub _is_dir_empty {
     }
 
     return 1;
+}
+
+sub _pipe_open (@) {
+    my(@cmd) = @_;
+    my $fh;
+    if ($^O eq 'MSWin32' && $] < 5.022) {
+	open $fh, '-|', Doit::Win32Util::win32_quote_list(@cmd)
+	    or return undef;
+    } else {
+	open $fh, '-|', @cmd
+	    or return undef;
+    }
+    return $fh;
 }
 
 1;
