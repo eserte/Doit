@@ -117,6 +117,14 @@ as_user {
     ok -d $ENV{HOME};
 } 'testdoit2', cache => 0; # XXX could the cache be invalidated automatically? should caching be off by default to avoid surprises?
 
+$doit->system('addgroup', 'testdoitgroup1');
+$doit->system('addgroup', 'testdoitgroup2');
+
+is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup1'), 1, 'user was added to group';
+is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup1'), 0, 'user is already in group';
+is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup2'), 1, 'user was added to another group';
+is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup2'), 0, 'user is already in group';
+
 $doit->user_account(
 		    username => 'testdoit2',
 		    ensure   => 'absent',

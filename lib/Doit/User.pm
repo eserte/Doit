@@ -210,15 +210,19 @@ sub user_add_user_to_group {
     my $group = delete $opts{group};
     if (!defined $group) { error "group is mandatory" }
     my %user_groups = map{($_,1)} _get_user_groups($username);
+    my $changes = 0;
     if (!$user_groups{$group}) {
 	if      ($^O eq 'linux') {
 	    $self->system('usermod', '--append', '--groups', $group, $username);
+	    $changes = 1;
 	} elsif ($^O eq 'freebsd') {
 	    $self->system('pw', 'groupmod', '-m', $username, '-n', $group);
+	    $changes = 1;
 	} else {
 	    error "user_add_user_to_group NYI for $^O";
 	}
     }
+    $changes;
 }
 
 sub _get_user_groups {
@@ -232,6 +236,7 @@ sub _get_user_groups {
 	    push @groups, $gname;
 	}
     }
+    endgrent;
     @groups;
 }
 
