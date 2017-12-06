@@ -663,7 +663,8 @@ sub debian_package_with_docker {
 	    # no: we need the full history for correct git version calculation: clone_opts => [qw(--depth=1)],
 	);
     }
-    $doit->write_binary("$dir/Dockerfile", <<"EOF");
+    in_directory {
+	my $dockerfile = <<"EOF";
 FROM $distro_spec
 
 ENV DEBIAN_FRONTEND noninteractive 
@@ -679,7 +680,15 @@ RUN apt-get install -y --no-install-recommends \\
     libnet-openssh-perl
 
 EOF
-    in_directory {
+	for my $env_key (qw(DEBFULLNAME DEBEMAIL EMAIL)) {
+	    if ($ENV{$env_key}) {
+		$dockerfile .= <<"EOF";
+ENV $env_key "$ENV{$env_key}"
+EOF
+	    }
+	}
+	$doit->write_binary("Dockerfile", $dockerfile);
+
 	(my $label = $distro_spec) =~ s{:}{-}g;
 	$label = "doit-deb-$label";
 	$doit->system(qw(docker build -t), $label, qw(.));
