@@ -33,6 +33,8 @@ sub git_repo_update {
     my $origin     = delete $opts{origin} || 'origin';
     my $allow_remote_url_change = delete $opts{allow_remote_url_change};
     my $clone_opts = delete $opts{clone_opts};
+    my $refresh    = delete $opts{refresh} || 'always';
+    if ($refresh !~ m{^(always|never)$}) { error "refresh may be 'always' or 'never'" }
     my $quiet      = delete $opts{quiet};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
@@ -68,19 +70,21 @@ sub git_repo_update {
 			"or specify allow_remote_url_change=>1\n";
 		}
 	    }
-	    if ($quiet) {
-		# XXX there's no quiet option for system, misuse qx instead
-		$self->qx({quiet=>1}, qw(git fetch));
-	    } else {
-		$self->system({show_cwd=>1}, qw(git fetch));
+	    if ($refresh eq 'always') {
+		if ($quiet) {
+		    # XXX there's no quiet option for system, misuse qx instead
+		    $self->qx({quiet=>1}, qw(git fetch));
+		} else {
+		    $self->system({show_cwd=>1}, qw(git fetch));
+		}
+		my $status = $self->git_short_status(untracked_files => 'no');
+		if ($status =~ m{>$}) {
+		    # may actually fail if diverged (status=<>)
+		    # or untracked/changed files would get overwritten
+		    $self->system({show_cwd=>1}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
+		    $has_changes = 1;
+		} # else: ahead, diverged, or something else
 	    }
-	    my $status = $self->git_short_status(untracked_files => 'no');
-	    if ($status =~ m{>$}) {
-		# may actually fail if diverged (status=<>)
-		# or untracked/changed files would get overwritten
-		$self->system({show_cwd=>1}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
-		$has_changes = 1;
-	    } # else: ahead, diverged, or something else
 	} $directory;
     } else {
 	my @cmd = (qw(git clone --origin), $origin);

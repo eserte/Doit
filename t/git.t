@@ -247,6 +247,40 @@ like $@, qr{ERROR.*only values 'normal' or 'no' supported for untracked_files};
 			      ), 1, 'update works, even with untracked files';
     }
 
+    {
+	my $repo1 = "$dir/newworkdir7";
+	my $repo2 = "$dir/newworkdir8";
+
+	is $d->git_repo_update(
+			       repository => $workdir,
+			       directory  => $repo1,
+			      ), 1;
+	is $d->git_repo_update(
+			       repository => $repo1,
+			       directory  => $repo2,
+			      ), 1;
+
+	in_directory {
+	    $d->touch("new-file");
+	    $d->system(qw(git add new-file));
+	    _git_commit_with_author('new file');
+	} $repo1;
+
+	$d->git_repo_update(
+			    repository => $repo1,
+			    directory  => $repo2,
+			    refresh    => 'never',
+			   );
+	ok !-e "$repo2/new-file", 'refresh=>never';
+
+	$d->git_repo_update(
+			    repository => $repo1,
+			    directory  => $repo2,
+			    refresh    => 'always',
+			   );
+	ok -e "$repo2/new-file", 'refresh=>always';
+    }
+
 }
 
 chdir "/"; # for File::Temp cleanup
