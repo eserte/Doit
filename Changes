@@ -1,5 +1,12 @@
 Revision history for Doit.
 
+0.023_50 2017-12-07
+	- test fixes
+	  - atime does not work on some netbsd systems (GH #1)
+	  - rmdir on current directory forbidden on some systems
+	  - different errno on failed rmdir calls
+	  - groupadd is more portable than addgroup
+
 0.023	 2017-12-06
 	- Doit::User: fix: call endgrent
 	- Doit::Git: new option refresh

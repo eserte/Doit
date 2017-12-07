@@ -17,7 +17,7 @@ use warnings;
 
 {
     package Doit;
-    our $VERSION = '0.023';
+    our $VERSION = '0.023_50';
 }
 
 {
