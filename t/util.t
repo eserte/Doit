@@ -9,6 +9,7 @@ use Cwd 'getcwd';
 use Doit;
 use Doit::Util;
 use Doit::Log;
+use Errno;
 use File::Temp qw(tempdir);
 use Test::More;
 
@@ -53,9 +54,7 @@ plan 'no_plan';
     is getcwd, $orig_dir, "directory was never changed";
 }
 
-SKIP: {
-    skip "Cannot remove active directory in MSWin32", 1
-	if $^O eq 'MSWin32';
+{
     my $orig_dir = getcwd;
     my $tempdir;
     $tempdir = tempdir(TMPDIR => 1, CLEANUP => 1);
@@ -64,7 +63,11 @@ SKIP: {
 	    my $doit = Doit->init;
 	    $doit->rmdir($tempdir);
 	} "/";
-	is getcwd, "/", 'still in /, temporary directory does not exist anymore';
+	if ($^O eq 'MSWin32') {
+	    like getcwd, qr{^[A-Z]:/$}, 'still in root of drive, temporary directory does not exist anymore';
+	} else {
+	    is getcwd, "/", 'still in /, temporary directory does not exist anymore';
+	}
     } $tempdir;
     is getcwd, $orig_dir, 'everything\'s restored';
 
@@ -72,13 +75,24 @@ SKIP: {
     in_directory {
 	mkdir "$tempdir/another_dir" or die "Cannot create temporary directory: $!";
 	chdir "$tempdir/another_dir" or die "Cannot chdir: $!";
-	rmdir "$tempdir/another_dir" or die "Cannot remove directory: $!";
-	in_directory {
-	    # do nothing, but a warning
-	    # "WARN: No known current working directory"
-	    # should appear
-	} "/";
-	is getcwd, "/", 'still in /, we had no known current working directory before';
+    SKIP: {
+	    my $success = rmdir "$tempdir/another_dir";
+	    skip "Cannot test - cannot remove active directory", 1
+		if (!$success &&
+		    (   $!{EINVAL} # seen on Solaris
+			|| $!{EACCES} # seen on MSWin32
+		    )
+		   );
+	    if (!$success) {
+		die "Cannot remove directory: $!"; # unexpected error
+	    }
+	    in_directory {
+		# do nothing, but a warning
+		# "WARN: No known current working directory"
+		# should appear
+	    } "/";
+	    is getcwd, "/", 'still in /, we had no known current working directory before';
+	}
     } $tempdir;
     is getcwd, $orig_dir, 'everything\'s restored again';
 }
