@@ -15,11 +15,12 @@ package TestUtil;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.03';
+$VERSION = '0.04';
 
 use Exporter 'import';
-use vars qw(@EXPORT);
+use vars qw(@EXPORT @EXPORT_OK);
 @EXPORT = qw(get_sudo module_exists is_dir_eq);
+@EXPORT_OK = qw(skip_utime_atime_unreliable);
 
 use Doit::Log;
 
@@ -101,6 +102,19 @@ sub is_dir_eq ($$;$) {
 	} else {
 	    Test::More::is($dir1, $dir2, $testname); # fails;
 	}
+    }
+}
+
+sub skip_utime_atime_unreliable (&) {
+    my($code) = @_;
+ SKIP: {
+	# see https://github.com/eserte/Doit/issues/1
+	# (actually one would need to test also if
+	# the file system operated on is mounted with
+	# noatime)
+	Test::More::skip("atime not reliable on this system", 1)
+	    if $^O eq 'netbsd';
+	$code->();
     }
 }
 

@@ -188,22 +188,22 @@ SKIP: {
 
 	$doit->utime(86400,86400,'source');
 	copy_stat('source', 'target');
-	is((stat('target'))[8], 86400, 'preserving atime');
+	TestUtil::skip_utime_atime_unreliable(sub { is((stat('target'))[8], 86400, 'preserving atime') });
 	is((stat('target'))[9], 86400, 'preserving mtime');
 
 	$stat[8] = $stat[9] = 86400*2;
 	copy_stat(\@stat, 'target');
-	is((stat('target'))[8], 86400*2, 'preserving atime using stat array');
+	TestUtil::skip_utime_atime_unreliable(sub { is((stat('target'))[8], 86400*2, 'preserving atime using stat array') });
 	is((stat('target'))[9], 86400*2, 'preserving mtime using stat array');
 
 	$stat[8] = $stat[9] = 86400*3;
 	copy_stat(\@stat, 'target', 'time' => 1);
-	is((stat('target'))[8], 86400*3, 'explicit preserve option (atime)');
+	TestUtil::skip_utime_atime_unreliable(sub { is((stat('target'))[8], 86400*3, 'explicit preserve option (atime)') });
 	is((stat('target'))[9], 86400*3, 'explicit preserve option (mtime)');
 
 	$stat[8] = $stat[9] = 86400*4;
 	copy_stat(\@stat, 'target', 'mode' => 1);
-	is((stat('target'))[8], 86400*3, 'unchanged atime, non-matching preserve option');
+	TestUtil::skip_utime_atime_unreliable(sub { is((stat('target'))[8], 86400*3, 'unchanged atime, non-matching preserve option') });
 	is((stat('target'))[9], 86400*3, 'unchanged mtime, non-matching preserve option');
 
 	# Must be last in this block --- source+target are deleted

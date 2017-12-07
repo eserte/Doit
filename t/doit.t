@@ -13,6 +13,9 @@
 #
 
 use strict;
+use FindBin;
+use lib $FindBin::RealBin;
+
 use File::Temp 'tempdir';
 use Test::More 'no_plan';
 use Errno ();
@@ -21,6 +24,8 @@ use Hash::Util qw(lock_keys);
 use Doit;
 use Doit::Log;
 use Doit::Util qw(new_scope_cleanup);
+
+use TestUtil qw(skip_utime_atime_unreliable);
 
 sub with_unreadable_directory (&$);
 
@@ -57,14 +62,20 @@ $r->unlink("doit-a", "doit-b", "doit-c");
 is $r->utime(1000, 1000, "doit-test"), 1;
 {
     my @s = stat "doit-test";
-    is $s[8], 1000, 'utime changed accesstime';
+    skip_utime_atime_unreliable {
+	is $s[8], 1000, 'utime changed accesstime';
+    };
     is $s[9], 1000, 'utime changed modtime';
 }
-is $r->utime(1000, 1000, "doit-test"), 0; # should not run
+skip_utime_atime_unreliable {
+    is $r->utime(1000, 1000, "doit-test"), 0; # should not run
+};
 is $r->utime(1000, 2000, "doit-test"), 1;
 {
     my @s = stat "doit-test";
-    is $s[8], 1000, 'accesstime still unchanged';
+    skip_utime_atime_unreliable {
+	is $s[8], 1000, 'accesstime still unchanged';
+    };
     is $s[9], 2000, 'utime changed modtime';
 }
 {
