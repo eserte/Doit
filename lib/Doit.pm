@@ -18,6 +18,8 @@ use warnings;
 {
     package Doit;
     our $VERSION = '0.023_50';
+
+    use constant IS_WIN => $^O eq 'MSWin32';
 }
 
 {
@@ -40,7 +42,7 @@ use warnings;
 	    # XXX Probably should also check if the terminal is ANSI-capable at all
 	    # XXX Probably should not use coloring on non-terminals (but
 	    #     there could be a --color option like in git to force it)
-	    $can_coloring = $^O ne 'MSWin32' && eval { require Term::ANSIColor; 1 } ? 1 : 0;
+	    $can_coloring = !Doit::IS_WIN && eval { require Term::ANSIColor; 1 } ? 1 : 0;
 	}
     }
 
@@ -758,7 +760,7 @@ use warnings;
 	my $instr = delete $options{instr}; $instr = '' if !defined $instr;
 	error "Unhandled options: " . join(" ", %options) if %options;
 
-	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
+	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
 
 	require IPC::Open2;
 
@@ -801,7 +803,7 @@ use warnings;
 	my $statusref = delete $options{statusref};
 	error "Unhandled options: " . join(" ", %options) if %options;
 
-	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
+	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
 
 	require IO::Select;
 	require IPC::Open3;
@@ -868,7 +870,7 @@ use warnings;
 
     sub _qx {
 	my(@args) = @_;
-	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
+	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
 
 	open my $fh, '-|', @args
 	    or error "Error running '@args': $!";
@@ -996,7 +998,7 @@ use warnings;
     sub cmd_system {
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
-	@args = Doit::Win32Util::win32_quote_list(@args) if $^O eq 'MSWin32';
+	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
 	my $show_cwd = delete $options{show_cwd};
 	error "Unhandled options: " . join(" ", %options) if %options;
 	my @commands;
@@ -1882,7 +1884,7 @@ use warnings;
 		return;
 	    }
 	    open my $oldout, ">&STDOUT" or die $!;
-	    if ($^O eq 'MSWin32') {
+	    if (Doit::IS_WIN) {
 		open STDOUT, '>', 'CON:' or die $!; # XXX????
 	    } else {
 		open STDOUT, '>', "/dev/stderr" or die $!; # XXX????

@@ -339,7 +339,7 @@ sub _is_dir_empty {
 sub _pipe_open (@) {
     my(@cmd) = @_;
     my $fh;
-    if ($^O eq 'MSWin32' && $] < 5.022) {
+    if (Doit::IS_WIN && $] < 5.022) {
 	open $fh, '-|', Doit::Win32Util::win32_quote_list(@cmd)
 	    or return undef;
     } else {

@@ -125,7 +125,7 @@ sub file_atomic_write {
 
 sub _make_writeable {
     my($doit, $file, $for) = @_;
-    return if $for eq 'rename' && $^O ne 'MSWin32'; # don't need to do anything
+    return if $for eq 'rename' && !Doit::IS_WIN; # don't need to do anything
     my @s = stat($file);
     return if !@s; # not stat-able -> file does not exist yet?
     my $old_mode = $s[2] & 07777;
