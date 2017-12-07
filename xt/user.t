@@ -7,6 +7,7 @@
 
 use Doit;
 use Doit::User 'as_user';
+use Doit::Util 'new_scope_cleanup';
 use Test::More;
 
 return 1 if caller;
@@ -117,13 +118,23 @@ as_user {
     ok -d $ENV{HOME};
 } 'testdoit2', cache => 0; # XXX could the cache be invalidated automatically? should caching be off by default to avoid surprises?
 
-$doit->system('addgroup', 'testdoitgroup1');
-$doit->system('addgroup', 'testdoitgroup2');
 
-is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup1'), 1, 'user was added to group';
-is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup1'), 0, 'user is already in group';
-is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup2'), 1, 'user was added to another group';
-is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup2'), 0, 'user is already in group';
+SKIP: {
+    skip "Only implemented for linux", 4 if $^O ne 'linux';
+
+    # groupadd exists on Debian+RedHat, addgroup only on Debian
+    my $scope_cleanup = new_scope_cleanup {
+	eval { $doit->system('groupdel', 'testdoitgroup1') }; warning $@ if $@;
+	eval { $doit->system('groupdel', 'testdoitgroup2') }; warning $@ if $@;
+    };
+    $doit->system('groupadd', 'testdoitgroup1');
+    $doit->system('groupadd', 'testdoitgroup2');
+
+    is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup1'), 1, 'user was added to group';
+    is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup1'), 0, 'user is already in group';
+    is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup2'), 1, 'user was added to another group';
+    is $doit->user_add_user_to_group(username => 'testdoit2', group => 'testdoitgroup2'), 0, 'user is already in group';
+}
 
 $doit->user_account(
 		    username => 'testdoit2',
