@@ -27,7 +27,7 @@ sub with_unreadable_directory (&$);
 my %errno_string =
     (
      EACCES => do { $! = Errno::EACCES(); "$!" }, # "Permission denied"
-     EEXIST => do { $! = Errno::EEXIST(); "$!" },
+     EEXIST => do { $! = Errno::EEXIST(); "$!" }, # "File exists"
      ENOENT => do { $! = Errno::ENOENT(); "$!" },
      ENOTEMPTY => do { $! = Errno::ENOTEMPTY(); "$!" }, # "Directory not empty"
     );
@@ -341,7 +341,10 @@ is $r->rmdir("doit-test"), 0;
 $r->mkdir("non-empty-dir");
 $r->touch("non-empty-dir/test");
 eval { $r->rmdir("non-empty-dir") };
-like $@, qr{ERROR.*(?:\Q$errno_string{ENOTEMPTY}\E|\Q$errno_string{EACCES}\E)};
+like $@, qr{ERROR.*(?:
+		    \Q$errno_string{ENOTEMPTY}\E # FreeBSD, Linux, Windows, POSIX
+		   |\Q$errno_string{EEXIST}\E # Solaris, POSIX
+		   )}x;
 $r->remove_tree("non-empty-dir");
 
 ######################################################################
