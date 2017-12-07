@@ -59,24 +59,24 @@ $r->unlink("doit-a", "doit-b", "doit-c");
 
 ######################################################################
 # utime
-is $r->utime(1000, 1000, "doit-test"), 1;
+is $r->utime(100000, 100000, "doit-test"), 1;
 {
     my @s = stat "doit-test";
     skip_utime_atime_unreliable {
-	is $s[8], 1000, 'utime changed accesstime';
+	is $s[8], 100000, 'utime changed accesstime';
     };
-    is $s[9], 1000, 'utime changed modtime';
+    is $s[9], 100000, 'utime changed modtime';
 }
 skip_utime_atime_unreliable {
-    is $r->utime(1000, 1000, "doit-test"), 0; # should not run
+    is $r->utime(100000, 100000, "doit-test"), 0; # should not run
 };
-is $r->utime(1000, 2000, "doit-test"), 1;
+is $r->utime(100000, 200000, "doit-test"), 1;
 {
     my @s = stat "doit-test";
     skip_utime_atime_unreliable {
-	is $s[8], 1000, 'accesstime still unchanged';
+	is $s[8], 100000, 'accesstime still unchanged';
     };
-    is $s[9], 2000, 'utime changed modtime';
+    is $s[9], 200000, 'utime changed modtime';
 }
 {
     my $now = time;
@@ -92,7 +92,7 @@ eval { $r->utime(1, 2, "doit-test-2", "non-existing-file") };
 like $@, qr{ERROR.*\Qutime failed on some files (1/2): $errno_string{ENOENT}}, 'utime on multiple non-existing files';
 $r->unlink('doit-test-2');
 $r->touch('doit-a', 'doit-b', 'doit-c');
-is $r->utime(1000, 1000, 'doit-a', 'doit-b', 'doit-c'), 3, 'three files were changed';
+is $r->utime(100000, 100000, 'doit-a', 'doit-b', 'doit-c'), 3, 'three files were changed';
 $r->unlink('doit-a', 'doit-b', 'doit-c');
 
 ######################################################################
