@@ -15,7 +15,7 @@ package Doit::File;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.02';
+$VERSION = '0.021';
 
 use Doit::Log;
 use Doit::Util qw(copy_stat new_scope_cleanup);

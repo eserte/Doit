@@ -1,5 +1,9 @@
 Revision history for Doit.
 
+0.024    2017-12-08
+	- constant IS_WIN
+	- test changes: use bigger epoch times
+
 0.023_50 2017-12-07
 	- test fixes
 	  - atime does not work on some netbsd systems (GH #1)
