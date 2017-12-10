@@ -561,6 +561,7 @@ sub _generate_META ($;$) {
 	resources => {
 	    repository => { url => 'git://github.com/eserte/Doit' },
 	},
+	generated_by => "Doit version " . _get_Doit_VERSION(),
     });
     if ($doit->is_dry_run) {
 	info "Would create $destfile" . (defined $meta_version ? " (version $meta_version)" : "") . " (dry-run)";
