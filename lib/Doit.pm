@@ -338,13 +338,19 @@ use warnings;
     sub _new {
 	my $class = shift;
 	my $self = bless { }, $class;
-	# XXX hmmm, creating now self-refential data structures ...
-	$self->{runner}    = Doit::Runner->new($self);
-	$self->{dryrunner} = Doit::Runner->new($self, 1);
 	$self;
     }
-    sub runner    { shift->{runner} }
-    sub dryrunner { shift->{dryrunner} }
+    sub runner {
+	my($self) = @_;
+	# XXX hmmm, creating now self-refential data structures ...
+	$self->{runner} ||= Doit::Runner->new($self);
+    }
+	    
+    sub dryrunner {
+	my($self) = @_;
+	# XXX hmmm, creating now self-refential data structures ...
+	$self->{dryrunner} ||= Doit::Runner->new($self, dryrun => 1);
+    }
 
     sub init {
 	my($class) = @_;
@@ -1524,8 +1530,10 @@ use warnings;
 {
     package Doit::Runner;
     sub new {
-	my($class, $X, $dryrun) = @_;
-	bless { X => $X, dryrun => $dryrun, components => [] }, $class;
+	my($class, $Doit, %options) = @_;
+	my $dryrun = delete $options{dryrun};
+	die "Unhandled options: " . join(" ", %options) if %options;
+	bless { Doit => $Doit, dryrun => $dryrun, components => [] }, $class;
     }
     sub is_dry_run { shift->{dryrun} }
 
@@ -1533,19 +1541,20 @@ use warnings;
 
     sub install_generic_cmd {
 	my($self, $name, @args) = @_;
-	$self->{X}->install_generic_cmd($name, @args);
-	install_cmd($name); # XXX hmmmm
+	$self->{Doit}->install_generic_cmd($name, @args);
+	__PACKAGE__->install_cmd($name);
     }
 
-    sub install_cmd ($) {
+    sub install_cmd {
+	shift; # $class unused
 	my $cmd = shift;
 	my $meth = 'cmd_' . $cmd;
 	my $code = sub {
 	    my($self, @args) = @_;
 	    if ($self->{dryrun}) {
-		$self->{X}->$meth(@args)->show;
+		$self->{Doit}->$meth(@args)->show;
 	    } else {
-		$self->{X}->$meth(@args)->doit;
+		$self->{Doit}->$meth(@args)->doit;
 	    }
 	};
 	no strict 'refs';
@@ -1602,7 +1611,7 @@ use warnings;
 		 qw(change_file), # own invention
 		 qw(setenv unsetenv), # $ENV manipulation
 		) {
-	install_cmd $cmd;
+	__PACKAGE__->install_cmd($cmd);
     }
 
     sub call_wrapped_method {
@@ -1661,6 +1670,8 @@ use warnings;
     sub new {
 	die "Please use either Doit::RPC::Client, Doit::RPC::Server or Doit::RPC::SimpleServer";
     }
+
+    sub runner { shift->{runner} }
 
     sub receive_data {
 	my($self) = @_;
@@ -1845,7 +1856,7 @@ use warnings;
 		return;
 	    }
 	    $d->(" calling method $data[0]");
-	    my($rettype, @ret) = $self->{runner}->call_wrapped_method($context, @data);
+	    my($rettype, @ret) = $self->runner->call_wrapped_method($context, @data);
 	    $d->(" sending result back");
 	    $self->send_data($rettype, @ret);
 	}
@@ -1889,7 +1900,7 @@ use warnings;
 	    } else {
 		open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
 	    }
-	    my($rettype, @ret) = $self->{runner}->call_wrapped_method($context, @data);
+	    my($rettype, @ret) = $self->runner->call_wrapped_method($context, @data);
 	    open STDOUT, ">&", $oldout or die $!;
 	    $self->send_data($rettype, @ret);
 	}
