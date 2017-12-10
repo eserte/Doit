@@ -142,6 +142,8 @@ sub git_short_status {
 		$untracked_marker = '*'; # will be combined later
 		last;
 	    }
+	    close $fh
+		or error "Error while running '@cmd': $!";
 	}
 
 	{
@@ -206,7 +208,7 @@ sub git_root {
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
-	chomp(my $dir = `git rev-parse --show-toplevel`);
+	chomp(my $dir = $self->info_qx({quiet=>1}, 'git', 'rev-parse', '--show-toplevel'));
 	$dir;
     } $directory;
 }
@@ -217,7 +219,7 @@ sub git_get_commit_hash {
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
-	chomp(my $commit = `git log -1 --format=%H`);
+	chomp(my $commit = $self->info_qx({quiet=>1}, 'git', 'log', '-1', '--format=%H'));
 	$commit;
     } $directory;
 }
@@ -298,6 +300,9 @@ sub git_config {
     my $val       = delete $opts{val};
     my $unset     = delete $opts{unset};
     error "Unhandled options: " . join(" ", %opts) if %opts;
+    if (defined $val && $unset) {
+	error "Don't specify both 'unset' and 'val'";
+    }
 
     in_directory {
 	no warnings 'uninitialized'; # $old_val may be undef
