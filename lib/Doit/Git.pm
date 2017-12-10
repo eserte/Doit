@@ -234,7 +234,7 @@ sub git_get_commit_files {
 	my $fh = _pipe_open(@cmd)
 	    or error "Error running @cmd: $!";
 	my $first = <$fh>;
-	if ($first ne "\n") { # first line is empty for older git versions (e.g. 1.7.x)
+	if (defined $first && $first ne "\n") { # first line is empty for older git versions (e.g. 1.7.x)
 	    chomp $first;
 	    push @files, $first;
 	}
@@ -251,6 +251,8 @@ sub git_get_commit_files {
 sub git_get_changed_files {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
+    error "Unhandled options: " . join(" ", %opts) if %opts;
+
     my @files;
     in_directory {
 	my @cmd = qw(git status --porcelain);
@@ -303,12 +305,14 @@ sub git_config {
 	if ($unset) {
 	    if ($@) {
 		if ($@->{exitcode} == 1) {
-		    # already non-existent
+		    # already non-existent (or even invalid)
+		    0;
 		} else {
 		    error "git config $key failed with exitcode $@->{exitcode}";
 		}
 	    } else {
 		$self->system(qw(git config --unset), $key, (defined $val ? $val : ()));
+		1;
 	    }
 	} else {
 	    if (!defined $val) {
@@ -316,6 +320,9 @@ sub git_config {
 	    } else {
 		if (!defined $old_val || $old_val ne $val) {
 		    $self->system(qw(git config), $key, $val);
+		    1;
+		} else {
+		    0;
 		}
 	    }
 	}
