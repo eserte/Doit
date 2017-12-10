@@ -278,6 +278,40 @@ sub test_pod (;$) {
     }
 }
 
+sub test_cpan_versions {
+    my($distdir) = @_;
+
+    if (is_in_path "cpan_check_versions") {
+	in_directory {
+	    $doit->system('cpan_check_versions', '-remote');
+	} $distdir;
+    } else {
+	warning <<EOF;
+No cpan_check_versions found in PATH, cannot check for properly
+incremented VERSIONs. Please check git://github.com/eserte/srezic-misc.git
+EOF
+    }
+}
+
+sub git_checks {
+    $doit->add_component('git');
+
+    my $status = $doit->git_short_status;
+    if ($status eq '<<') {
+	error 'Working directory has uncomitted changes: ' . `git status`;
+    }
+    if ($status eq '*') {
+	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
+    }
+
+    my $Doit_VERSION = _get_Doit_VERSION();
+
+    my $out = $doit->info_qx(qw(git tag -l), $Doit_VERSION);
+    if (defined $out && $out ne '') {
+	error "A git tag $Doit_VERSION already exists";
+    }
+}
+
 sub distdir {
     my(%options) = @_;
     my $temporary = delete $options{temporary};
@@ -319,11 +353,25 @@ sub distdir {
 }
 
 sub dist {
+    if (!$ENV{DOIT_TEST_SKIP_SOME_CHECKS}) {
+	git_checks();
+    }
+    # else skip because Doit version is usually not incremented in
+    # this phase and the git tag already exists
+
+
     my $tarfile = _get_tarfilename();
     if (-e $tarfile) {
 	error "$tarfile already exists";
     }
     my $distdir = distdir(temporary => 1);
+
+    if (!$ENV{DOIT_TEST_SKIP_SOME_CHECKS}) {
+	test_cpan_versions($distdir);
+    }
+    # else because versions of all Doit modules are usually not
+    # incremented in this phase
+
     require File::Basename;
     in_directory {
 	# Note: tar cfvz C:/... ... does not seem to work on Windows
@@ -336,6 +384,7 @@ sub dist {
 }
 
 sub dist_install_and_test {
+    local $ENV{DOIT_TEST_SKIP_SOME_CHECKS} = 1; # XXX is there a better interface?
     my $tarfile = _get_tarfilename();
     if (!-e $tarfile) {
 	dist();
@@ -483,27 +532,6 @@ sub install {
 	info "Run ExtUtils::Install::install with parameters\n" . $euii_args_dump;
 	ExtUtils::Install::install([@euii_args]);
     }
-}
-
-sub git_tag {
-    $doit->add_component('git');
-
-    my $status = $doit->git_short_status;
-    if ($status eq '<<') {
-	error 'Working directory has uncomitted changes: ' . `git status`;
-    }
-    if ($status eq '*') {
-	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
-    }
-
-    my $Doit_VERSION = _get_Doit_VERSION();
-
-    my $out = $doit->info_qx(qw(git tag --list), $Doit_VERSION);
-    if (defined $out && $out ne '') {
-	error "A git tag $Doit_VERSION already exists";
-    }
-
-    $doit->system(qw(git tag -a -m), "tag $Doit_VERSION release", $Doit_VERSION);
 }
 
 sub _get_Doit_VERSION () {
