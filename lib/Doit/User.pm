@@ -30,10 +30,6 @@ use Doit::Log;
 	my $cache = exists $opts{cache} ? delete $opts{cache} : 1;
 	error "Unhandled options: " . join(" ", %opts) if %opts;
 
-	if ($> != 0) {
-	    error "as_user works only for root";
-	}
-
 	my($uid, $gid, $homedir);
 	if ($cache) {
 	    ($uid, $gid, $homedir) = ($uid_cache{$user}, $gid_cache{$user}, $homedir_cache{$user});
@@ -51,10 +47,11 @@ use Doit::Log;
 	    }
 	}
 
-	local $( = $gid; # change first the gid, then the uid!
-	local $) = $gid;
-	local $< = $uid;
-	local $> = $uid;
+	# change first the gid, then the uid!
+	local $( = $gid; { my $errno = $!; if ($( != $gid) { error "Can't set real group id (wanted: $gid, is: $(): $errno" } }
+	local $) = $gid; { my $errno = $!; if ($) != $gid) { error "Can't set effective group id (wanted: $gid, is: $)): $errno" } }
+	local $< = $uid; { my $errno = $!; if ($< != $uid) { error "Can't set real user id (wanted: $uid, is: $<) : $errno" } }
+	local $> = $uid; { my $errno = $!; if ($> != $uid) { error "Can't set effective user id (wanted: $uid, is: $>): $errno" } }
 	local $ENV{HOME} = $homedir;
 	local $ENV{USER} = $user;
 	local $ENV{LOGNAME} = $user;
