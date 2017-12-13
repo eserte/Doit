@@ -33,6 +33,10 @@ sub run {
 	$res{homeenv}     = $ENV{HOME};
 	$res{userenv}     = $ENV{USER};
 	$res{lognameenv}  = $ENV{LOGNAME};
+	$res{realuid}     = $<;
+	$res{effuid}      = $>;
+	$res{realgid}     = $(;
+	$res{effgid}      = $);
     } $ENV{SUDO_USER};
 
     \%res;
@@ -129,6 +133,8 @@ SKIP: {
 	    if !$ENV{LOGNAME}; # e.g. in docker
 	is $res->{lognameenv}, $ENV{LOGNAME}, q{expected logname (through environment)};
     }
+    is $res->{realuid}, $<, 'expected user id';
+    is((split / /, $res->{realgid})[0], (split / /, $()[0], 'expected first group id');
 }
 
 __END__
