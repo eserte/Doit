@@ -28,18 +28,23 @@ require TestUtil;
 
 plan 'no_plan';
 
-my $d = Doit->init;
-$d->add_component('git');
-$d->add_component('deb');
+my $doit = Doit->init;
+$doit->add_component('git');
+$doit->add_component('deb');
 
-ok $d->call_with_runner('check_deb_component'), 'available deb component locally';
-ok $d->call_with_runner('check_git_component'), 'available git component locally';
+ok $doit->call_with_runner('check_deb_component'), 'available deb component locally';
+ok $doit->call_with_runner('check_git_component'), 'available git component locally';
+
+# XXX $doit->{components} is an internal member!
+is_deeply [map { $_->{module} } @{ $doit->{components} }], ['Doit::Git', 'Doit::Deb'], 'two components loaded';
+$doit->add_component('git');
+is_deeply [map { $_->{module} } @{ $doit->{components} }], ['Doit::Git', 'Doit::Deb'], 'still two components loaded';
 
 SKIP: {
     my $number_of_tests = 2;
 
     my %info;
-    my $sudo = TestUtil::get_sudo($d, info => \%info);
+    my $sudo = TestUtil::get_sudo($doit, info => \%info);
     if (!$sudo) {
 	skip $info{error}, $number_of_tests;
     }
