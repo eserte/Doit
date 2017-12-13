@@ -1562,17 +1562,23 @@ use warnings;
     }
 
     sub add_component {
-	my($self, $component) = @_;
-	for (@{ $self->{components} }) {
-	    return if $_->{component} eq $component;
+	my($self, $component_or_module) = @_;
+	my $module;
+	if ($component_or_module =~ /::/) {
+	    $module = $component_or_module;
+	} else {
+	    $module = 'Doit::' . ucfirst($component_or_module);
 	}
 
-	my $module = 'Doit::' . ucfirst($component);
+	for (@{ $self->{components} }) {
+	    return if $_->{module} eq $module;
+	}
+
 	if (!eval qq{ require $module; 1 }) {
-	    die "Cannot load $module: $@";
+	    Doit::Log::error("Cannot load $module: $@");
 	}
 	my $o = $module->new
-	    or die "Error while calling $module->new";
+	    or Doit::Log::error("Error while calling $module->new");
 	for my $function ($o->functions) {
 	    my $fullqual = $module.'::'.$function;
 	    my $code = sub {
@@ -1586,7 +1592,7 @@ use warnings;
 	    (my $relpath = $module) =~ s{::}{/};
 	    $relpath .= '.pm';
 	};
-	push @{ $self->{components} }, { component => $component, module => $module, path => $INC{$mod_file}, relpath => $mod_file };
+	push @{ $self->{components} }, { module => $module, path => $INC{$mod_file}, relpath => $mod_file };
 
 	if ($o->can('add_components')) {
 	    for my $sub_component ($o->add_components) {
@@ -1928,7 +1934,7 @@ use warnings;
 
     sub add_components {
 	my(@components) = @_;
-	q|for my $component (qw(| . join(" ", map { qq{$_->{component}} } @components) . q|)) { $d->add_component($component) } |;
+	q|for my $component_module (qw(| . join(" ", map { qq{$_->{module}} } @components) . q|)) { $d->add_component($component_module) } |;
     }
 
     sub self_require (;$) {
