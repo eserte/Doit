@@ -70,6 +70,10 @@ require Getopt::Long;
 my %opt = (verbose => 0, uninst => 0, destdir => '', create_packlist => 1);
 $Build_PL::ARGV=$Build_PL::ARGV if 0; # cease -w
 @ARGV = (@$Build_PL::ARGV, @ARGV);
+if ($ENV{PERL_MB_OPT}) {
+    require Text::ParseWords;
+    push @ARGV, Text::ParseWords::shellwords($ENV{PERL_MB_OPT});
+}
 Getopt::Long::GetOptions(
     \%opt,
     'allow_mb_mismatch=i',
@@ -77,6 +81,7 @@ Getopt::Long::GetOptions(
     'create_packlist=i',
     'destdir=s',
     'installdirs=s',
+    'install_base=s',
     'install_path=s%',
     'prefix=s',
     'uninst:1',
@@ -483,6 +488,19 @@ sub install {
     my @euii_args = (
 	from_to => {
 	    (
+		$opt{install_base}
+		?
+		(
+		    read          => "$Config{sitearchexp}/auto/$FULLEXT/.packlist",
+		    ($opt{create_packlist} ? (write => "$opt{install_base}/lib/perl5/$Config{archname}/auto/$FULLEXT/.packlist") : ()),
+		    $INST_LIB     => "$opt{install_base}/lib/perl5",
+		    $INST_ARCHLIB => "$opt{install_base}/lib/perl5",
+		    $INST_BIN     => "$opt{install_base}/bin",
+		    $INST_SCRIPT  => "$opt{install_base}/bin",
+		    $INST_MAN1DIR => "$opt{install_base}/man/man1",
+		    $INST_MAN3DIR => "$opt{install_base}/man/man3",
+		)
+	        :
 		($opt{installdirs}||'') eq 'core'
 		?
 		(
