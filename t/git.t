@@ -69,6 +69,8 @@ if ($ENV{HOME} && -x "$ENV{HOME}/bin/sh/git-short-status") {
 SKIP: {
     my $self_git = eval { $d->git_root };
     skip "Not a git checkout", 1 if !$self_git;
+    skip "Current git checkout is not the Doit git checkout", 1 # ... but probably a git directory in an upper directory
+	if realpath("$FindBin::RealBin/..") ne realpath($self_git);
     skip "shallow repositories cannot be cloned", 1 if $d->git_is_shallow;
 
     my $workdir = "$dir/doit";
