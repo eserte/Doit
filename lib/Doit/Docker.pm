@@ -113,7 +113,7 @@ sub docker_connect {
 
 	# On linux use Linux Abstract Namespace Sockets ---
 	# invisible and automatically cleaned up. See man 7 unix.
-	my $LANS_PREFIX = $^O eq 'linux' ? '\0' : '';
+	my $LANS_PREFIX = $class->_can_LANS;
 
 	# Run the server
 	my @cmd_worker =

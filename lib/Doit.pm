@@ -1927,6 +1927,11 @@ use warnings;
 	$self->call_remote($method, @_); # XXX or use goto?
     }
 
+    sub _can_LANS {
+	require POSIX;
+	$^O eq 'linux' && (POSIX::uname())[2] !~ m{^([01]\.|2\.[01]\.)} # osvers >= 2.2, earlier versions did not have LANS
+    }
+
 }
 
 {
@@ -1971,16 +1976,14 @@ use warnings;
 
 	require File::Basename;
 	require IPC::Open2;
+	require POSIX;
 	require Symbol;
 
 	# Socket pathname, make it possible to find out
 	# old outdated sockets easily by including a
 	# timestamp. Also need to maintain a $socket_count,
 	# if the same script opens multiple sockets quickly.
-	my $sock_path = do {
-	    require POSIX;
-	    "/tmp/." . join(".", "doit", "sudo", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, (++$socket_count)) . ".sock";
-	};
+	my $sock_path = "/tmp/." . join(".", "doit", "sudo", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, (++$socket_count)) . ".sock";
 
 	# Make sure password has to be entered only once (if at all)
 	# Using 'sudo --validate' would be more correct, however,
@@ -2002,7 +2005,7 @@ use warnings;
 
 	# On linux use Linux Abstract Namespace Sockets ---
 	# invisible and automatically cleaned up. See man 7 unix.
-	my $LASN_PREFIX = $^O eq 'linux' ? '\0' : '';
+	my $LANS_PREFIX = $class->_can_LANS ? '\0' : '';
 
 	# Run the server
 	my @cmd_worker =
@@ -2011,8 +2014,8 @@ use warnings;
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
-	     q{Doit::RPC::Server->new($d, "} . $LASN_PREFIX . $sock_path . q{", excl => 1, debug => } . ($debug?1:0) . q{)->run();} .
-	     ($LASN_PREFIX ? '' : q<END { unlink "> . $sock_path . q<" }>), # cleanup socket file, except if Linux Abstract Namespace Sockets are used
+	     q{Doit::RPC::Server->new($d, "} . $LANS_PREFIX . $sock_path . q{", excl => 1, debug => } . ($debug?1:0) . q{)->run();} .
+	     ($LANS_PREFIX ? '' : q<END { unlink "> . $sock_path . q<" }>), # cleanup socket file, except if Linux Abstract Namespace Sockets are used
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
 	my $worker_pid = fork;
@@ -2028,7 +2031,7 @@ use warnings;
 	# access.
 	my($in, $out);
 	my @cmd_comm = ('sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
-			q{Doit::Comm->comm_to_sock("} . $LASN_PREFIX . $sock_path . q{", debug => shift)}, !!$debug);
+			q{Doit::Comm->comm_to_sock("} . $LANS_PREFIX . $sock_path . q{", debug => shift)}, !!$debug);
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
 	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:", debug => $debug);
