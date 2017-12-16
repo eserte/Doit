@@ -17,7 +17,7 @@ use warnings;
 
 {
     package Doit;
-    our $VERSION = '0.024_51';
+    our $VERSION = '0.025';
 
     use constant IS_WIN => $^O eq 'MSWin32';
 }

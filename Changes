@@ -1,5 +1,8 @@
 Revision history for Doit.
 
+0.025	 2017-12-16
+	- stable release, no changes since 0.024_51
+
 0.024_51 2017-12-15
 	- as_user: check for failure when setting $< et al
 	- add_component may take a full module name
