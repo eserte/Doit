@@ -2063,6 +2063,8 @@ use warnings;
 	my $tty = delete $opts{tty};
 	my $port = delete $opts{port};
 	my $master_opts = delete $opts{master_opts};
+	my $dest_os = delete $opts{dest_os};
+	$dest_os = 'unix' if !defined $dest_os;
 	my $put_to_remote = delete $opts{put_to_remote} || 'rsync_put'; # XXX ideally this should be determined automatically
 	$put_to_remote =~ m{^(rsync_put|scp_put)$}
 	    or error "Valid values for put_to_remote: rsync_put or scp_put";
@@ -2083,7 +2085,12 @@ use warnings;
 	    and error "Connection error to $host: " . $ssh->error;
 	$self->{ssh} = $ssh;
 	{
-	    my $remote_cmd = "[ ! -d .doit/lib ] && mkdir -p .doit/lib";
+	    my $remote_cmd;
+	    if ($dest_os eq 'MSWin32') {
+		$remote_cmd = 'if not exist .doit\lib\ mkdir .doit\lib';
+	    } else {
+		$remote_cmd = "[ ! -d .doit/lib ] && mkdir -p .doit/lib";
+	    }
 	    if ($debug) {
 		info "Running '$remote_cmd' on remote";
 	    }
@@ -2096,23 +2103,43 @@ use warnings;
 	$ssh->$put_to_remote({verbose => $debug}, __FILE__, ".doit/lib/");
 	{
 	    my %seen_dir;
-	    for my $component (@components) {
+	    for my $component (
+			       @components,
+			       ( # add additional RPC components
+				$dest_os ne 'MSWin32' ? () :
+				do {
+				    (my $srcpath = __FILE__) =~ s{\.pm}{/WinRPC.pm};
+				    {relpath => "Doit/WinRPC.pm", path => $srcpath},
+				}
+			       )
+			      ) {
 		my $from = $component->{path};
 		my $to = $component->{relpath};
 		my $full_target = ".doit/lib/$to";
 		my $target_dir = File::Basename::dirname($full_target);
 		if (!$seen_dir{$target_dir}) {
-		    $ssh->system(\%ssh_run_opts, "[ ! -d $target_dir ] && mkdir -p $target_dir");
+		    my $remote_cmd;
+		    if ($dest_os eq 'MSWin32') {
+			(my $win_target_dir = $target_dir) =~ s{/}{\\}g;
+			$remote_cmd = "if not exist $win_target_dir mkdir $win_target_dir"; # XXX is this equivalent to mkdir -p?
+		    } else {
+			$remote_cmd = "[ ! -d $target_dir ] && mkdir -p $target_dir";
+		    }
+		    $ssh->system(\%ssh_run_opts, $remote_cmd);
 		    $seen_dir{$target_dir} = 1;
 		}
 		$ssh->$put_to_remote({verbose => $debug}, $from, $full_target);
 	    }
 	}
 
-	my $sock_path = do {
-	    require POSIX;
-	    "/tmp/." . join(".", "doit", "ssh", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, int(rand(99999999))) . ".sock";
-	};
+	my $sock_path = (
+			 $dest_os eq 'MSWin32'
+			 ? join("-", "doit", "ssh", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), int(rand(99999999)))
+			 : do {
+			     require POSIX;
+			     "/tmp/." . join(".", "doit", "ssh", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, int(rand(99999999))) . ".sock";
+			 }
+			);
 
 	my @cmd;
 	if (defined $as) {
@@ -2123,7 +2150,23 @@ use warnings;
 	    }
 	} # XXX add ssh option -t? for password input?
 
-	my @cmd_worker =
+	my @cmd_worker;
+	if ($dest_os eq 'MSWin32') {
+	    @cmd_worker =
+	    (
+	     # @cmd not used here (no sudo)
+	     $perl, "-I.doit", "-I.doit\\lib", "-e",
+	     Doit::_ScriptTools::self_require($FindBin::RealScript) .
+	     q{use Doit::WinRPC; } .
+	     q{my $d = Doit->init; } .
+	     Doit::_ScriptTools::add_components(@components) .
+	     # XXX server cleanup? on signals? on END?
+	     q{Doit::WinRPC::Server->new($d, "} . $sock_path . q{", debug => } . ($debug?1:0).q{)->run();},
+	     "--", ($dry_run? "--dry-run" : ())
+	    );
+	    @cmd_worker = Doit::Win32Util::win32_quote_list(@cmd_worker);
+	} else {
+	    @cmd_worker =
 	    (
 	     @cmd, $perl, "-I.doit", "-I.doit/lib", "-e",
 	     Doit::_ScriptTools::self_require($FindBin::RealScript) .
@@ -2135,16 +2178,27 @@ use warnings;
 	     q{Doit::RPC::Server->new($d, "} . $sock_path . q{", excl => 1, debug => } . ($debug?1:0).q{)->run();},
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
+	}
 	warn "remote perl cmd: @cmd_worker\n" if $debug;
 	my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
 	$self->{worker_pid} = $worker_pid;
 
-	my @cmd_comm =
+	my @cmd_comm;
+	if ($dest_os eq 'MSWin32') {
+	    @cmd_comm =
+	    ($perl, "-I.doit\\lib", "-MDoit", "-MDoit::WinRPC", "-e",
+	     q{Doit::WinRPC::Comm->new("} . $sock_path . q{", debug => shift)->run},
+	     !!$debug,
+	    );
+	    @cmd_comm = Doit::Win32Util::win32_quote_list(@cmd_comm);
+	} else {
+	    @cmd_comm =
 	    (
 	     @cmd, $perl, "-I.doit/lib", "-MDoit", "-e",
 	     q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift);},
 	     !!$debug,
 	    );
+	}
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
 	$self->{comm_pid} = $comm_pid;
