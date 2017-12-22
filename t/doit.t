@@ -278,6 +278,7 @@ eval { $r->write_binary("non-existing-dir/test", "egal\n") };
 like $@, qr{ERROR.*\Q$errno_string{ENOENT}};
 SKIP: {
     skip "permissions probably work differently on Windows", 1 if $^O eq 'MSWin32';
+    skip "permissions probably work differently on cygwin", 1 if $^O eq 'cygwin';
     skip "non-writable file not a problem for the superuser", 1 if $> == 0;
 
     $r->write_binary({quiet=>1}, "unwritable-file", "something\n");
@@ -464,6 +465,7 @@ sub with_unreadable_directory (&$) {
 
  SKIP: {
 	skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';
+	skip "unreadable directories behave differently on cygwin", 1 if $^O eq 'cygwin';
 	skip "unreadable directories not a problem for the superuser", 1 if $> == 0;
 
 	$r->mkdir($unreadable_dir);

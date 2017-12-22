@@ -53,6 +53,7 @@ unshift @INC, $FindBin::RealBin;
 require TestUtil;
 
 plan skip_all => 'Does not work on Windows' if $^O eq 'MSWin32'; # too many unix-isms used
+plan skip_all => 'cygwin does not have a root user' if $^O eq 'cygwin';
 plan 'no_plan';
 
 my $doit = Doit->init;
