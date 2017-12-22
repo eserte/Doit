@@ -55,7 +55,7 @@ sub deb_missing_packages {
 	my $err = Symbol::gensym();
 	my $fh;
 	my $pid = IPC::Open3::open3(undef, $fh, $err, @cmd)
-	    or die "Error running '@cmd': $!";
+	    or error "Error running '@cmd': $!";
 	while(<$fh>) {
 	    chomp;
 	    if (m{^([^\t]+)\t([^\t]+)\t([^\t]*)$}) {
@@ -67,7 +67,7 @@ sub deb_missing_packages {
 		}
 		$seen_packages{$1} = 1;
 	    } else {
-		warn "ERROR: cannot parse $_, ignore line...\n";
+		warning "cannot parse '$_', ignore line...";
 	    }
 	}
 	waitpid $pid, 0;
@@ -85,18 +85,18 @@ sub deb_install_key {
     my $url       = delete $opts{url};
     my $keyserver = delete $opts{keyserver};
     my $key       = delete $opts{key};
-    die "Unhandled options: " . join(" ", %opts) if %opts;
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     if (!$url) {
 	if (!$keyserver) {
-	    die "keyserver is missing";
+	    error "keyserver is missing";
 	}
 	if (!$key) {
-	    die "key is missing";
+	    error "key is missing";
 	}
     } else {
 	if ($keyserver) {
-	    die "Don't define both url and keyserver";
+	    error "Don't define both url and keyserver";
 	}
     }
 
@@ -121,7 +121,7 @@ sub deb_install_key {
 		if (-r $keyfile) {
 		    my @cmd = ('gpg', '--keyring', $keyfile, '--list-keys', '--fingerprint', '--with-colons');
 		    open my $fh, '-|', @cmd
-			or die "Running '@cmd' failed: $!";
+			or error "Running '@cmd' failed: $!";
 		    while(<$fh>) {
 			if (m{^fpr:::::::::\Q$key\E:$}) {
 			    $found_key = 1;
@@ -129,7 +129,7 @@ sub deb_install_key {
 			}
 		    }
 		    close $fh
-			or die "Running '@cmd' failed: $!";
+			or error "Running '@cmd' failed: $!";
 		}
 	    }
 	}
