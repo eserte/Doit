@@ -17,6 +17,7 @@ use strict;
 use vars qw($VERSION);
 $VERSION = '0.02';
 
+use Doit::Log;
 use Doit::Util 'get_sudo_cmd';
 
 sub new { bless {}, shift }
@@ -111,16 +112,27 @@ sub deb_install_key {
 	#   local $ENV{HOME} = (getpwuid($<))[7];
 	# Probably better would be to work with privilege escalation and run
 	# this command as normal user (to be implemented).
-	open my $fh, '-|', 'gpg', '--keyring', '/etc/apt/trusted.gpg', '--list-keys', '--fingerprint', '--with-colons'
-	    or die "Running gpg failed: $!";
-	while(<$fh>) {
-	    if (m{^fpr:::::::::\Q$key\E:$}) {
-		$found_key = 1;
-		last;
+	#
+	# Older Debian (jessie and older?) have only /etc/apt/trusted.gpg,
+	# newer ones (stretch and newer?) have /etc/apt/trusted.gpg.d/*.gpg
+    SEARCH_FOR_KEY: {
+	    require File::Glob;
+	    for my $keyfile ('/etc/apt/trusted.gpg', File::Glob::bsd_glob('/etc/apt/trusted.gpg.d/*.gpg')) {
+		if (-r $keyfile) {
+		    my @cmd = ('gpg', '--keyring', $keyfile, '--list-keys', '--fingerprint', '--with-colons');
+		    open my $fh, '-|', @cmd
+			or die "Running '@cmd' failed: $!";
+		    while(<$fh>) {
+			if (m{^fpr:::::::::\Q$key\E:$}) {
+			    $found_key = 1;
+			    last SEARCH_FOR_KEY;
+			}
+		    }
+		    close $fh
+			or die "Running '@cmd' failed: $!";
+		}
 	    }
 	}
-	close $fh
-	    or die "Running gpg failed: $!";
     }
 
     my $changed = 0;
@@ -128,9 +140,26 @@ sub deb_install_key {
 	if ($keyserver) {
 	    $self->system(get_sudo_cmd(), 'apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
 	} elsif ($url) {
-	    $self->run(['curl', '-fsSL', $url], '|', [get_sudo_cmd(), 'apt-key', 'add', '-']);
+	    my @fetch_cmd = ('curl', '-fsSL', $url);
+	    my @add_cmd   = (get_sudo_cmd(), 'apt-key', 'add', '-');
+	    if ($self->is_dry_run) {
+		info "Fetch key using '@fetch_cmd' and add using '@add_cmd' (dry-run)";
+	    } else {
+		open my $ifh, '-|', @fetch_cmd
+		    or error "Failed to start '@fetch_cmd': $!";
+		open my $ofh, '|-', @add_cmd
+		    or error "Failed to start '@add_cmd': $!";
+		local $/ = \1024;
+		while(<$ifh>) {
+		    print $ofh $_;
+		}
+		close $ofh
+		    or error "Running '@add_cmd' failed: $!";
+		close $ifh
+		    or error "Running '@fetch_cmd' failed: $!";
+	    }
 	} else {
-	    die "Shouldn't happen";
+	    error "Shouldn't happen (either url or keyserver has to be specified)";
 	}
 	$changed = 1;
     }
