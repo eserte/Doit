@@ -179,7 +179,7 @@ use warnings;
 	if (defined $dir) {
 	    require Cwd;
 	    my $pwd = Cwd::getcwd();
-	    if (!defined $pwd) {
+	    if (!defined $pwd || $pwd eq '') { # XS variant returns undef, PP variant returns '' --- see https://rt.perl.org/Ticket/Display.html?id=132648
 		warning "No known current working directory";
 	    } else {
 		$scope_cleanup = new_scope_cleanup
