@@ -555,13 +555,13 @@ sub install {
 	verbose           => $opt{verbose},
 	uninstall_shadows => $opt{uninst},
 	dir_mode          => $PERM_DIR,
+	dry_run           => $doit->is_dry_run,
     );
     my $euii_args_dump = Data::Dumper->new([{ @euii_args }],[qw()])->Indent(1)->Useqq(1)->Sortkeys(1)->Terse(1)->Dump;
+    info "Run ExtUtils::Install::install with parameters\n" . $euii_args_dump;
+    ExtUtils::Install::install([@euii_args]);
     if ($doit->is_dry_run) {
-	info "Would run ExtUtils::Install::install with parameters\n" . $euii_args_dump;
-    } else {
-	info "Run ExtUtils::Install::install with parameters\n" . $euii_args_dump;
-	ExtUtils::Install::install([@euii_args]);
+	info "(this was dry-run mode)";
     }
 }
 
