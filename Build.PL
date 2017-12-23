@@ -123,7 +123,11 @@ sub clean {
 sub realclean { &clean }
 
 sub test {
-    $doit->system(_prove_path(), '-b', 't'); # use right perl?
+    local $ENV{PERL_DL_NONLAZY} = 1;
+    require File::Glob;
+    require File::Spec;
+    $doit->system($^X, "-MExtUtils::Command::MM", "-MTest::Harness", "-e", 'undef *Test::Harness::Switches; test_harness(0, "blib/lib", "blib/arch")', File::Glob::bsd_glob(File::Spec->catfile("t", "*.t")));
+    # $doit->system(_prove_path(), '-b', 't'); # use right perl?
 }
 
 sub test_xt {
