@@ -246,6 +246,15 @@ ENV DOIT_TEST_WITH_SUDO 1
 EOF
 	}
     }
+
+    for my $env_key (qw(HARNESS_OPTIONS)) {
+	if (defined $ENV{$env_key}) {
+	    $dockerfile .= <<"EOF";
+ENV $env_key "$ENV{$env_key}"
+EOF
+	}
+    }
+
     $doit->write_binary("$dir/Dockerfile", $dockerfile);
     in_directory {
 	(my $tag = $distro_spec) =~ s{:}{-}g;

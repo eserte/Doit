@@ -17,6 +17,7 @@ install:
 build_script:
   - perl Build.PL
   - perl Build
+  - set HARNESS_OPTIONS=c:j4
   - perl Build test
   - perl Build install
   - perl Build test_installed
