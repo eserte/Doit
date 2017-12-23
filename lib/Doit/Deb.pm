@@ -15,7 +15,7 @@ package Doit::Deb; # Convention: all commands here should be prefixed with 'deb_
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.02';
+$VERSION = '0.021';
 
 use Doit::Log;
 use Doit::Util 'get_sudo_cmd';
