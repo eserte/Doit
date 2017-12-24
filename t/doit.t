@@ -125,6 +125,7 @@ ok !-f 'doit-test2', 'file was deleted';
 is $r->unlink('non-existing-directory/test'), 0; # not throwing exceptions, as a file check is done before
 SKIP: {
     skip "permissions probably work differently on Windows", 1 if $^O eq 'MSWin32';
+    skip "permissions probably work differently on cygwin", 1 if $^O eq 'cygwin';
     skip "non-writable directory not a problem for the superuser", 1 if $> == 0;
 
     $r->mkdir("non-writable-dir");
