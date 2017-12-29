@@ -3,22 +3,25 @@ branches:
     - /travis/
 skip_tags: true
 
-cache:
-  - C:\strawberry
+environment:
+  matrix:
+    - perl: activeperl
+    - perl: cygwinperl
+    - perl: strawberryperl
+
+#cache:
+#  - C:\strawberry
 
 install:
-  - if not exist "C:\strawberry" cinst strawberryperl
-  - set PATH=C:\strawberry\perl\bin;C:\strawberry\perl\site\bin;C:\strawberry\c\bin;%PATH%
+  - if %perl%==strawberryperl ( if not exist "C:\strawberry" cinst strawberryperl )
+  - if %perl%==strawberryperl set PATH=C:\strawberry\perl\bin;C:\strawberry\perl\site\bin;C:\strawberry\c\bin;%PATH%
+  - if not %perl%==cygwinperl perl -v
+  - if     %perl%==cygwinperl c:\cygwin\bin\sh -c "/usr/bin/perl -v"
   - cd C:\projects\%APPVEYOR_PROJECT_NAME%
-# XXX --installdeps should work
-  - cpanm --quiet IPC::Run
-#  - cpanm --installdeps .
+  - if %perl%==strawberryperl cpanm --quiet IPC::Run
 
 build_script:
-  - perl Build.PL
-  - perl Build
   - set HARNESS_OPTIONS=c:j4
-  - perl Build test
-  - perl Build install
-  - perl Build test_installed
-  - perl Build dist_install_and_test
+  - if     %perl%==cygwinperl       c:\cygwin\bin\sh -c "PATH=/usr/bin:/bin; perl Build.PL && perl Build && perl Build test"
+  - if not %perl%==cygwinperl     ( perl Build.PL && perl Build && perl Build test )
+  - if     %perl%==strawberryperl ( perl Build install && perl Build test_installed && perl Build dist_install_and_test )
