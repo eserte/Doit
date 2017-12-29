@@ -343,7 +343,7 @@ sub distdir {
     $doit->mkdir($distdir);
     for my $line (split /\n/, $doit->info_qx({quiet=>1}, 'git', 'ls-files')) {
 	next if ($line =~ m{^(   \.travis\.yml
-			     |   appveyor\.yml
+			     |   \.?appveyor\.yml
 			     |   \.gitignore
 			     )$}x);
 	# XXX maybe implement also MANIFEST.SKIP?
