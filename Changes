@@ -1,5 +1,9 @@
 Revision history for Doit.
 
+0.025_51 2017-12-31
+	- use ExtUtils::Install::install's dry_run mode
+	- skip another test on cygwin
+
 0.025_50 2017-12-23
 	- experimental: do_ssh_connect works from Unix to Windows systems
 	  (using new Doit::WinRPC module and named pipes)
