@@ -6,6 +6,7 @@
 #
 
 use strict;
+use File::Temp qw(tempdir);
 use Test::More;
 
 plan 'no_plan';
@@ -77,6 +78,15 @@ SKIP: {
     like $@, qr{^Command died with signal 6, with coredump};
     is $@->{signalnum}, 6;
     is $@->{coredump}, 'with';
+}
+
+{
+    local @ARGV = ('--dry-run');
+    my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
+    my $dry_run = Doit->init;
+    my $test_file = "$tempdir/should_never_happen.$$";
+    $dry_run->system($^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $test_file);
+    ok ! -e $test_file, 'dry-run mode, no file was created';
 }
 
 __END__
