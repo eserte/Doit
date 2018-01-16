@@ -499,10 +499,12 @@ Always returns C<1> (unless there's an exception).
 =head3 system
 
     $doit->system("command", "arg" ...);
-    $doit->system({show_cwd => $bool}, "command", "arg" ...);
+    $doit->system({quiet => $bool, info => $bool, show_cwd => $bool}, "command", "arg" ...);
 
 Execute a command. If C<show_cwd> is set to a true value, then logging
-shows also the current working directory. See L<"system" in
+shows also the current working directory. If C<quiet> is set to a true
+value, then no logging is done. If C<info> is set to a true value,
+then command execution happens even in dry-run mode. See L<"system" in
 perlfunc|perlfunc/system LIST> for more details.
 
 Always returns C<1> (unless there's an exception).
@@ -538,6 +540,13 @@ Like L</open3>, but with the option C<< info=>1 >> set.
     my $stdout = $doit->info_qx({quiet => $bool, statusref => \%status}, "command", "arg" ...);
 
 Like L</qx>, but with the option C<< info=>1 >> set.
+
+=head3 info_system
+
+    $doit->info_system("command", "arg" ...);
+    $doit->info_system({quiet => $bool, show_cwd => $bool }, "command", "arg" ...);
+
+Like L</system>, but with the option C<< info=>1 >> set.
 
 =head2 REMOTE AND USER-SWITCHING FUNCTIONS
 
@@ -749,7 +758,7 @@ Slaven Rezic <srezic@cpan.org>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2017 Slaven Rezic. All rights reserved.
+Copyright (c) 2017,2018 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 

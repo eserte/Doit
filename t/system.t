@@ -35,6 +35,19 @@ SKIP: {
     } "/";
 }
 
+SKIP: {
+    skip "Requires Capture::Tiny", 1
+	if !eval { require Capture::Tiny; 1 };
+    in_directory {
+	my($stdout, $stderr) = Capture::Tiny::capture
+	    (sub {
+		 $r->system({quiet=>1}, 'echo', 'hello');
+	     });
+	is $stdout, "hello\n";
+	is $stderr, '', 'quiet mode';
+    } "/";
+}
+
 eval { $r->system($^X, '-e', 'exit 1') };
 like $@, qr{^Command exited with exit code 1};
 is $@->{exitcode}, 1;
@@ -84,9 +97,26 @@ SKIP: {
     local @ARGV = ('--dry-run');
     my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
     my $dry_run = Doit->init;
-    my $test_file = "$tempdir/should_never_happen.$$";
-    $dry_run->system($^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $test_file);
-    ok ! -e $test_file, 'dry-run mode, no file was created';
+
+    {
+	my $no_create_file = "$tempdir/should_never_happen";
+	is $dry_run->system($^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $no_create_file), 1, 'returns 1 in dry-run mode';
+	ok ! -e $no_create_file, 'dry-run mode, no file was created';
+    }
+
+    {
+	my $create_file = "$tempdir/should_happen";
+	is $dry_run->info_system($^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $create_file), 1, 'returns 1 as info_system call';
+	ok -e $create_file, 'info_system runs even in dry-run mode';
+	$r->unlink($create_file);
+    }
+
+    {
+	my $create_file = "$tempdir/should_happen";
+	is $dry_run->system({info=>1}, $^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $create_file), 1, 'returns 1 as system call with info=>1 option';
+	ok -e $create_file, 'system with info=>1 option runs even in dry-run mode';
+	$r->unlink($create_file);
+    }
 }
 
 __END__

@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -1004,21 +1004,42 @@ use warnings;
     sub cmd_system {
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
-	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
+	my $quiet = delete $options{quiet};
+	my $info = delete $options{info};
 	my $show_cwd = delete $options{show_cwd};
 	error "Unhandled options: " . join(" ", %options) if %options;
+
+	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
+
+	my $code = sub {
+	    system @args;
+	    if ($? != 0) {
+		_handle_dollar_questionmark;
+	    }
+	};
+
 	my @commands;
 	push @commands, {
-			 code => sub {
-			     system @args;
-			     if ($? != 0) {
-				 _handle_dollar_questionmark;
-			     }
-			 },
-			 msg  => "@args" . _show_cwd($show_cwd),
-			 rv   => 1,
+			 ($info
+			  ? (
+			     rv   => do { $code->(); 1 },
+			     code => sub {},
+			    )
+			  : (
+			     rv   => 1,
+			     code => $code,
+			    )
+			 ),
+			 ($quiet ? () : (msg  => "@args" . _show_cwd($show_cwd))),
 			};
 	Doit::Commands->new(@commands);
+    }
+
+    sub cmd_info_system {
+	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	$options{info} = 1;
+	$self->cmd_system(\%options, @args);
     }
 
     sub cmd_touch {
@@ -1602,13 +1623,14 @@ use warnings;
     }
 
     for my $cmd (
-		 qw(chmod chown mkdir rename rmdir symlink system unlink utime),
+		 qw(chmod chown mkdir rename rmdir symlink unlink utime),
 		 qw(make_path remove_tree), # File::Path
 		 qw(copy move), # File::Copy
 		 qw(run), # IPC::Run
 		 qw(qx info_qx), # qx// and variant which even runs in dry-run mode, both using list syntax
 		 qw(open2 info_open2), # IPC::Open2
 		 qw(open3 info_open3), # IPC::Open3
+		 qw(system info_system), # builtin system with variant
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
 		 qw(ln_nsf), # like unix ln -nsf
