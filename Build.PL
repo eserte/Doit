@@ -607,6 +607,7 @@ sub _generate_META ($;$) {
 		    'Net::OpenSSH' => 0,
 		},
 		requires => {
+		    'perl'        => 5.006,
 		    'Exporter'    => 5.57, # use Exporter "import"
 		    'File::Path'  => 2.07, # make_path
 		},
