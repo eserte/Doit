@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -335,7 +335,6 @@ sub distdir {
     my $temporary = delete $options{temporary};
     error "Unhandled options: " . join(" ", %options) if %options;
 
-    require File::Basename;
     require File::Temp;
     my $tempdir = File::Temp::tempdir("Doit_distdir_XXXXXXXX", TMPDIR => 1, CLEANUP => $temporary);
     my $Doit_VERSION = _get_Doit_VERSION();
@@ -347,7 +346,7 @@ sub distdir {
 			     |   \.gitignore
 			     )$}x);
 	# XXX maybe implement also MANIFEST.SKIP?
-	my $dirname = File::Basename::dirname($line);
+	my $dirname = dirname $line;
 	if ($dirname ne '.') {
 	    $doit->make_path("$distdir/$dirname");
 	}
@@ -390,13 +389,12 @@ sub dist {
     # else because versions of all Doit modules are usually not
     # incremented in this phase
 
-    require File::Basename;
     in_directory {
 	# Note: tar cfvz C:/... ... does not seem to work on Windows
 	# (for all or some tar versions?). Error message is:
 	#     tar (child): Cannot connect to C: resolve failed
 	# So create in cwd first, and move to final location.
-	$doit->system('tar', 'cfvz', File::Basename::basename($tarfile), File::Basename::basename($distdir));
+	$doit->system('tar', 'cfvz', basename($tarfile), basename($distdir));
 	$doit->move(basename($tarfile), $tarfile);
     } "$distdir/..";
 }
@@ -407,14 +405,13 @@ sub dist_install_and_test {
     if (!-e $tarfile) {
 	dist();
     }
-    require File::Basename;
     require File::Temp;
     my $dir = File::Temp::tempdir("Doit_dist_install_and_test_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
     my $Doit_VERSION = _get_Doit_VERSION();
     in_directory {
 	# Note: see above for tar under Windows problems
-	$doit->move($tarfile, File::Basename::basename($tarfile));
-	$doit->system('tar', 'xfz', File::Basename::basename($tarfile));
+	$doit->move($tarfile, basename($tarfile));
+	$doit->system('tar', 'xfz', basename($tarfile));
 	in_directory {
 	    $doit->system($^X, 'Build.PL');
 	    my @Build = $^O eq 'MSWin32' ? ($^X, 'Build') : ('./Build');
@@ -800,8 +797,7 @@ sub release {
 	error "exiting release process";
     }
 
-    require File::Basename;
-    $doit->system('cpan-upload', File::Basename::basename($tarfile));
+    $doit->system('cpan-upload', basename($tarfile));
 
     $doit->system('git', 'tag', '-a', '-m', "* $Doit_VERSION", $Doit_VERSION);
     $doit->system('git', 'push', 'origin', 'master', $Doit_VERSION);
