@@ -102,6 +102,11 @@ if (@ARGV) {
 }
 
 sub build {
+    build_libs();
+    manifypods();
+}
+
+sub build_libs {
     $doit->make_path('blib/lib');
     $doit->make_path('blib/arch'); # not used, but keep ExtUtils::Install quiet
     require File::Find;
@@ -114,6 +119,42 @@ sub build {
 	    $doit->copy($file, $dest);
 	}
     }
+}
+
+sub manifypods {
+    # Handles only Pods in .pod files (which is the case in the Doit distribution)
+    require File::Find;
+    require Pod::Man;
+    my $mansep = $^O =~ m{^(MSWin32|cygwin)$} ? '.' : '::';
+    File::Find::find
+	    ({
+	      wanted => sub {
+		  if (-f $_ && /\.pod$/) {
+		      no warnings 'once';
+		      my $pod = $File::Find::name;
+		      my $section = 3; # no scripts yet, so we can hardcode here
+		      my %options = (section => $section);
+		      (my $man = $pod) =~ s{^lib.}{};
+		      $man =~ s{/+}{$mansep}g;
+		      $man =~ s{\.pod$}{.$Config{"man${section}ext"}};
+		      $man = "blib/man$section/$man";
+		      if (!-e $man || -M $man > -M $pod || -M $man > -M "Build") {
+			  $doit->make_path(dirname($man));
+			  my $parser = Pod::Man->new(%options);
+			  if ($doit->is_dry_run) {
+			      info "$pod -> $man (dry-run)";
+			  } else {
+			      info "$pod -> $man";
+			      $parser->parse_from_file($pod, $man)
+				  or error "Could not install $man";
+			  }
+			  $doit->chmod(0644, $man); # XXX should this be changeable? like $PERM_RW in Makefile.PL?
+		      }
+		  }
+	      },
+	      no_chdir => 1,
+	     },
+	     "lib");
 }
 
 sub clean {
