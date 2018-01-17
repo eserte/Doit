@@ -17,7 +17,7 @@ use strict;
 use warnings;
 our $VERSION = '0.01';
 
-use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
+our @ISA = ('Doit::_AnyRPCImpl');
 
 use Doit::Log;
 

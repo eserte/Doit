@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -14,10 +14,10 @@
 package Doit::WinRPC;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.01';
+use warnings;
+our $VERSION = '0.011';
 
-use vars '@ISA'; @ISA = ('Doit::RPC');
+our @ISA = ('Doit::RPC');
 
 use constant STATE_LENGTH => 1;
 use constant STATE_BODY   => 2;
@@ -80,7 +80,7 @@ sub receive_data {
 {
     package Doit::WinRPC::Server;
 
-    use vars '@ISA'; @ISA = ('Doit::WinRPC');
+    our @ISA = ('Doit::WinRPC');
 
     sub new {
 	my($class, $runner, $pipename, %options) = @_;
@@ -152,7 +152,7 @@ sub receive_data {
 {
     package Doit::WinRPC::Comm;
 
-    use vars '@ISA'; @ISA = ('Doit::WinRPC');
+    our @ISA = ('Doit::WinRPC');
 
     sub new {
 	my($class, $pipename, %options) = @_;

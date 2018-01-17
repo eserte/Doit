@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -14,13 +14,12 @@
 package TestUtil;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.04';
+use warnings;
+our $VERSION = '0.041';
 
 use Exporter 'import';
-use vars qw(@EXPORT @EXPORT_OK);
-@EXPORT = qw(get_sudo module_exists is_dir_eq);
-@EXPORT_OK = qw(skip_utime_atime_unreliable);
+our @EXPORT = qw(get_sudo module_exists is_dir_eq);
+our @EXPORT_OK = qw(skip_utime_atime_unreliable);
 
 use Doit::Log;
 

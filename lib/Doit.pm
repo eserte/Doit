@@ -1776,7 +1776,7 @@ use warnings;
 
 {
     package Doit::RPC::Client;
-    use vars '@ISA'; @ISA = ('Doit::RPC');
+    our @ISA = ('Doit::RPC');
 
     sub new {
 	my($class, $infh, $outfh, %options) = @_;
@@ -1816,7 +1816,7 @@ use warnings;
 
 {
     package Doit::RPC::Server;
-    use vars '@ISA'; @ISA = ('Doit::RPC');
+    our @ISA = ('Doit::RPC');
 
     sub new {
 	my($class, $runner, $sockpath, %options) = @_;
@@ -1894,7 +1894,7 @@ use warnings;
 
 {
     package Doit::RPC::SimpleServer;
-    use vars '@ISA'; @ISA = ('Doit::RPC');
+    our @ISA = ('Doit::RPC');
     
     sub new {
 	my($class, $runner, $infh, $outfh, %options) = @_;
@@ -1942,7 +1942,7 @@ use warnings;
 	$self->{rpc}->call_remote(@args);
     }
 
-    use vars '$AUTOLOAD';
+    our $AUTOLOAD;
     sub AUTOLOAD {
 	(my $method = $AUTOLOAD) =~ s{.*::}{};
 	my $self = shift;
@@ -1979,7 +1979,7 @@ use warnings;
 {
     package Doit::Sudo;
 
-    use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
+    our @ISA = ('Doit::_AnyRPCImpl');
 
     use Doit::Log;
 
@@ -2068,7 +2068,7 @@ use warnings;
 {
     package Doit::SSH;
 
-    use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
+    our @ISA = ('Doit::_AnyRPCImpl');
 
     use Doit::Log;
 
