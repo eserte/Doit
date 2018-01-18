@@ -584,10 +584,16 @@ dry-run mode, if defined, is passed to the other system or user.
 
     my $ssh = $doit->do_ssh_connect('user@host', options ...);
 
+    my $net_openssh = Net::OpenSSH->new('user@host', options ...);
+    my $ssh = $doit->do_ssh_connect($net_openssh, options ...);
+
 Create a Doit runner-like object which runs commands over a ssh
 connection to I<user@host>. The connection and communication is
-created and done using L<Net::OpenSSH>. The following options are
-available:
+created and done using L<Net::OpenSSH>. It is also possible to pass a
+L<Net::OpenSSH> object instead of specifying user and host in the
+first argument.
+
+The following options are available:
 
 =over
 
@@ -616,7 +622,9 @@ Use a different ssh port.
 
 =item C<< master_opts => [ ... ] >>
 
-Additional options to pass. See L<Net::OpenSSH/master_opts>.
+Additional options to pass to the underlying C<Net::OpenSSH> object.
+See L<Net::OpenSSH/master_opts>. Cannot be used if a C<Net::OpenSSH>
+object was passed in this method call.
 
 =item C<< put_to_remote => I<$method> >>
 

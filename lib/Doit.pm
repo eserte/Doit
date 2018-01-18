@@ -2076,7 +2076,7 @@ use warnings;
 	require File::Basename;
 	require Net::OpenSSH;
 	require FindBin;
-	my($class, $host, %opts) = @_;
+	my($class, $ssh_or_host, %opts) = @_;
 	my $dry_run = delete $opts{dry_run};
 	my @components = @{ delete $opts{components} || [] };
 	my $debug = delete $opts{debug};
@@ -2093,7 +2093,7 @@ use warnings;
 	my $perl = delete $opts{perl} || 'perl';
 	error "Unhandled options: " . join(" ", %opts) if %opts;
 
-	my $self = bless { host => $host, debug => $debug }, $class;
+	my $self = bless { debug => $debug }, $class;
 	my %ssh_run_opts = (
 	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
 	    ($tty           ? (tty           => $tty)           : ()),
@@ -2102,10 +2102,19 @@ use warnings;
 	    ($forward_agent ? (forward_agent => $forward_agent) : ()),
 	    ($master_opts   ? (master_opts   => $master_opts)   : ()),
 	);
-	my $ssh = Net::OpenSSH->new($host, %ssh_new_opts);
-	$ssh->error
-	    and error "Connection error to $host: " . $ssh->error;
+
+	my($host, $ssh);
+	if (UNIVERSAL::isa($ssh_or_host, 'Net::OpenSSH')) {
+	    $ssh = $ssh_or_host;
+	    $host = $ssh->get_host; # XXX what about username/port/...?
+	} else {
+	    $host = $ssh_or_host;
+	    $ssh = Net::OpenSSH->new($host, %ssh_new_opts);
+	    $ssh->error
+		and error "Connection error to $host: " . $ssh->error;
+	}
 	$self->{ssh} = $ssh;
+
 	{
 	    my $remote_cmd;
 	    if ($dest_os eq 'MSWin32') {
