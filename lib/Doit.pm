@@ -2246,6 +2246,7 @@ use warnings;
     sub DESTROY {
 	my $self = shift;
 	if ($self->{ssh}) {
+	    $self->{ssh}->disconnect;
 	    delete $self->{ssh};
 	}
 	if ($self->{rpc}) {
