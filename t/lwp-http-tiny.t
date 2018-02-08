@@ -40,7 +40,10 @@ in_directory {
     is $doit->lwp_mirror("$httpbin_url/cache", "mirrored.txt", @ua_opts), 0, 'no change';
 
     eval { $doit->lwp_mirror("$httpbin_url/status/500", "mirrored.txt", @ua_opts, debug => 1) };
-    like $@, qr{ERROR.*mirroring failed: 500 };
+    like $@, qr{ERROR.*mirroring failed: 500 }, 'got status 500';
+
+    eval { $doit->lwp_mirror("unknown_scheme://localhost/foobar", "mirrored.txt", @ua_opts, debug => 1) };
+    like $@, qr{ERROR.*mirroring failed: 599 Internal Exception: Unsupported URL scheme 'unknown_scheme}, 'got internal exception with extra information';
 
 } $tmpdir;
 
