@@ -2245,6 +2245,7 @@ use warnings;
 
     sub DESTROY {
 	my $self = shift;
+	local $?; # XXX Net::OpenSSH::_waitpid sets $?=0
 	if ($self->{ssh}) {
 	    $self->{ssh}->disconnect if $self->{ssh}->can('disconnect');
 	    delete $self->{ssh};

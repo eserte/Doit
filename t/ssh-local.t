@@ -28,6 +28,10 @@ sub stdout_test {
     print "This goes to STDOUT\n";
 }
 
+sub remote_fail {
+    Doit::Log::error("fail");
+}
+
 return 1 if caller;
 
 plan skip_all => "Net::OpenSSH does not work on Windows" if $^O eq 'MSWin32'; # but it can still be installed
@@ -69,7 +73,7 @@ SKIP: {
 
     # Do a symlink test
     my $dir = tempdir("doit_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
-    $doit->write_binary("$dir/test-doit.pl", <<'EOF');
+    $doit->write_binary({quiet=>1}, "$dir/test-doit.pl", <<'EOF');
 use Doit;
 return 1 if caller;
 my $doit = Doit->init;
@@ -81,6 +85,26 @@ EOF
     $doit->symlink("$dir/test-doit.pl", "$dir/test-symlink.pl");
     my $ret = $doit->info_qx($^X, "$dir/test-symlink.pl");
     is $ret, "yes\n";
+}
+
+{
+    my $dir = tempdir("doit_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    $doit->write_binary({quiet=>1}, "$dir/test-doit.pl", <<'EOF');
+use Doit;
+sub fail_on_remote {
+    Doit::Log::error("fail on remote");
+}
+return 1 if caller;
+my $doit = Doit->init;
+my $ssh = $doit->do_ssh_connect((defined $ENV{USER} ? $ENV{USER}.'@' : '') . 'localhost', debug => 0, master_opts => [qw(-oPasswordAuthentication=no -oBatchMode=yes)]);
+$ssh->call_with_runner("fail_on_remote");
+Doit::Log::warning("This should never be reached!");
+EOF
+    $doit->chmod(0755, "$dir/test-doit.pl");
+    my $ret = eval { $doit->system($^X, "$dir/test-doit.pl"); 1 };
+    ok !$ret, 'system command failed';
+    like $@, qr{^Command exited with exit code (\d+) at}, 'expected error message';
+    isnt $1, 0, 'exit code is not zero';
 }
 
 __END__
