@@ -55,6 +55,7 @@ The following commands are added to the Doit runner object:
         repository              => $git_url,
         directory               => $local_directory,
         repository_aliases      => [$git_url ...],
+        branch                  => $branch,
         allow_remote_url_change => $boolean,
         origin                  => $nickname,
         refresh                 => 'always', # or 'never'
@@ -76,6 +77,9 @@ this case the remote URL will be adapted.
 
 The default remote name C<origin> may be changed by using the
 C<origin> option.
+
+If the C<branch> option is given, then make sure that I<$branch> is
+checkout out.
 
 If C<refresh> is set to C<never>, then only C<git-clone> will be done
 for non-existent local repositories. The default is C<always>, which

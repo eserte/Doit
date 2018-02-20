@@ -31,6 +31,7 @@ sub git_repo_update {
     my @repository_aliases = @{ delete $opts{repository_aliases} || [] };
     my $directory  = delete $opts{directory};
     my $origin     = delete $opts{origin} || 'origin';
+    my $branch     = delete $opts{branch};
     my $allow_remote_url_change = delete $opts{allow_remote_url_change};
     my $clone_opts = delete $opts{clone_opts};
     my $refresh    = delete $opts{refresh} || 'always';
@@ -70,6 +71,13 @@ sub git_repo_update {
 			"or specify allow_remote_url_change=>1\n";
 		}
 	    }
+	    if (defined $branch) {
+		my $current_branch = $self->git_current_branch;
+		if (!defined $current_branch || $current_branch ne $branch) {
+		    $self->system({show_cwd=>1}, qw(git checkout), $branch);
+		    $has_changes = 1;
+		}
+	    }
 	    if ($refresh eq 'always') {
 		if ($quiet) {
 		    # XXX there's no quiet option for system, misuse qx instead
@@ -88,6 +96,9 @@ sub git_repo_update {
 	} $directory;
     } else {
 	my @cmd = (qw(git clone --origin), $origin);
+	if (defined $branch) {
+	    push @cmd, "--branch", $branch;
+	}
 	if ($clone_opts) {
 	    push @cmd, @$clone_opts;
 	}

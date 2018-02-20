@@ -369,6 +369,25 @@ SKIP: {
 	ok -e "$repo2/new-file", 'refresh=>always';
     }
 
+    { # Test branch option
+	my $repo1 = "$dir/newworkdir9";
+	my $repo2 = "$dir/newworkdir10";
+
+	is $d->git_repo_update(repository => $workdir, directory => $repo1), 1, 'clone without --branch';
+	in_directory {
+	    $d->system(qw(git checkout -b branch_test));
+	    is $d->git_current_branch, 'branch_test';
+	    is $d->git_repo_update(repository => $workdir, directory => $repo1, branch => 'branch_test'), 0, 'no change with branch';
+	    is $d->git_repo_update(repository => $workdir, directory => $repo1), 0, 'no change without branch option';
+	    is $d->git_repo_update(repository => $workdir, directory => $repo1, branch => 'master'), 1, 'branch changed';
+	    is $d->git_current_branch, 'master';
+	} $repo1;
+
+	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'branch_test'), 1, 'clone with --branch';
+	in_directory {
+	    is $d->git_current_branch, 'branch_test', 'clone into non-master branch';
+	} $repo2;
+    }
 }
 
 chdir "/"; # for File::Temp cleanup
@@ -430,6 +449,7 @@ sub run_tests {
 
 	$d->system(qw(git checkout -b new_branch));
 	is $d->git_current_branch, 'new_branch';
+
     } $directory;
 
     $d->mkdir("$dir/exists");
