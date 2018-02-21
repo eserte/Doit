@@ -71,27 +71,39 @@ sub git_repo_update {
 			"or specify allow_remote_url_change=>1\n";
 		}
 	    }
-	    if (defined $branch) {
-		my $current_branch = $self->git_current_branch;
+
+	    # In some cases a "git fetch" is not sufficient to fetch
+	    # from the expected remote, e.g. for a detached branch.
+	    # Extra heuristics are used to fill @origin_for_fetch
+	    # in these situations.
+	    my @origin_for_fetch;
+	    if (defined $branch) { # maybe branch switching necessary?
+		my %info;
+		my $current_branch = $self->git_current_branch(info_ref => \%info);
 		if (!defined $current_branch || $current_branch ne $branch) {
-		    $self->system({show_cwd=>1}, qw(git checkout), $branch);
+		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch);
 		    $has_changes = 1;
+		    %info = ();
+		    $self->git_current_branch(info_ref => \%info);
+		}
+		if ($info{detached} && $branch =~ m{^(.*?)/}) {
+		    @origin_for_fetch = $1;
 		}
 	    }
+
 	    if ($refresh eq 'always') {
-		if ($quiet) {
-		    # XXX there's no quiet option for system, misuse qx instead
-		    $self->qx({quiet=>1}, qw(git fetch));
-		} else {
-		    $self->system({show_cwd=>1}, qw(git fetch));
-		}
+		$self->system({show_cwd=>1,quiet=>$quiet}, qw(git fetch), @origin_for_fetch);
 		my $status = $self->git_short_status(untracked_files => 'no');
 		if ($status =~ m{>$}) {
 		    # may actually fail if diverged (status=<>)
 		    # or untracked/changed files would get overwritten
-		    $self->system({show_cwd=>1}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
+		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly... # XXX does not work if @origin_for_fetch is set
 		    $has_changes = 1;
 		} # else: ahead, diverged, or something else
+
+		if (@origin_for_fetch) {
+		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch);
+		}
 	    }
 	} $directory;
     } else {
@@ -292,12 +304,60 @@ sub git_is_shallow {
 sub git_current_branch {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
+    my $info_ref  = delete $opts{info_ref};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
 	my $git_root = $self->git_root;
 	my $fh;
-	open $fh, "<", "$git_root/.git/HEAD" and $_ = <$fh> and m{refs/heads/(\S+)} and return $1;
+	my $this_head;
+	if (open $fh, "<", "$git_root/.git/HEAD") {
+	    chomp($this_head = <$fh>);
+	    if ($this_head =~ m{refs/heads/(\S+)}) {
+		return $1;
+	    }
+	}
+
+	# fallback to git-status
+	$ENV{LC_ALL} = 'C';
+	if (open $fh, '-|', 'git', 'status') {
+	    chomp($_ = <$fh>);
+	    if (/^On branch (.*)/) {
+		if ($info_ref) {
+		    $info_ref->{fallback} = 'git-status';
+		}
+		return $1;
+	    }
+	    if (/^.* detached at (.*)/) {
+		if ($info_ref) {
+		    $info_ref->{detached} = 1;
+		    $info_ref->{fallback} = 'git-status';
+		}
+		return $1;
+	    }
+	    if (/^\Q# Not currently on any branch./) {
+		# Probably old git (~ 1.5 ... 1.7)
+		if (open my $fh2, '-|', 'git', 'show-ref') {
+		    while(<$fh2>) {
+			chomp;
+			if (my($sha1, $ref) = $_ =~ m{^(\S+)\s+refs/remotes/(.*)$}) {
+			    if ($sha1 eq $this_head) {
+				if ($info_ref) {
+				    $info_ref->{detached} = 1;
+				    $info_ref->{fallback} = 'git-show-ref';
+				}
+				return $ref;
+			    }
+			}
+		    }
+		    close $fh2
+			or warning "Problem while running 'git show-ref': $!";
+		} else {
+		    warning "Error running 'git show-ref': $!";
+		}
+	    }
+	}
+
 	undef;
     } $directory;
 }

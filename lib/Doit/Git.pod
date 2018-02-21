@@ -79,7 +79,8 @@ The default remote name C<origin> may be changed by using the
 C<origin> option.
 
 If the C<branch> option is given, then make sure that I<$branch> is
-checkout out.
+checkout out. There's some heuristics to detect detached branches and
+do the right thing if updates are requested.
 
 If C<refresh> is set to C<never>, then only C<git-clone> will be done
 for non-existent local repositories. The default is C<always>, which
@@ -243,8 +244,32 @@ checked.
         directory => $directory,
     );
 
+    my %info;
+    my @files = $doit->git_current_branch(
+        directory => $directory,
+        info_ref  => \%info,
+    );
+
 Return the current branch in the given directory I<$directory> (or the
 current working directory if not specified).
+
+If C<info_ref> is specified, then it should point to a hash reference,
+which is filled with the following keys:
+
+=over
+
+=item detached
+
+Set to a true value if the current branch is a detached one, otherwise
+it's set to a false value or is missing.
+
+=item fallback
+
+Set to C<git-status> if the function walked into fallback code using
+C<git status> and parsing its output. Otherwise it is missing. Mainly
+used for internal testing purposes.
+
+=back
 
 =head3 git_config (informational command)
 

@@ -385,7 +385,44 @@ SKIP: {
 
 	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'branch_test'), 1, 'clone with --branch';
 	in_directory {
-	    is $d->git_current_branch, 'branch_test', 'clone into non-master branch';
+	    my %info;
+	    is $d->git_current_branch(info_ref => \%info), 'branch_test', 'clone into non-master branch';
+	    ok !$info{fallback}, 'no git-status fallback was used';
+	    $d->system("git", "checkout", "master");
+	    is $d->git_current_branch, 'master', 'changed back to master';
+	} $repo2;
+
+	in_directory {
+	    $d->system("git", "checkout", "branch_test");
+	    $d->create_file_if_nonexisting('new_file_for_detached_branch_test');
+	    $d->system(qw(git add new_file_for_detached_branch_test));
+	    _git_commit_with_author('msg for detached branch test');
+	} $repo1;
+
+	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'origin/branch_test'), 1, 'switch + update with detached branch';
+	in_directory {
+	    my %info;
+	    is $d->git_current_branch(info_ref => \%info), 'origin/branch_test', 'detached branch'
+		or diag `git status`;
+	    ok $info{detached}, 'git_current_branch knows that the branch is detached';
+	    like $info{fallback}, qr{^(git-status|git-show-ref)$}, 'a fallback was used';
+	    ok -f 'new_file_for_detached_branch_test', 'freshly created file exists';
+	} $repo2;
+
+	in_directory {
+	    $d->create_file_if_nonexisting('new_file_2_for_detached_branch_test');
+	    $d->system(qw(git add new_file_2_for_detached_branch_test));
+	    _git_commit_with_author('msg 2 for detached branch test');
+	} $repo1;
+
+	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'origin/branch_test'), 0, 'update with detached branch, but without switch (git-fetch changes are expected, but not reflected in the return value)';
+	in_directory {
+	    my %info;
+	    is $d->git_current_branch(info_ref => \%info), 'origin/branch_test', 'still in detached branch'
+		or diag `git status`;
+	    ok $info{detached}, 'git_current_branch knows that the branch is detached';
+	    like $info{fallback}, qr{^(git-status|git-show-ref)$}, 'a fallback was used';
+	    ok -f 'new_file_2_for_detached_branch_test', 'freshly created file exists';
 	} $repo2;
     }
 }
