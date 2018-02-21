@@ -261,15 +261,19 @@ EOF
     } else {
 	######################################################################
 	# Debian-like (Debian, Ubuntu, LinuxMint ...)
+	my @packages = (
+	    'libipc-run-perl',
+	    ($distro_spec eq 'ubuntu:precise' ? () : 'libnet-openssh-perl'),
+	    'sudo',
+	    'rsync',
+	    'git',
+	);
+	my $packages_spec = join(" \\\n", map { "    $_" } @packages);
 	$dockerfile .= <<"EOF";
 ENV DEBIAN_FRONTEND noninteractive 
 
 RUN apt-get update && apt-get install -y --no-install-recommends \\
-    libipc-run-perl \\
-    libnet-openssh-perl \\
-    sudo \\
-    rsync \\
-    git
+$packages_spec
 
 EOF
 	if ($more_testing) {
