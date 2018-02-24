@@ -1,5 +1,17 @@
 Revision history for Doit.
 
+0.025_52 2018-02-24
+	- ssh: explicitely disconnect in DESTROY
+	- workaround: localize $? in ssh DESTROY
+	- new experimental Doit::XTermRPC module
+	- new command info_system
+	- git_repo_update: new option branch
+	- Doit::Lwp: more information in case of 599
+	- Build.PL: new manifypods action
+	- use warnings everywhere
+	- convert "use vars" to our
+	- minimum perl version is now 5.006
+
 0.025_51 2017-12-31
 	- use ExtUtils::Install::install's dry_run mode
 	- skip another test on cygwin
