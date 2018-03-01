@@ -18,7 +18,7 @@ Doit::Git - commands for dealing with the git revision control system
         untracked_files => 'no',
     );
 
-    my $directory = $doit->get_root;
+    my $directory = $doit->git_root;
     my $sha1      = $doit->git_get_commit_hash;
     my @files     = $doit->git_get_commit_files;
     my @files     = $doit->git_get_changed_files;
