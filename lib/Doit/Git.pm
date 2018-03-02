@@ -320,7 +320,7 @@ sub git_current_branch {
 
 	# fallback to git-status
 	$ENV{LC_ALL} = 'C';
-	if (open $fh, '-|', 'git', 'status') {
+	if ($fh = _pipe_open(qw(git status))) {
 	    chomp($_ = <$fh>);
 	    if (/^On branch (.*)/) {
 		if ($info_ref) {
@@ -337,7 +337,7 @@ sub git_current_branch {
 	    }
 	    if (/^\Q# Not currently on any branch./) {
 		# Probably old git (~ 1.5 ... 1.7)
-		if (open my $fh2, '-|', 'git', 'show-ref') {
+		if (my $fh2 = _pipe_open(qw(git show-ref))) {
 		    while(<$fh2>) {
 			chomp;
 			if (my($sha1, $ref) = $_ =~ m{^(\S+)\s+refs/remotes/(.*)$}) {
