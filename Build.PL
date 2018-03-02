@@ -849,7 +849,15 @@ sub release {
 }
 
 sub _prove_path {
-    my @candidates = ("$Config{bin}/prove", "$Config{bin}/prove$Config{version}");
+    require Cwd;
+    my @directory_candidates = ($Config{bin}, dirname(Cwd::realpath($^X)));
+    my @basename_candidates = ('prove', "prove$Config{version}");
+    my @candidates = map {
+	my $basename = $_;
+	map {
+	    "$_/$basename";
+	} @directory_candidates;
+    } @basename_candidates;
     if ($^O eq 'MSWin32') {
 	unshift @candidates, map { "$_.bat"} @candidates;
     }
