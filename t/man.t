@@ -19,15 +19,17 @@ my $has_blib_man3 = -d $man3path;
 plan skip_all => "manifypods probably not called" if !$has_blib_man3;
 plan 'no_plan';
 
-ok -s glob("$man3path/Doit.3*"),     'non-empty manpage for Doit';
-ok -s glob("$man3path/Doit*Deb.3*"), 'non-empty manpage for Doit::Deb';
+ok -s bsd_glob("$man3path/Doit.3*"),     'non-empty manpage for Doit'
+    or system("ls -al $man3path");
+ok -s bsd_glob("$man3path/Doit*Deb.3*"), 'non-empty manpage for Doit::Deb'
+    or system("ls -al $man3path");
 
 my $doit = Doit->init;
 my $file_prg = is_in_path('file');
 SKIP: {
     skip "file command not installed", 1 if !$file_prg;
-    like get_filetype(glob("$man3path/Doit.3*")),     qr{troff}, 'Doit manpage looks like a manpage';
-    like get_filetype(glob("$man3path/Doit*Deb.3*")), qr{troff}, 'Doit::Deb manpage looks like a manpage';
+    like get_filetype(bsd_glob("$man3path/Doit.3*")),     qr{troff}, 'Doit manpage looks like a manpage';
+    like get_filetype(bsd_glob("$man3path/Doit*Deb.3*")), qr{troff}, 'Doit::Deb manpage looks like a manpage';
 }
 
 sub get_filetype {
