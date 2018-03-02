@@ -15,7 +15,7 @@ package Doit::Git; # Convention: all commands here should be prefixed with 'git_
 
 use strict;
 use warnings;
-our $VERSION = '0.024';
+our $VERSION = '0.025';
 
 use Doit::Log;
 use Doit::Util qw(in_directory);

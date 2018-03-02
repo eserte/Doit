@@ -1,5 +1,10 @@
 Revision history for Doit.
 
+0.025_53 2018-03-02
+	- use _pipe_open in all places in Doit::Git
+	- try harder to find "prove"
+	- typo fix in Doit::Git doc
+
 0.025_52 2018-02-24
 	- ssh: explicitely disconnect in DESTROY
 	- workaround: localize $? in ssh DESTROY
