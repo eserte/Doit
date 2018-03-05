@@ -56,15 +56,16 @@ for my $git_key (sort keys %ENV) {
     $d->unsetenv($git_key);
 }
 
-# realpath() needed on darwin
+# realpath() needed on darwin (/private/tmp vs. /tmp)
 my $dir = realpath(tempdir('doit-git-XXXXXXXX', CLEANUP => 1, TMPDIR => 1));
 
-# A private git-short-status script; should behave the same.
+# A private git-short-status script; should behave the same as the git_short_status command.
 my $my_git_short_status;
 if ($ENV{HOME} && -x "$ENV{HOME}/bin/sh/git-short-status") {
     $my_git_short_status = "$ENV{HOME}/bin/sh/git-short-status";
 }
 
+######################################################################
 # Tests with the Doit repository (if checked out)
 SKIP: {
     my $self_git = eval { $d->git_root };
@@ -78,6 +79,7 @@ SKIP: {
     run_tests($self_git, $workdir);
 }
 
+######################################################################
 # Error cases
 for my $meth (qw(git_repo_update git_short_status git_root git_get_commit_hash git_get_commit_files git_get_changed_files git_is_shallow git_current_branch git_config)) {
     eval { $d->$meth('unhandled-option' => 1) };
@@ -111,6 +113,7 @@ SKIP: {
     }
 }
 
+######################################################################
 # Tests with a freshly created git repository
 {
     my $workdir = "$dir/newworkdir";
@@ -142,6 +145,7 @@ SKIP: {
 
     is $d->git_short_status, '<<', 'git_short_status without directory';
 
+    # untracked file
     $d->touch('untracked-file');
     ok((grep { $_ eq 'testfile'       } $d->git_get_changed_files), 'added, but not committed file detected');
     ok((grep { $_ eq 'untracked-file' } $d->git_get_changed_files), 'untracked file detected');
@@ -163,6 +167,7 @@ SKIP: {
     _git_commit_with_author('two files in commit');
     is_deeply [$d->git_get_commit_files], [qw(multiple-files-1 multiple-files-2)], 'git_get_commit_files with multiple files';
 
+    # changed file
     $d->change_file('testfile', {add_if_missing => 'some content'});
     git_short_status_check(                         $d, '<<', 'dirty after change');
     git_short_status_check({untracked_files=>'no'}, $d, '<<', 'dirty after change');
@@ -185,6 +190,7 @@ SKIP: {
 	is_dir_eq $d->git_root, $workdir, 'in_directory call without prototype';
     }, 'subdir');
 
+    # git_config
     eval {
 	$d->git_config(key => "test.key", val => "test.val", unset => 1);
     };
@@ -213,6 +219,7 @@ SKIP: {
     is $d->git_config(key => "test.with.newlines", val => "line1\nline2\line3\another line\n"), 1, 'newline key was changed';
     is $d->git_config(key => "test.with.newlines"),       "line1\nline2\line3\another line\n", 'last change was successful';
 
+    # various clone tests
     is $d->git_repo_update(
 			   repository => "$workdir/.git",
 			   repository_aliases => [$workdir],
