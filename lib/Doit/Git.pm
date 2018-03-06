@@ -57,52 +57,72 @@ sub git_repo_update {
     }
     if (!$do_clone) {
 	in_directory {
-	    chomp(my $actual_repository = eval { $self->info_qx({quiet=>1}, qw(git config --get), "remote.$origin.url") });
-	    if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
-		my @change_cmd = ('git', 'remote', 'set-url', $origin, $repository);
-		if ($allow_remote_url_change) {
-		    info "Need to change remote URL for $origin";
-		    $self->system(@change_cmd);
-		} else {
-		    error
-			"In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n" .
-			"Please run manually\n" .
-			"    @change_cmd\n" .
-			"or specify allow_remote_url_change=>1\n";
+	    my $actual_repository = eval { $self->info_qx({quiet=>1}, qw(git config --get), "remote.$origin.url") };
+	    if (!defined $actual_repository) {
+		# Remote does not exist yet --- create it.
+		$self->system(qw(git remote add), $origin, $repository);
+	    } else {
+		chomp $actual_repository;
+		if ($actual_repository ne $repository && !grep { $_ eq $actual_repository } @repository_aliases) {
+		    my @change_cmd = ('git', 'remote', 'set-url', $origin, $repository);
+		    if ($allow_remote_url_change) {
+			info "Need to change remote URL for $origin";
+			$self->system(@change_cmd);
+		    } else {
+			error
+			    "In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n" .
+			    "Please run manually\n" .
+			    "    @change_cmd\n" .
+			    "or specify allow_remote_url_change=>1\n";
+		    }
 		}
 	    }
 
-	    # In some cases a "git fetch" is not sufficient to fetch
-	    # from the expected remote, e.g. for a detached branch.
-	    # Extra heuristics are used to fill @origin_for_fetch
-	    # in these situations.
-	    my @origin_for_fetch;
+	    my $switch_later;
 	    if (defined $branch) { # maybe branch switching necessary?
-		my %info;
-		my $current_branch = $self->git_current_branch(info_ref => \%info);
+		my $current_branch = $self->git_current_branch;
 		if (!defined $current_branch || $current_branch ne $branch) {
-		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch);
-		    $has_changes = 1;
-		    %info = ();
-		    $self->git_current_branch(info_ref => \%info);
+		    if (eval { $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch); 1 }) {
+			$has_changes = 1;
+		    } else {
+			# Cannot switch now to the branch. Maybe a
+			# git-fetch has to be done first, as the
+			# branch is not yet in the clone --- try
+			# later.
+			$switch_later = 1;
+		    }
 		}
-		if ($info{detached} && $branch =~ m{^(.*?)/}) {
-		    @origin_for_fetch = $1;
+		my %info;
+		$self->git_current_branch(info_ref => \%info);
+		if ($info{detached}) {
+		    $switch_later = 1; # because a "git pull" wouldn't update a detached branch
 		}
 	    }
 
 	    if ($refresh eq 'always') {
-		$self->system({show_cwd=>1,quiet=>$quiet}, qw(git fetch), @origin_for_fetch);
+		$self->system({show_cwd=>1,quiet=>$quiet}, qw(git fetch), $origin);
 		my $status = $self->git_short_status(untracked_files => 'no');
 		if ($status =~ m{>$}) {
 		    # may actually fail if diverged (status=<>)
 		    # or untracked/changed files would get overwritten
-		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git pull)); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly... # XXX does not work if @origin_for_fetch is set
+		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git pull), $origin); # XXX actually would be more efficient to do a merge or rebase, but need to figure out how git does it exactly...
 		    $has_changes = 1;
 		} # else: ahead, diverged, or something else
+	    }
 
-		if (@origin_for_fetch) {
-		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch);
+	    if ($switch_later) {
+		my($commit_before, $branch_before);
+		if (!$has_changes) {
+		    $commit_before = $self->git_get_commit_hash;
+		    $branch_before = $self->git_current_branch;
+		}
+		$self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch);
+		if ($commit_before
+		    && (   $self->git_get_commit_hash ne $commit_before
+			|| $self->git_current_branch ne $branch_before
+		    )
+		) {
+		    $has_changes = 1;
 		}
 	    }
 	} $directory;

@@ -422,7 +422,7 @@ SKIP: {
 	    _git_commit_with_author('msg 2 for detached branch test');
 	} $repo1;
 
-	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'origin/branch_test'), 0, 'update with detached branch, but without switch (git-fetch changes are expected, but not reflected in the return value)';
+	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'origin/branch_test'), 1, 'update with detached branch, but without switch';
 	in_directory {
 	    my %info;
 	    is $d->git_current_branch(info_ref => \%info), 'origin/branch_test', 'still in detached branch'
@@ -431,6 +431,45 @@ SKIP: {
 	    like $info{fallback}, qr{^(git-status|git-show-ref)$}, 'a fallback was used';
 	    ok -f 'new_file_2_for_detached_branch_test', 'freshly created file exists';
 	} $repo2;
+    }
+
+    { # branch option on a branch not yet in the fetched remote
+	my $repo1 = "$dir/newworkdir11";
+	my $repo2 = "$dir/newworkdir12";
+
+	is $d->git_repo_update(repository => $workdir, directory => $repo1), 1;
+	is $d->git_repo_update(repository => $repo1,   directory => $repo2), 1;
+	in_directory {
+	    $d->system(qw(git checkout -b new_branch));
+	} $repo1;
+	is $d->git_repo_update(repository => $repo1,   directory => $repo2, branch => 'new_branch'), 1;
+	is $d->git_current_branch(directory => $repo2), 'new_branch';
+	is $d->git_repo_update(repository => $repo1,   directory => $repo2, branch => 'new_branch'), 0;
+	is $d->git_current_branch(directory => $repo2), 'new_branch';
+
+	# go even further: checkout a detached branch
+	is $d->git_repo_update(repository => $repo1,   directory => $repo2, origin => 'some_remote', branch => 'some_remote/new_branch'), 1;
+	my $git_with_show_ref_fallback;
+	{
+	    my %info;
+	    my $current_branch = $d->git_current_branch(directory => $repo2, info_ref => \%info);
+	    $git_with_show_ref_fallback = ($info{fallback}||'') eq 'git-show-ref';
+	SKIP: {
+		skip "cannot distinguish between origin/master and some_remote/new_branch with git-show-ref fallback", 5
+		    if $git_with_show_ref_fallback;
+
+		is $current_branch, 'some_remote/new_branch';
+		ok $info{detached};
+
+		# update again to the same branch (should be a no-op)
+		is $d->git_repo_update(repository => $repo1,   directory => $repo2, origin => 'some_remote', branch => 'some_remote/new_branch'), 0;
+		
+		%info = ();
+		$current_branch = $d->git_current_branch(directory => $repo2, info_ref => \%info);
+		is $current_branch, 'some_remote/new_branch';
+		ok $info{detached};
+	    }
+	}
     }
 }
 
