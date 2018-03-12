@@ -307,6 +307,8 @@ is $r->mkdir("doit-test"), 1;
 ok -d "doit-test";
 is $r->mkdir("doit-test"), 0;
 ok -d "doit-test";
+is $r->mkdir("doit-test/"), 0, 'ignore trailing slash';
+ok -d "doit-test";
 {
     my $umask = umask 0;
     is $r->mkdir("doit-test-0700", 0700), 1;
