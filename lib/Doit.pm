@@ -390,7 +390,11 @@ use warnings;
     }
 
     sub cmd_chmod {
-	my($self, $mode, @files) = @_;
+	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet};
+	error "Unhandled options: " . join(" ", %options) if %options;
+	my($mode, @files) = @args;
 	my @files_to_change;
 	for my $file (@files) {
 	    my @s = stat($file);
@@ -416,7 +420,7 @@ use warnings;
 				     }
 				 }
 			     },
-			     msg  => sprintf("chmod 0%o %s", $mode, join(" ", @files_to_change)), # shellquote?
+			     ($quiet ? () : (msg => sprintf("chmod 0%o %s", $mode, join(" ", @files_to_change)))), # shellquote?
 			     rv   => scalar @files_to_change,
 			    };
 	    Doit::Commands->new(@commands);
@@ -426,7 +430,11 @@ use warnings;
     }
 
     sub cmd_chown {
-	my($self, $uid, $gid, @files) = @_;
+	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet};
+	error "Unhandled options: " . join(" ", %options) if %options;
+	my($uid, $gid, @files) = @args;
 
 	if (!defined $uid) {
 	    $uid = -1;
@@ -483,7 +491,7 @@ use warnings;
 				     }
 				 }
 			     },
-			     msg  => "chown $uid, $gid, @files_to_change", # shellquote?
+			     ($quiet ? () : (msg => "chown $uid, $gid, @files_to_change")), # shellquote?
 			     rv   => scalar @files_to_change,
 			    };
 	    Doit::Commands->new(@commands);

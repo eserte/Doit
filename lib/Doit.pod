@@ -112,21 +112,24 @@ would be done, and in real mode it's the number of changes performed.
 =head3 chmod
 
     $doit->chmod($mode, $file ...);
+    $doit->chmod({quiet => $bool}, $mode, $file ...);
 
 Make sure that the permission of the listed files is set to I<$mode>
 (which is typically expressed as an octal number). Fails if not all
-files could be changed. See L<perlfunc/chmod> for more details.
+files could be changed. If C<quiet> is set to a true value, then no
+logging is done. See L<perlfunc/chmod> for more details.
 
 =head3 chown
 
     $doit->chown($user, $group, $file ...);
+    $doit->chown({quiet => $bool}, $user, $group, $file ...);
 
 Make sure that the owner (and group) of the listed files is set to the
 given values. The user and group may be specified as uid/gid or as
 username/groupname. A value of -1 or C<undef> for I<$user> and
 I<$group> is interpreted to leave that value unchanged. This command
-is not useful on Windows systems. See L<perlfunc/chown> for more
-details.
+is not useful on Windows systems. If C<quiet> is set to a true value,
+then no logging is done. See L<perlfunc/chown> for more details.
 
 =head3 create_file_if_nonexisting
 

@@ -144,6 +144,8 @@ is $r->unlink('not-existing', 'doit-a', 'doit-b', 'doit-c'), 3, 'three of four f
 $r->create_file_if_nonexisting('doit-test2');
 is $r->chmod(0755, "doit-test", "doit-test2"), 2; # changes expected
 is $r->chmod(0644, "doit-test2"), 1; # one change expected
+is $r->chmod({quiet => 1}, 0755, "doit-test2"), 1;
+is $r->chmod({quiet => 1}, 0644, "doit-test2"), 1;
 {
     local $TODO = "No noop on Windows" if $^O eq 'MSWin32';
     is $r->chmod(0755, "doit-test"), 0; # noop
@@ -165,6 +167,7 @@ is $r->chown(-1, -1, "doit-test"), 0;
 is $r->chown($>, undef, "doit-test"), 0;
 is $r->chown($>, -1, "doit-test"), 0;
 is $r->chown($>, undef, "doit-test"), 0;
+is $r->chown({quiet => 1 }, $>, undef, "doit-test"), 0;
 SKIP: {
     my @groups = split / /, $);
     my $another_group = $groups[1];
