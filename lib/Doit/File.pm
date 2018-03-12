@@ -15,7 +15,7 @@ package Doit::File;
 
 use strict;
 use warnings;
-our $VERSION = '0.022';
+our $VERSION = '0.023';
 
 use Doit::Log;
 use Doit::Util qw(copy_stat new_scope_cleanup);
@@ -39,9 +39,10 @@ sub file_atomic_write {
     require Cwd;
     my $dest_dir = Cwd::realpath(File::Basename::dirname($file));
 
-    my $tmp_suffix = delete $opts{tmpsuffix} || '.tmp';
-    my $tmp_dir    = delete $opts{tmpdir}; if (!defined $tmp_dir) { $tmp_dir = $dest_dir }
-    my $mode       = delete $opts{mode};
+    my $tmp_suffix   = delete $opts{tmpsuffix} || '.tmp';
+    my $tmp_dir      = delete $opts{tmpdir}; if (!defined $tmp_dir) { $tmp_dir = $dest_dir }
+    my $mode         = delete $opts{mode};
+    my $check_change = delete $opts{check_change};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my($tmp_fh,$tmp_file);
@@ -102,6 +103,14 @@ sub file_atomic_write {
 	error "Error while closing temporary file $tmp_file: $!";
     }
 
+    if ($check_change) {
+	require File::Compare;
+	if (File::Compare::compare($tmp_file, $file) == 0) {
+	    # unchanged
+	    return 0;
+	}
+    }
+
     if ($same_fs) {
 	_make_writeable($doit, $file, 'rename');
 	$doit->rename($tmp_file, $file);
@@ -121,6 +130,8 @@ sub file_atomic_write {
 	    copy_stat [@dest_stat], $file, mode => 1;
 	}
     }
+
+    return 1;
 }
 
 sub _make_writeable {
