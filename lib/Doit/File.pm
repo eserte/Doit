@@ -66,14 +66,14 @@ sub file_atomic_write {
 	push @cleanup_files, $tmp_file;
 	push @cleanup_fhs, $tmp_fh;
 	if (defined $mode) {
-	    $doit->chmod($mode, $tmp_file);
+	    $doit->chmod({quiet => 1}, $mode, $tmp_file);
 	} else {
-	    $doit->chmod(0666 & ~umask, $tmp_file);
+	    $doit->chmod({quiet => 1}, 0666 & ~umask, $tmp_file);
 	}
 	if ($tmp_dir ne $dest_dir) {
 	    my @stat_destdir = stat $dest_dir;
 	    if ($^O =~ /bsd/ || $^O eq 'darwin' || ($stat_destdir[2] & 02000)) {
-		$doit->chown(undef, $stat_destdir[5], $tmp_file);
+		$doit->chown({quiet => 1 }, undef, $stat_destdir[5], $tmp_file);
 	    }
 	}
     }
