@@ -18,7 +18,10 @@ install:
   - if not %perl%==cygwinperl perl -v
   - if     %perl%==cygwinperl c:\cygwin\bin\sh -c "/usr/bin/perl -v"
   - cd C:\projects\%APPVEYOR_PROJECT_NAME%
-  - if %perl%==strawberryperl cpanm --quiet IPC::Run
+# IPC::Run is already preinstalled on StrawberryPerl;
+# trying to reinstall/upgrade it may lead to a hanging cpanm
+# See also https://github.com/toddr/IPC-Run/issues/98
+#  - if %perl%==strawberryperl cpanm --quiet IPC::Run
 
 build_script:
   - set HARNESS_OPTIONS=c:j4
