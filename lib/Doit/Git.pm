@@ -15,7 +15,7 @@ package Doit::Git; # Convention: all commands here should be prefixed with 'git_
 
 use strict;
 use warnings;
-our $VERSION = '0.025';
+our $VERSION = '0.026';
 
 use Doit::Log;
 use Doit::Util qw(in_directory);
@@ -293,7 +293,8 @@ sub git_get_commit_files {
 
 sub git_get_changed_files {
     my($self, %opts) = @_;
-    my $directory = delete $opts{directory};
+    my $directory        = delete $opts{directory};
+    my $ignore_untracked = delete $opts{ignore_untracked};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my @files;
@@ -303,6 +304,7 @@ sub git_get_changed_files {
 	    or error "Error running @cmd: $!";
 	while(<$fh>) {
 	    chomp;
+	    next if $ignore_untracked && m{^\?\?};
 	    s{^...}{};
 	    push @files, $_;
 	}

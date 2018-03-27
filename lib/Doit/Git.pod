@@ -219,11 +219,15 @@ current working directory if not specified).
 
     my @files = $doit->git_get_changed_files(
         directory => $directory,
+	ignore_untracked => $boolean,
     );
 
 Return the list of changed files (uncommitted or untracked) in the
 given directory I<$directory> (or the current working directory if not
 specified).
+
+If C<ignore_untracked> is set to a true value, then untracked files
+are ignored.
 
 =head3 git_is_shallow
 

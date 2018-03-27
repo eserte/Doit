@@ -125,6 +125,7 @@ SKIP: {
     is_dir_eq $d->git_root, $workdir, 'git_root in root directory';
     is_dir_eq $d->git_root(directory => getcwd), $workdir, 'git_root with directory option';
     is_deeply [$d->git_get_changed_files], [], 'no changed files in fresh empty directory';
+    is_deeply [$d->git_get_changed_files(ignore_untracked => 1)], [], 'no changed files in fresh empty directory, also with ignore_untracked';
     git_short_status_check(                         $d, '', 'empty directory, not dirty');
     git_short_status_check({untracked_files=>'no'}, $d, '', 'empty directory, not dirty');
     is $d->git_current_branch, 'master';
@@ -134,6 +135,7 @@ SKIP: {
     # dirty
     $d->touch('testfile');
     is_deeply [$d->git_get_changed_files], ['testfile'], 'new file detected';
+    is_deeply [$d->git_get_changed_files(ignore_untracked => 1)], [], 'untracked file ignored';
     git_short_status_check(                         $d, '*', 'untracked file detected');
     git_short_status_check({untracked_files=>'no'}, $d, '',  'no detection of untracked files');
 
