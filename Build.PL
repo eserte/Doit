@@ -312,6 +312,17 @@ EOF
     } $dir;
 }
 
+# Run a series of standard tests
+sub test_standard {
+    $doit->system($^X, 'Build.PL');
+    $doit->system('./Build');
+    $doit->system('./Build', 'test');
+    for my $distro_spec ('debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6') {
+	local $ENV{DISTRO_SPEC} = $distro_spec;
+	$doit->system('./Build', 'test_in_docker');
+    }
+}
+
 sub test_kwalitee (;$) {
     my($distdir) = @_;
     # If cwd is used then more tests fail,
