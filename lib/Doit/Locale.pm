@@ -15,7 +15,7 @@ package Doit::Locale;
 
 use strict;
 use warnings;
-our $VERSION = '0.022';
+our $VERSION = '0.023';
 
 use Doit::Log;
 
@@ -78,8 +78,27 @@ sub locale_enable_locale {
     # localedef (e.g RedHat, CentOS)
     if (-x "/usr/bin/localedef" && -e "/etc/redhat-release") {
 	# It also exists on Debian-based systems, but works differently there.
+	my $use_glibc_langpack;
+	if (open my $fh, "/etc/redhat-release") {
+	    my $line = <$fh>;
+	    if ($line =~ /^Fedora release (\d+) / && $1 >= 28) { # XXX since when we should take this path?
+		$use_glibc_langpack = 1;
+	    }
+	}
     TRY_LOCALE: {
 	    my @errors;
+	    if ($use_glibc_langpack) {
+		if ((keys(%locale))[0] =~ m{^([^_]+)}) {
+		    my $lang = $1;
+		    # XXX requires a previous add_component("rpm"); should be done automatically!
+		    my $package = 'glibc-langpack-'.$lang;
+		    eval { $self->rpm_install_packages($package) };
+		    if (!$@) {
+			last TRY_LOCALE;
+		    }
+		    push @errors, "Installing $package failed: $@";
+		}
+	    }
 	    for my $try_locale (sort keys %locale) {
 		if (my($lang_country, $charset) = $try_locale =~ m{^(.*)\.(.*)$}) {
 		    my $stderr;
