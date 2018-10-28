@@ -852,16 +852,17 @@ use warnings;
 	    }
 
 	    waitpid $pid, 0;
+
+	    if ($errref) {
+		$$errref = $buf{$chld_err};
+	    }
+
 	    if ($statusref) {
 		%$statusref = ( _analyze_dollar_questionmark );
 	    } else {
 		if ($? != 0) {
 		    _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "open3 command '@args' failed: ") : ());
 		}
-	    }
-
-	    if ($errref) {
-		$$errref = $buf{$chld_err};
 	    }
 
 	    $buf{$chld_out};
