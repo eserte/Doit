@@ -17,15 +17,17 @@ my @std_master_opts = qw(-oPasswordAuthentication=no -oBatchMode=yes);
 
 my $doit = Doit->init;
 
+my $cant_locate_net_openssh_rx = qr{Can't locate Net/OpenSSH\.pm};
+
 {
     my $ssh = eval { $doit->do_ssh_connect('host.invalid.but.unused.here', put_to_remote => 'unhandled_put') };
-    like $@, qr{\QValid values for put_to_remote:}, 'expected error message';
+    like $@, qr{($cant_locate_net_openssh_rx|\QValid values for put_to_remote:\E)}, 'expected error message';
     ok(!$ssh, 'Options error');
 }
 
 {
     my $ssh = eval { $doit->do_ssh_connect('host.invalid.but.unused.here', umask => 'invalid') };
-    like $@, qr{\QThe umask 'invalid' does not look correct, it should be a (possibly octal) number}, 'expected error message';
+    like $@, qr{($cant_locate_net_openssh_rx|\QThe umask 'invalid' does not look correct, it should be a (possibly octal) number\E)}, 'expected error message';
     ok(!$ssh, 'Options error');
 }
 
