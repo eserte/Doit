@@ -2112,6 +2112,10 @@ use warnings;
 	$put_to_remote =~ m{^(rsync_put|scp_put)$}
 	    or error "Valid values for put_to_remote: rsync_put or scp_put";
 	my $perl = delete $opts{perl} || 'perl';
+	my $umask = delete $opts{umask};
+	if (defined $umask && $umask !~ m{^\d+$}) {
+	    error "The umask '$umask' does not look correct, it should be a (possibly octal) number";
+	}
 	error "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { host => $host, debug => $debug }, $class;
@@ -2212,6 +2216,7 @@ use warnings;
 	    @cmd_worker =
 	    (
 	     @cmd, $perl, "-I.doit", "-I.doit/lib", "-e",
+	     (defined $umask ? qq{umask $umask; } : q{}) .
 	     Doit::_ScriptTools::self_require($FindBin::RealScript) .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .

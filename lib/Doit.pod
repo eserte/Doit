@@ -630,6 +630,12 @@ C<rsync_put> (default) and C<scp_put>.
 
 Use a different perl for running the commands. Defaults to C<$^X>.
 
+=item C<< umask => I<$umask> >>
+
+Specify an explicit umask for the worker process. Default is unset,
+which means that the system's default umask is used, which may be 0022
+or 0077.
+
 =back
 
 =head3 do_sudo
