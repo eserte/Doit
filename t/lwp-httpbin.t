@@ -99,6 +99,19 @@ for my $def (
 	    } else {
 		like $err, qr{ERROR.*mirroring failed: 599 Internal Exception: Unsupported URL scheme 'unknown_scheme}, "$ua_name: got internal exception with extra information";
 	    }
+
+	    my $expected_md5 = '7f7652b0379b30f50d4daafb05d82c79';
+
+	    ($res, $err) = lwp_mirror_wrapper("$httpbin_url/base64/aHR0cGJpbmdvLm9yZw==", "digest-test", refresh => ['digest', $expected_md5]);
+	    is $res, 1, "$ua_name: mirror was done (with digest, file does not exist yet)"
+		or diag "lwp_mirror failed with: $err";
+	    ($res, $err) = lwp_mirror_wrapper("$httpbin_url/base64/aHR0cGJpbmdvLm9yZw==", "digest-test", refresh => ['digest', $expected_md5]);
+	    is $res, 0, "$ua_name: no change (with digest, file already downloaded)"
+		or diag "lwp_mirror failed with: $err";
+	    $doit->write_binary("digest-test", "changed file content\n");
+	    ($res, $err) = lwp_mirror_wrapper("$httpbin_url/base64/aHR0cGJpbmdvLm9yZw==", "digest-test", refresh => ['digest', $expected_md5]);
+	    is $res, 1, "$ua_name: mirror was done (with digest, local file content changed)"
+		or diag "lwp_mirror failed with: $err";
 	}
     } $tmpdir;
 }

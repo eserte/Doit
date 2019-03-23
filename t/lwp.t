@@ -34,7 +34,10 @@ eval { $doit->lwp_mirror("http://example.com") };
 like $@, qr{ERROR.*filename is mandatory};
 
 eval { $doit->lwp_mirror("http://example.com", "/tmp/filename", refresh => 'invalid') };
-like $@, qr{ERROR.*refresh may be 'always' or 'never'};
+like $@, qr{ERROR.*refresh may be 'always', 'never' or 'unconditionally'};
+
+eval { $doit->lwp_mirror("http://example.com", "/tmp/filename", refresh => ['digest', '12345678', 'MD5', 'invalid']) };
+like $@, qr{ERROR.*\Qrefresh in ARRAY form expects two elements (string 'digest', the digest value and optionally digest type)};
 
 eval { $doit->lwp_mirror("http://example.com", "/tmp/filename", unhandled_option => 1) };
 like $@, qr{ERROR.*Unhandled options: unhandled_option};
@@ -69,6 +72,42 @@ EOF
 
     eval { $doit->lwp_mirror('file://' . $tmpurl . '/does-not-exist', 'mirrored.txt') };
     like $@, qr{ERROR.*mirroring failed: 404 };
+
+    ######################################################################
+    # Digest tests
+    my $expected_md5 = '5628e5cd7673b0de072df568cebf302e';
+    my $expected_sha1 = '2ff34ae1a8bb84346661922448184ac62c567f0c';
+
+    for my $def (
+		 [undef,   $expected_md5],
+		 ['MD5',   $expected_md5],
+		 ['SHA-1', $expected_sha1],
+		) {
+	my($digest_type, $expected) = @$def;
+	my $digest_type_string = defined $digest_type ? $digest_type : "(default=MD5)";
+	my @digest_args = ('digest', $expected, (defined $digest_type ? $digest_type : ()));
+    SKIP: {
+	    if (defined $digest_type && $digest_type eq 'SHA-1') {
+		skip "Digest::SHA not available", 3
+		    if !module_exists('Digest::SHA');
+	    }
+
+	    $doit->unlink("mirrored.txt");
+
+	    is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "mirrored.txt", refresh => [@digest_args]), 1, "mirror previously non-existent file with digest $digest_type_string";
+	    is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "mirrored.txt", refresh => [@digest_args]), 0, "no mirror necessary, with digest $digest_type_string";
+    
+	    $doit->write_binary("mirrored.txt", <<EOF);
+Changed local file.
+EOF
+	    is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "mirrored.txt", refresh => [@digest_args]), 1, "mirror again after changing with digest $digest_type_string";
+	}
+    }
+
+    ######################################################################
+    # unconditionally
+    is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "unconditionally.txt", refresh => 'unconditionally'), 1, 'refresh unconditionally, first fetch';
+    is $doit->lwp_mirror('file://' . $tmpurl . '/test.txt', "unconditionally.txt", refresh => 'unconditionally'), 1, 'refresh unconditionally, second fetch';
 
 } $tmpdir;
 

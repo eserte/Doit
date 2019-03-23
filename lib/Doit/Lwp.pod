@@ -25,7 +25,8 @@ The following commands are added to the Doit runner object:
 =head3 lwp_mirror
 
     $doit->lwp_mirror($url, $filename);
-    $doit->lwp_mirror($url, $filename, refresh => always|never, ua => $ua);
+    $doit->lwp_mirror($url, $filename, refresh => "always"|"never"|"unconditionally", ua => $ua);
+    $doit->lwp_mirror($url, $filename, refresh => ["digest", $digest_type, $digest], ua => $ua);
 
 Make sure that the resource at I<$url> is fetched and stored on the
 local system as I<$filename>. L<LWP::UserAgent's
@@ -33,8 +34,43 @@ mirror|LWP::UserAgent/mirror> is used to fetch the resource, so if the
 remote resource did not change and the remote server deals correctly
 with C<If-Modified-Since> requests, then nothing happens.
 
-The C<refresh> option may be set to C<never> --- in this case the
-resource will fetched only once, and never refreshed.
+The C<refresh> option may be set to the following options:
+
+=over
+
+=item C<always> (default)
+
+A normal C<If-Modified-Since> check with the remote server is done,
+skipping the download if the remote server supports this operation and
+nothing changed since the last download.
+
+=item C<never>
+
+The resource will fetched only once, and never refreshed.
+
+=item C<unconditionally>
+
+Download the resource unconditionally, even if there's no change (no
+C<If-Modified-Since> check will be done).
+
+=item C<["digest", I<$digest_type>, I<$digest>]>
+
+If the local file already exists, then calculate the digest using
+I<$digest_type> (e.g. C<MD5> (default), C<SHA-1> etc., see L<Digest> for
+supported algorithms). If this matches I<$digest>, then no download is
+done. Probably useful to minimize remote calls, or if even a "304 Not
+Modified" response is slower than the local digest calculation, or if
+the remote server does not support C<If-Modified-Since> requests.
+
+An example call could look like this:
+
+    my $downloaded = $doit->lwp_mirror(
+        "http://httpbingo.org/base64/aHR0cGJpbmdvLm9yZw==",
+        $local_file,
+        refresh => ['digest', '7f7652b0379b30f50d4daafb05d82c79', 'MD5'],
+    );
+
+=back
 
 By default, L<LWP::UserAgent> is used for doing the mirror. It is
 possible to use L<HTTP::Tiny> by passing an object of this class to
@@ -53,7 +89,7 @@ Slaven Rezic <srezic@cpan.org>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2017 Slaven Rezic. All rights reserved.
+Copyright (c) 2017,2018,2023 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
