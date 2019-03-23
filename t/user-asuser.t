@@ -96,7 +96,9 @@ for my $cache (undef, 1, 1, 0) {
 
 ######################################################################
 # as_user root
-{
+SKIP: {
+    skip "haiku does not have a root user", 2 if $^O eq 'haiku';
+
     my $as_user_body_called;
     eval {
 	as_user {
