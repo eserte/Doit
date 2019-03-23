@@ -19,7 +19,7 @@ our $VERSION = '0.042';
 
 use Exporter 'import';
 our @EXPORT = qw(get_sudo module_exists is_dir_eq);
-our @EXPORT_OK = qw(skip_utime_atime_unreliable);
+our @EXPORT_OK = qw(skip_utime_atime_unreliable signal_kill_num);
 
 use Doit::Log;
 
@@ -118,6 +118,14 @@ sub skip_utime_atime_unreliable (&) {
 	Test::More::skip("atime not set on this system", 1)
 	    if $^O eq 'haiku';
 	$code->();
+    }
+}
+
+sub signal_kill_num {
+    if ($^O eq 'haiku') {
+	21; # actually SIGKILLTHR, see https://github.com/haiku/haiku/blob/master/headers/posix/signal.h and http://www.cpantesters.org/cpan/report/e0265104-b2d4-11e8-bafc-fcd8acac9ab4
+    } else {
+	9;
     }
 }
 
