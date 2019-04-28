@@ -1,5 +1,21 @@
 Revision history for Doit.
 
+0.025_54 2019-04-28
+	- features
+	  - do_ssh_connect can take a Net::OpenSSH object (GH #3)
+	  - new umask option for do_ssh_connect
+	  - git_get_changed_files: new option ignore_untracked
+	  - new quiet option for chmod and chown commands (used in Doit::File)
+	  - Doit::File: new option check_change
+	- fixes
+	  - Doit::Git: handle more edge cases wrt detached branches
+	  - open3: fill errref before analyzing $?
+	- tests
+	  - new TestUtil helper signal_kill_num
+	  - skip some problematic tests on haiku (atime, root user)
+	  - new build action test_standard
+	  - ci improvements (for appveyor)
+
 0.025_53 2018-03-02
 	- use _pipe_open in all places in Doit::Git
 	- try harder to find "prove"
