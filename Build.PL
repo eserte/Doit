@@ -187,6 +187,7 @@ sub test_in_docker {
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
+    Doit::Log::set_label("[$distro_spec]");
     my $more_testing = $ENV{XXX_MORE_TESTING}; # XXX this will be a proper option in future!
     for my $tool (qw(docker)) {
 	$doit->qx('which', $tool); # existence check
@@ -310,13 +311,17 @@ EOF
 		      'sh', '-c', 'rsync -a --exclude=blib "--exclude=Doit-*.tar.gz" /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build && ./Build generate_META_json && ./Build test && ./Build test_xt && ./Build dist_install_and_test'
 		     );
     } $dir;
+
+    Doit::Log::set_label(undef);
 }
 
 # Run a series of standard tests
 sub test_standard {
+    Doit::Log::set_label("[local]");
     $doit->system($^X, 'Build.PL');
     $doit->system('./Build');
     $doit->system('./Build', 'test');
+    Doit::Log::set_label(undef);
     for my $distro_spec ('debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
 	$doit->system('./Build', 'test_in_docker');
