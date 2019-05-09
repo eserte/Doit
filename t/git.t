@@ -473,6 +473,45 @@ SKIP: {
 	    }
 	}
     }
+
+    { # branch option on a branch not yet in the working directory, but exists in two remotes
+      # a mere "git checkout branch" fails in this situation --- one has to explicitly
+      # specify the remote here: "git checkout -b branch --track remote/branch"
+
+	# create two remotes
+	for my $remote (qw(one two)) {
+	    my $workdir = "$dir/newworkdir13_$remote";
+	    $d->mkdir($workdir);
+	    in_directory {
+		$d->system(qw(git init));
+		$d->touch(qw(testfile));
+		$d->system(qw(git add testfile));
+		_git_commit_with_author('test');
+		$d->system(qw(git checkout -b testbranch));
+		$d->write_binary('testfile', "some content\n");
+		$d->system(qw(git add testfile));
+		_git_commit_with_author('a change');
+		$d->system(qw(git checkout master));
+	    } $workdir;
+	}
+	# create working directory, using the first remote
+	my $workdir = "$dir/newworkdir13_work";
+	$d->git_repo_update(repository => "$dir/newworkdir13_one",
+			    directory => $workdir);
+	in_directory {
+	    # add the 2nd remote
+	    $d->system(qw(git remote add another_remote), "$dir/newworkdir13_two");
+	    $d->system(qw(git fetch another_remote));
+	    # now switch to the (ambigous) not-yet checked out branch
+	    # This will also fail for git < 1.5.1, but hopefully
+	    # such old gits do not exist anymore.
+	    $d->git_repo_update(repository => "$dir/newworkdir13_one",
+				directory => $workdir,
+				branch => "testbranch",
+			       );
+	    is $d->git_current_branch, 'testbranch';
+	} $workdir;
+    }
 }
 
 chdir "/"; # for File::Temp cleanup

@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -15,7 +15,7 @@ package Doit::Git; # Convention: all commands here should be prefixed with 'git_
 
 use strict;
 use warnings;
-our $VERSION = '0.026';
+our $VERSION = '0.027';
 
 use Doit::Log;
 use Doit::Util qw(in_directory);
@@ -116,7 +116,13 @@ sub git_repo_update {
 		    $commit_before = $self->git_get_commit_hash;
 		    $branch_before = $self->git_current_branch;
 		}
-		$self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch);
+		if (!eval { $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch) }) {
+		    # Possible reason for the failure: $branch exists
+		    # as a remote branch in multiple remotes. Try
+		    # again by explicitly specifying the remote.
+		    # --track exists since approx git 1.5.1
+		    $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout -b), $branch, qw(--track), "$origin/$branch");
+		}
 		if ($commit_before
 		    && (   $self->git_get_commit_hash ne $commit_before
 			|| $self->git_current_branch ne $branch_before
