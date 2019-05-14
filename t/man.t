@@ -8,12 +8,14 @@
 use strict;
 use FindBin;
 
+use Config;
 use File::Glob qw(bsd_glob);
 use Test::More;
 
 use Doit;
 use Doit::Extcmd 'is_in_path';
 
+my $man3ext = $Config{'man3ext'};
 my $man3path = "$FindBin::RealBin/../blib/man3";
 my $has_blib_man3 = -d $man3path;
 plan skip_all => "manifypods probably not called" if !$has_blib_man3;
@@ -21,16 +23,22 @@ plan 'no_plan';
 
 my $doit = Doit->init;
 
-ok -s bsd_glob("$man3path/Doit.3*"),     'non-empty manpage for Doit'
+if ($man3ext ne "3") {
+    # Seen ".0" on some smoker systems:
+    # http://www.cpantesters.org/cpan/report/0490cdd2-70ce-11e9-9066-e374b0ba08e8
+    diag "Non-standard man3 extension: .$man3ext instead of .3";
+}
+
+ok -s bsd_glob("$man3path/Doit.$man3ext*"),     'non-empty manpage for Doit'
     or diag($doit->info_qx(qw(ls -al), $man3path));
-ok -s bsd_glob("$man3path/Doit*Deb.3*"), 'non-empty manpage for Doit::Deb'
+ok -s bsd_glob("$man3path/Doit*Deb.$man3ext*"), 'non-empty manpage for Doit::Deb'
     or diag($doit->info_qx(qw(ls -al), $man3path));
 
 my $file_prg = is_in_path('file');
 SKIP: {
     skip "file command not installed", 1 if !$file_prg;
-    like get_filetype(bsd_glob("$man3path/Doit.3*")),     qr{troff}, 'Doit manpage looks like a manpage';
-    like get_filetype(bsd_glob("$man3path/Doit*Deb.3*")), qr{troff}, 'Doit::Deb manpage looks like a manpage';
+    like get_filetype(bsd_glob("$man3path/Doit.$man3ext*")),     qr{troff}, 'Doit manpage looks like a manpage';
+    like get_filetype(bsd_glob("$man3path/Doit*Deb.$man3ext*")), qr{troff}, 'Doit::Deb manpage looks like a manpage';
 }
 
 sub get_filetype {
