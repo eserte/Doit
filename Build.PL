@@ -17,6 +17,7 @@ use FindBin;
 use lib "$FindBin::RealBin/lib";
 
 use Config;
+use Cwd qw(realpath getcwd);
 use Digest::MD5 qw(md5_hex);
 use File::Basename;
 use Doit;
@@ -636,8 +637,7 @@ sub _get_Doit_VERSION () {
 
 sub _get_tarfilename () {
     my $Doit_VERSION = _get_Doit_VERSION();
-    require Cwd;
-    Cwd::getcwd() . "/Doit-" . $Doit_VERSION . ".tar.gz";
+    getcwd . "/Doit-" . $Doit_VERSION . ".tar.gz";
 }
 
 sub _generate_META ($;$) {
@@ -768,8 +768,21 @@ sub debian_package_with_docker {
     for my $tool (qw(docker)) {
 	$doit->qx('which', $tool); # existence check
     }
+
+    # Cannot access directories outside of /Users when working
+    # with docker-machine @ Mac, see for an explanation:
+    # https://stackoverflow.com/questions/37673140/docker-volume-located-in-tmp-on-osx-empty
+    my $limited_volume_availability = $^O eq 'darwin';
+
     require File::Temp;
-    my $dir = File::Temp::tempdir("Doit_debian_package_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    my $dir = File::Temp::tempdir("Doit_debian_package_docker_XXXXXXXX", TMPDIR => !$limited_volume_availability, CLEANUP => 1);
+    $dir = realpath $dir; # docker volumes have to be specified with absolute paths
+
+    my $pkgdir = $limited_volume_availability ? "$FindBin::RealBin/pkg" : "/tmp";
+    if (!-d $pkgdir) {
+	$doit->mkdir($pkgdir);
+    }
+
     my $use_workdir = $ENV{USE_WORKDIR}; # XXX this should be a proper option
     if ($use_workdir) {
 	# no --cvs-exclude --- git-describe has to work
@@ -812,10 +825,11 @@ EOF
 	$label = "doit-deb-$label";
 	$doit->system(qw(docker build -t), $label, qw(.));
 	$doit->system(
-		      qw(docker run), '-v', "$dir:/data", qw(-v /tmp:/pkg), $label,
+		      qw(docker run), '-v', "$dir:/data", '-v', "$pkgdir:/pkg", $label,
 		      'sh', '-c', 'cd /data && perl Build.PL && ./Build debian_package && cp *.deb /pkg'
 		     );
     } $dir;
+    info "Package is available in $pkgdir";
 }
 
 sub release {
@@ -865,8 +879,7 @@ sub release {
 }
 
 sub _prove_path {
-    require Cwd;
-    my @directory_candidates = ($Config{bin}, dirname(Cwd::realpath($^X)));
+    my @directory_candidates = ($Config{bin}, dirname(realpath $^X));
     my @basename_candidates = ('prove', "prove$Config{version}");
     my @candidates = map {
 	my $basename = $_;
