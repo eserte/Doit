@@ -316,14 +316,16 @@ EOF
     Doit::Log::set_label(undef);
 }
 
-# Run a series of standard tests
+# Run docker-based tests on a number of Linux distributions:
+# the stable ones of Debian, Ubuntu and CentOS, and some
+# older versions of these distributions.
 sub test_standard {
     Doit::Log::set_label("[local]");
     $doit->system($^X, 'Build.PL');
     $doit->system('./Build');
     $doit->system('./Build', 'test');
     Doit::Log::set_label(undef);
-    for my $distro_spec ('debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6') {
+    for my $distro_spec ('debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
 	$doit->system('./Build', 'test_in_docker');
     }
