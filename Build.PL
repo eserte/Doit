@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -199,6 +199,8 @@ sub test_in_docker {
 FROM $distro_spec
 
 EOF
+    my $add_opts = {};
+    $dockerfile .= _fix_Dockerfile_for_dist($distro_spec, $add_opts);
     if ($distro_spec =~ m{^centos:}) {
 	######################################################################
 	# CentOS
@@ -274,7 +276,7 @@ EOF
 	$dockerfile .= <<"EOF";
 ENV DEBIAN_FRONTEND noninteractive 
 
-RUN apt-get update && apt-get install -y --no-install-recommends \\
+RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends \\
 $packages_spec
 
 EOF
@@ -800,10 +802,14 @@ sub debian_package_with_docker {
     in_directory {
 	my $dockerfile = <<"EOF";
 FROM $distro_spec
+EOF
+	my $add_opts = {};
+	$dockerfile .= _fix_Dockerfile_for_dist($distro_spec, $add_opts);
+	$dockerfile .= <<"EOF";
 
 ENV DEBIAN_FRONTEND noninteractive 
 
-RUN apt-get update && apt-get install -y --no-install-recommends \\
+RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends \\
     dh-make-perl \\
     lsb-release \\
     git
@@ -929,6 +935,25 @@ EOF
 	$doit->chmod(0755, 'Build');
     }
     exit;
+}
+
+# Return a string for adding to Dockerfile after the FROM line. Also
+# the 2nd parameter (which has to be an empty hashref) is filled with
+# further instructions to amend the Dockerfile (currently only
+# apt_get_update_opts).
+sub _fix_Dockerfile_for_dist {
+    my($distro_spec, $add_opts_ref) = @_;
+    if ($distro_spec =~ m{^debian:(wheezy|7)$}) {
+	# https://unix.stackexchange.com/questions/508724/failed-to-fetch-jessie-backports-repository
+	$add_opts_ref->{apt_get_update_opts} = ' -o Acquire::Check-Valid-Until=false'; # with leading space
+	<<EOF;
+RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian wheezy main'                   >  /etc/apt/sources.list
+RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian-security/ wheezy/updates main' >> /etc/apt/sources.list
+EOF
+    } else {
+	$add_opts_ref->{apt_get_update_opts} = '';
+	'';
+    }
 }
 
 # REPO BEGIN
