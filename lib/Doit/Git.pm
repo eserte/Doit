@@ -263,10 +263,11 @@ sub git_root {
 sub git_get_commit_hash {
     my($self, %opts) = @_;
     my $directory = delete $opts{directory};
+    my $commit    = delete $opts{commit};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     in_directory {
-	chomp(my $commit = $self->info_qx({quiet=>1}, 'git', 'log', '-1', '--format=%H'));
+	chomp(my $commit = $self->info_qx({quiet=>1}, 'git', 'log', '-1', '--format=%H', (defined $commit ? $commit : ())));
 	$commit;
     } $directory;
 }

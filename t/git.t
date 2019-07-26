@@ -524,6 +524,11 @@ sub run_tests {
     git_short_status_check({untracked_files=>'no', directory => $directory}, $d, '', 'not dirty after clone');
     my $commit_hash = $d->git_get_commit_hash(directory => $directory);
     like $commit_hash, qr{^[0-9a-f]{40}$}, 'a sha1';
+    my $current_branch = $d->git_current_branch(directory => $directory);
+    my $commit_hash_with_branch = $d->git_get_commit_hash(directory => $directory, commit => $current_branch);
+    is $commit_hash_with_branch, $commit_hash, 'git_get_commit_hash with commit option';
+    my $commit_hash_with_abbrev_sha1 = $d->git_get_commit_hash(directory => $directory, commit => substr($commit_hash, 0, 7));
+    is $commit_hash_with_abbrev_sha1, $commit_hash, 'git_get_commit_hash with abbreviated sha1';
     ok -d $directory;
     ok -d "$directory/.git";
     is $d->git_repo_update(repository => $repository, directory => $directory), 0, 'second call does nothing';
@@ -573,6 +578,10 @@ sub run_tests {
 
 	$d->system(qw(git checkout -b new_branch));
 	is $d->git_current_branch, 'new_branch';
+	my $commit_hash_branch = $d->git_get_commit_hash;
+	like $commit_hash_branch, qr{^[0-9a-f]{40}$}, 'a sha1';
+	my $commit_hash_branch_with_branch = $d->git_get_commit_hash(directory => $directory, commit => 'new_branch');
+	is $commit_hash_branch_with_branch, $commit_hash_branch, 'git_get_commit_hash with commit option';
 
     } $directory;
 

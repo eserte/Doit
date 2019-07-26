@@ -198,11 +198,16 @@ given.
 
     my $sha1 = $doit->git_get_commit_hash(
         directory => $directory,
+	commit    => $committish,
     );
 
 Return the SHA1 of the git checkout for the given directory
 I<$directory>, or the current working directory if C<directory> is not
 given.
+
+If the optional C<commit> is set, then return the SHA1 for the given
+commit --- usually a branch or tag, but may also be used to expand a
+abbreviated SHA1 to a full one.
 
 =head3 git_get_commit_files
 
