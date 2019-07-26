@@ -6,9 +6,11 @@ matrix:
 # First five
     - perl: "5.26"
       env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+      dist: xenial
 
     - perl: "5.20"
       env: DO_DIST_INSTALL=1 DOIT_TEST_WITH_SUDO=1
+      dist: trusty
 
     # Actually the perl here does not matter
     - perl: "5.18"
@@ -17,6 +19,7 @@ matrix:
 
     - perl: "5.16"
       env: DOIT_TEST_WITH_SUDO=0 HARNESS_OPTIONS=c:j4
+      dist: trusty
 
     # The perl does not matter here, system perl will be used
     - perl: "5.18"
@@ -26,19 +29,24 @@ matrix:
 # Second five
     - perl: "5.12"
       env: WITH_IPC_RUN=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+      dist: trusty
 
     - perl: "5.10"
       env: DOIT_TEST_WITH_SUDO=0 HARNESS_OPTIONS=c:j4
+      dist: trusty
 
     - perl: "5.8"
       env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+      dist: trusty
 
     # Actually the perl here does not matter
-    - perl: "5.14"
-      env: USE_SYSTEM_PERL=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
-
     - perl: "5.22"
+      env: USE_SYSTEM_PERL=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+      dist: xenial
+
+    - perl: "5.30"
       env: WITH_IPC_RUN=1 DOIT_TEST_WITH_SUDO=1
+      dist: xenial
 
 before_install:
  - if [ "$USE_SYSTEM_PERL" = 1 ]; then perlbrew off; fi
