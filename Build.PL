@@ -512,13 +512,7 @@ sub look {
 }
 
 sub cover {
-    {
-	no warnings 'uninitialized';
-	local $ENV{PERL5LIB} .= ($ENV{PERL5LIB} ne '' ? ':' : '') . "$FindBin::RealBin/lib";
-	local $ENV{PERL5OPT} .= ($ENV{PERL5OPT} ne '' ? ' ' : '') . '-MDevel::Cover=-db,' . "$FindBin::RealBin/cover_db";
-	$doit->system(_prove_path(), '--exec', $^X, 't');
-    }
-    $doit->system(_cover_path());
+    $doit->system(_cover_path(), '--test');
 }
 
 sub show_cover {
