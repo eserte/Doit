@@ -36,7 +36,7 @@ my $Build_PL_file_contents = do {
 my $Build_PL_md5hex = md5_hex $Build_PL_file_contents;
 
 for (@ARGV) {
-    if (/.*=.*/) { # looks like oldfashioned options (e.g. "installdirs=vendor")
+    if (/^[^-].*=.*/) { # looks like oldfashioned option without leading dash (e.g. "installdirs=vendor")
 	s/^/--/;
     }
 }
