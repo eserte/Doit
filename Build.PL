@@ -89,6 +89,9 @@ Getopt::Long::GetOptions(
     'verbose:1',
     'versionlib=s',
     'version=s',
+    # The following are just ignored, but currently set by cover
+    'extra_compiler_flags=s',
+    'extra_linker_flags=s',
 )
     or error "usage: $0 [options]";
 
