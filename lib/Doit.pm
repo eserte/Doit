@@ -43,7 +43,7 @@ use warnings;
 	    # XXX Probably should also check if the terminal is ANSI-capable at all
 	    # XXX Probably should not use coloring on non-terminals (but
 	    #     there could be a --color option like in git to force it)
-	    $can_coloring = !Doit::IS_WIN && eval { require Term::ANSIColor; 1 } ? 1 : 0;
+	    $can_coloring = !Doit::IS_WIN && ($ENV{TERM}||'') !~ m{^(|dumb)$} && eval { require Term::ANSIColor; 1 } ? 1 : 0;
 	}
     }
 
