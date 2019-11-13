@@ -2117,6 +2117,7 @@ use warnings;
 	if (defined $umask && $umask !~ m{^\d+$}) {
 	    error "The umask '$umask' does not look correct, it should be a (possibly octal) number";
 	}
+	my $bootstrap = delete $opts{bootstrap};
 	error "Unhandled options: " . join(" ", %opts) if %opts;
 
 	my $self = bless { debug => $debug }, $class;
@@ -2140,6 +2141,11 @@ use warnings;
 		and error "Connection error to $host: " . $ssh->error;
 	}
 	$self->{ssh} = $ssh;
+
+	if (($bootstrap||'') eq 'perl') {
+	    require Doit::Bootstrap;
+	    Doit::Bootstrap::_bootstrap_perl($self, dry_run => $dry_run);
+	}
 
 	{
 	    my $remote_cmd;
