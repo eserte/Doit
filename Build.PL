@@ -591,7 +591,7 @@ sub install {
 		?
 		(
 		    read          => "$Config{vendorlib}/auto/$FULLEXT/.packlist",
-		    ($opt{create_packlist} ? (write => "$opt{destdir}$Config{installarchlib}/auto/$FULLEXT/.packlist") : ()),
+		    ($opt{create_packlist} ? (write => "$opt{destdir}$Config{installvendorarch}/auto/$FULLEXT/.packlist") : ()),
 		    $INST_LIB     => "$opt{destdir}$Config{installvendorlib}",
 		    $INST_ARCHLIB => "$opt{destdir}$Config{installvendorarch}",
 		    $INST_BIN     => "$opt{destdir}$Config{installvendorbin}",
@@ -602,7 +602,7 @@ sub install {
 		: # default is site
 		(
 		    read          => "$Config{sitearchexp}/auto/$FULLEXT/.packlist",
-		    ($opt{create_packlist} ? (write => "$opt{destdir}$Config{installarchlib}/auto/$FULLEXT/.packlist") : ()),
+		    ($opt{create_packlist} ? (write => "$opt{destdir}$Config{installsitearch}/auto/$FULLEXT/.packlist") : ()),
 		    $INST_LIB     => "$opt{destdir}$Config{installsitelib}",
 		    $INST_ARCHLIB => "$opt{destdir}$Config{installsitearch}",
 		    $INST_BIN     => "$opt{destdir}$Config{installsitebin}",
