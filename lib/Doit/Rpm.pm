@@ -13,6 +13,8 @@
 
 package Doit::Rpm;
 
+use Doit::Log;
+
 use strict;
 use warnings;
 our $VERSION = '0.011';
@@ -35,8 +37,9 @@ sub rpm_missing_packages {
     my @missing_packages;
 
     if (@packages) {
-	open my $fh, '-|', 'env', 'LC_ALL=C', 'rpm', '--query', @packages
-	    or die $!;
+	my @cmd = ('env', 'LC_ALL=C', 'rpm', '--query', @packages);
+	open my $fh, '-|', @cmd
+	    or error "Error running '@cmd': $!";
 	while(<$fh>) {
 	    if (m{^package (\S+) is not installed}) {
 		push @missing_packages, $1;
