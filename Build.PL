@@ -216,13 +216,15 @@ EOF
 	    $dockerfile .= <<"EOF";
 RUN yum -y install epel-release
 EOF
+	} elsif ($distro_spec =~ m{:8$}) {
+	    $dockerfile .= <<"EOF";
+RUN yum -y install epel-release
+EOF
 	} else {
 	    info "No EPEL support for $distro_spec";
 	}
 	$dockerfile .= <<"EOF";
 RUN yum -y install \\
-    "perl(IPC::Run)" \\
-    "perl(Net::OpenSSH)" \\
     sudo \\
     rsync \\
     "perl(ExtUtils::MakeMaker)" \\
@@ -232,6 +234,24 @@ RUN yum -y install \\
     git
 
 EOF
+	if ($distro_spec =~ m{:8$}) {
+	    # Requires also PowerTools repo additionally to EPEL
+	    $dockerfile .= <<"EOF";
+RUN dnf -y install 'dnf-command(config-manager)'
+RUN yum config-manager --set-enabled PowerTools
+EOF
+	}
+	$dockerfile .= <<"EOF";
+RUN yum -y install \\
+    "perl(IPC::Run)"
+EOF
+	if ($distro_spec !~ m{:8$}) {
+	    # Currently not available in CentOS8
+	    $dockerfile .= <<"EOF";
+RUN yum -y install \\
+    "perl(Net::OpenSSH)"
+EOF
+	}
 	if ($distro_spec =~ m{:6$}) {
 	    $dockerfile .= <<"EOF";
 RUN curl -L https://cpanmin.us | perl - App::cpanminus
