@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2020 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -15,7 +15,7 @@ package Doit::Locale;
 
 use strict;
 use warnings;
-our $VERSION = '0.023';
+our $VERSION = '0.024';
 
 use Doit::Log;
 
@@ -81,7 +81,10 @@ sub locale_enable_locale {
 	my $use_glibc_langpack;
 	if (open my $fh, "/etc/redhat-release") {
 	    my $line = <$fh>;
-	    if ($line =~ /^Fedora release (\d+) / && $1 >= 28) { # XXX since when we should take this path?
+	    if (
+		   ($line =~ /^Fedora release (\d+) / && $1 >= 28) # XXX since when we should take this path?
+		|| ($line =~ /^CentOS Linux release (\d+)/ && $1 >= 8)
+	       ) {
 		$use_glibc_langpack = 1;
 	    }
 	}
