@@ -191,8 +191,8 @@ sub test_in_docker {
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
-    Doit::Log::set_label("[$distro_spec]");
     my $more_testing = $ENV{XXX_MORE_TESTING}; # XXX this will be a proper option in future!
+    Doit::Log::set_label("[$distro_spec" . ($more_testing ? " (more)" : "") . "]");
     for my $tool (qw(docker)) {
 	$doit->qx('which', $tool); # existence check
     }
@@ -359,7 +359,10 @@ sub test_standard {
     Doit::Log::set_label(undef);
     for my $distro_spec ('debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
-	$doit->system('./Build', 'test_in_docker');
+	for my $more_testing (0, 1) {
+	    local $ENV{XXX_MORE_TESTING} = $more_testing;
+	    $doit->system('./Build', 'test_in_docker');
+	}
     }
 }
 
