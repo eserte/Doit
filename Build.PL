@@ -274,7 +274,9 @@ RUN yum -y install \\
     "perl(Capture::Tiny)" \\
     "perl(Term::ANSIColor)" \\
     "perl(BSD::Resource)" \\
-    "perl(CPAN::Meta::Validator)"
+    "perl(CPAN::Meta::Validator)" \\
+    "perl(LWP::UserAgent)" \\
+    file
 
 ENV TRAVIS 1
 ENV DOIT_TEST_WITH_SUDO 1
@@ -312,8 +314,10 @@ RUN apt-get install -y --no-install-recommends \\
     libbsd-resource-perl \\
     libcapture-tiny-perl \\
     libcpan-meta-perl \\
+    libwww-perl \\
     perl-modules \\
-    locales
+    locales \\
+    file
 
 ENV TRAVIS 1
 ENV DOIT_TEST_WITH_SUDO 1
