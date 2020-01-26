@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -202,6 +202,9 @@ sub test_in_docker {
 FROM $distro_spec
 
 EOF
+    if ($ENV{XXX_INVALIDATE_CACHE}) { # XXX this will be a proper option in future!
+	_add_Dockerfile_invalidate_cmd(\$dockerfile);
+    }
     my $add_opts = {};
     $dockerfile .= _fix_Dockerfile_for_dist($distro_spec, $add_opts);
     if ($distro_spec =~ m{^centos:}) {
@@ -971,6 +974,16 @@ EOF
 	$add_opts_ref->{apt_get_update_opts} = '';
 	'';
     }
+}
+
+sub _add_Dockerfile_invalidate_cmd {
+    my $dockerfile_ref = shift;
+    require POSIX;
+    $$dockerfile_ref .= <<"EOF";
+# Just a hack to make sure that the following lines
+# are executed at least once a day
+RUN echo @{[ POSIX::strftime("%F", localtime) ]}
+EOF
 }
 
 # REPO BEGIN
