@@ -23,7 +23,7 @@ plan 'no_plan';
 
 my $doit = Doit->init;
 
-if ($man3ext ne "3") {
+if ($man3ext !~ m{^(3|3pm)$}) {
     # Seen ".0" on some smoker systems:
     # http://www.cpantesters.org/cpan/report/0490cdd2-70ce-11e9-9066-e374b0ba08e8
     diag "Non-standard man3 extension: .$man3ext instead of .3";
