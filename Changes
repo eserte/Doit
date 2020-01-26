@@ -1,5 +1,27 @@
 Revision history for Doit.
 
+0.025_55 2020-01-26
+	- features
+	  - ability to bootstrap perl
+	  - new function rpm_enable_repo
+	  - git_get_commit_hash with new optional parameter 'commit'
+	  - no log coloring for dumb/empty TERM
+	  - regain debian:wheezy support
+	- fixes
+	  - use correct locations for vendor/site packlists
+	  - another Doit::Git corner case regarding checkout branches
+	  - debian_package_with_docker may run on docker-machine systems
+	  - fix handling if old-fashioned Build.PL options
+	  - rework cover handling
+	- tests
+	  - new test file for Doit's own version
+	  - do not hardcode man3 extension
+	  - lwp-http-tiny.t: skip on fatal backend errors
+	  - implement ci testing on github
+	  - travis-ci: adapt for the travis-ci switch to xenial
+	  - test_standard: more distributions to test
+	  - test_standard: two passes now, one with "more testing"
+
 0.025_54 2019-04-28
 	- features
 	  - do_ssh_connect can take a Net::OpenSSH object (GH #3)
