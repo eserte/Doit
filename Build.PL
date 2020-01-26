@@ -655,15 +655,40 @@ sub install {
     }
 }
 
-sub _get_Doit_VERSION () {
-    my $Doit_VERSION = $Doit::VERSION;
-    if (!defined $Doit_VERSION) {
-	error 'Fatal: Doit.pm does not define a version';
+{
+    my $Doit_VERSION;
+
+    sub _get_Doit_VERSION () {
+	return $Doit_VERSION if defined $Doit_VERSION;
+
+	{
+	    my $Doit_pm = $INC{"Doit.pm"};
+	    open my $fh, $Doit_pm or die "Cannot open $Doit_pm: $!";
+	    while(<$fh>) {
+		if (/\$VERSION\s*=\s*'(.*)'/) {
+		    $Doit_VERSION = $1;
+		    last;
+		}
+	    }
+	    if (!defined $Doit_VERSION) {
+		error "Fatal: Cannot find \$VERSION in $Doit_pm";
+	    }
+	}
+	if ($Doit_VERSION !~ m{^\d+\.[\d_]+$}) {
+	    error "Doit.pm VERSION $Doit_VERSION does not look as expected";
+	}
+	# Check also for numerical value of version
+	if (!defined $Doit::VERSION) {
+	    error "Unexpected: cannot find \$VERSION in loaded Doit.pm";
+	}
+	{
+	    (my $Doit_numerical_version = $Doit_VERSION) =~ s{_}{}g;
+	    if ($Doit_numerical_version != $Doit::VERSION) {
+		error "Unexpected: parsed version $Doit_VERSION is not numerically equal to loaded version $Doit::VERSION";
+	    }
+	}
+	$Doit_VERSION;
     }
-    if ($Doit_VERSION !~ m{^\d+\.[\d_]+$}) {
-	error "Doit.pm VERSION $Doit_VERSION does not look like expected";
-    }
-    $Doit_VERSION;
 }
 
 sub _get_tarfilename () {
