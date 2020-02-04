@@ -80,6 +80,9 @@ sub git_repo_update {
 
 	    my $switch_later;
 	    if (defined $branch) { # maybe branch switching necessary?
+		if ($branch =~ m{^refs/remotes/(.*)}) { # extract branch with remote
+		    $branch = $1;
+		}
 		my $current_branch = $self->git_current_branch;
 		if (!defined $current_branch || $current_branch ne $branch) {
 		    if (eval { $self->system({show_cwd=>1,quiet=>$quiet}, qw(git checkout), $branch); 1 }) {
@@ -135,6 +138,9 @@ sub git_repo_update {
     } else {
 	my @cmd = (qw(git clone --origin), $origin);
 	if (defined $branch) {
+	    if ($branch =~ m{^refs/remotes/[^/]+/(.*)}) { # extract branch without remote
+		$branch = $1;
+	    }
 	    push @cmd, "--branch", $branch;
 	}
 	if ($clone_opts) {

@@ -383,6 +383,7 @@ SKIP: {
     { # Test branch option
 	my $repo1 = "$dir/newworkdir9";
 	my $repo2 = "$dir/newworkdir10";
+	my $repo3 = "$dir/newworkdir10b";
 
 	is $d->git_repo_update(repository => $workdir, directory => $repo1), 1, 'clone without --branch';
 	in_directory {
@@ -402,6 +403,15 @@ SKIP: {
 	    $d->system("git", "checkout", "master");
 	    is $d->git_current_branch, 'master', 'changed back to master';
 	} $repo2;
+
+	is $d->git_repo_update(repository => $repo1, directory => $repo3, branch => 'refs/remotes/origin/branch_test'), 1, 'clone and switch to branch, use refs/remotes/... syntax';
+	in_directory {
+	    my %info;
+	    is $d->git_current_branch(info_ref => \%info), 'branch_test', 'clone into non-master branch';
+	    ok !$info{fallback}, 'no git-status fallback was used';
+	    $d->system("git", "checkout", "master");
+	    is $d->git_current_branch, 'master', 'changed back to master';
+	} $repo3;
 
 	in_directory {
 	    $d->system("git", "checkout", "branch_test");
@@ -427,6 +437,17 @@ SKIP: {
 	} $repo1;
 
 	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'origin/branch_test'), 1, 'update with detached branch, but without switch';
+	in_directory {
+	    my %info;
+	    is $d->git_current_branch(info_ref => \%info), 'origin/branch_test', 'still in detached branch'
+		or diag `git status`;
+	    ok $info{detached}, 'git_current_branch knows that the branch is detached';
+	    like $info{fallback}, qr{^(git-status|git-show-ref)$}, 'a fallback was used';
+	    ok -f 'new_file_2_for_detached_branch_test', 'freshly created file exists';
+	} $repo2;
+
+	$d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'origin/master');
+	is $d->git_repo_update(repository => $repo1, directory => $repo2, branch => 'refs/remotes/origin/branch_test'), 1, 'use refs/remotes/... syntax';
 	in_directory {
 	    my %info;
 	    is $d->git_current_branch(info_ref => \%info), 'origin/branch_test', 'still in detached branch'
