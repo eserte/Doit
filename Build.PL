@@ -290,6 +290,14 @@ RUN cpanm --quiet --notest "Term::ANSIColor~>=2.01"
 EOF
 	    }
 	}
+    } elsif ($distro_spec =~ m{^alpine(:|$)}) {
+	$dockerfile .= <<"EOF";
+RUN apk update
+# perl-utils for prove
+# shadow for useradd
+RUN apk add sudo rsync git perl perl-utils make shadow
+EOF
+
     } else {
 	######################################################################
 	# Debian-like (Debian, Ubuntu, LinuxMint ...)
@@ -357,7 +365,7 @@ sub test_standard {
     $doit->system('./Build');
     $doit->system('./Build', 'test');
     Doit::Log::set_label(undef);
-    for my $distro_spec ('debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6') {
+    for my $distro_spec ('debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6', 'alpine:latest') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
 	for my $more_testing (0, 1) {
 	    local $ENV{XXX_MORE_TESTING} = $more_testing;
