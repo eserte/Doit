@@ -40,8 +40,10 @@ perl-level exceptions when running the code reference, and no system
 errors like "no space left on device"), then the temporary file is
 renamed atomically to the final destination.
 
-The code reference takes two parameters: a filehandle and the filename
-of a temporary file.
+The code reference takes two parameters: a filehandle to write to and
+the filename of a temporary file. Don't close the filehandle;
+C<file_atomic_write> takes care of closing it (and fails if something
+goes wrong).
 
 The command always returns true, as the file is normally always
 written, but see the L</check_change> option below.
