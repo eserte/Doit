@@ -617,7 +617,9 @@ Enable ssh agent forwardning if set to true.
 =item C<< tty => I<$bool> >>
 
 Allocate a pseudo terminal. May be useful if the script requires
-interactive input (e.g. password input).
+interactive input (e.g. password input or host key confirmation). Note
+that simultanously having multiple ssh connections with tty enabled is
+calling for trouble.
 
 =item C<< port => I<$port> >>
 
