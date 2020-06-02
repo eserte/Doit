@@ -447,7 +447,7 @@ sub distdir {
     my $Doit_VERSION = _get_Doit_VERSION();
     my $distdir = "$tempdir/Doit-$Doit_VERSION";
     $doit->mkdir($distdir);
-    for my $line (split /\n/, $doit->info_qx({quiet=>1}, 'git', 'ls-files')) {
+    for my $line (split /\0/, $doit->info_qx({quiet=>1}, 'git', 'ls-files', '-z')) {
 	next if ($line =~ m{^(   \.travis\.yml
 			     |   \.?appveyor\.yml
 			     |   \.gitignore
