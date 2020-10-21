@@ -287,6 +287,12 @@ EOF
 # Term::ANSIColor exists, but is too old (no colorstrip function)
 RUN cpanm --quiet --notest "Term::ANSIColor~>=2.01"
 
+RUN yum -y install python34-pip
+
+EOF
+	    } else {
+		$dockerfile .= <<"EOF";
+RUN yum -y install python3-pip
 EOF
 	    }
 	}
@@ -297,6 +303,15 @@ RUN apk update
 # shadow for useradd
 RUN apk add sudo rsync git perl perl-utils make shadow
 EOF
+	if ($more_testing) {
+	    $dockerfile .= <<"EOF";
+RUN apk add py3-pip
+
+#ENV TRAVIS 1
+ENV DOIT_TEST_WITH_SUDO 1
+
+EOF
+	}
 
     } else {
 	######################################################################
@@ -317,15 +332,20 @@ $packages_spec
 
 EOF
 	if ($more_testing) {
+	    my @more_packages = (
+		'libbsd-resource-perl',
+		'libcapture-tiny-perl',
+		'libcpan-meta-perl',
+		'libwww-perl',
+		'perl-modules',
+		'locales',
+		'file',
+		($distro_spec eq 'ubuntu:precise' ? () : 'python3-pip'),
+	    );
+	    my $more_packages_spec = join(" \\\n", map { "    $_" } @more_packages);
 	    $dockerfile .= <<"EOF";
 RUN apt-get install -y --no-install-recommends \\
-    libbsd-resource-perl \\
-    libcapture-tiny-perl \\
-    libcpan-meta-perl \\
-    libwww-perl \\
-    perl-modules \\
-    locales \\
-    file
+$more_packages_spec
 
 ENV TRAVIS 1
 ENV DOIT_TEST_WITH_SUDO 1
