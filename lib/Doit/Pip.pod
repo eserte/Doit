@@ -49,6 +49,15 @@ This is an "informational" command and runs even in dry-run mode.
 Return a boolean value whether pip operation is possible (i.e. C<pip3>
 is installed).
 
+Note that this component does not make sure that C<pip3> is installed.
+You have to assure this by installing the package yourself, i.e.
+
+    $doit->deb_install_packages(qw(python3-pip));
+
+or
+
+    $doit->rpm_install_packages(qw(python3-pip));
+
 =head1 AUTHOR
 
 Slaven Rezic <srezic@cpan.org>
