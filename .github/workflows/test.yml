@@ -31,3 +31,25 @@ jobs:
         c:\strawberry\perl\bin\perl Build
         c:\strawberry\perl\bin\perl Build test
       if: "startsWith(matrix.os, 'windows-')"
+
+  coverage:
+    name: Test coverage
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v1
+    - name: install Devel::Cover::Report::Coveralls
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -q --no-install-recommends \
+            cpanminus \
+            libdevel-cover-perl \
+            libcapture-tiny-perl libipc-run-perl libdevel-hide-perl
+        sudo cpanm --quiet --notest Devel::Cover::Report::Coveralls
+    - name: Build and test with coverage
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOIT_TEST_WITH_SUDO: 1
+      run: |
+        perl Build.PL
+        ./Build
+        cover -test -report coveralls
