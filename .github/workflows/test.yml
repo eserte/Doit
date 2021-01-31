@@ -18,7 +18,9 @@ jobs:
        os: [ubuntu-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        clean: false
     - name: Build and test
       run: |
         perl Build.PL
@@ -36,7 +38,9 @@ jobs:
     name: Test coverage
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        clean: false
     - name: install Devel::Cover::Report::Coveralls
       run: |
         sudo apt-get update -qq
