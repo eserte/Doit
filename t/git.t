@@ -68,7 +68,7 @@ if ($ENV{HOME} && -x "$ENV{HOME}/bin/sh/git-short-status") {
 ######################################################################
 # Tests with the Doit repository (if checked out)
 SKIP: {
-    skip "git_short_status does not work as expected (TODO)" if $ENV{GITHUB_ACTIONS}; # maybe because of git-lfs?
+#    skip "git_short_status does not work as expected (TODO)" if $ENV{GITHUB_ACTIONS}; # this does not seem to work if git-lfs is in use, which is the default with actions/checkout@v1 and may be configured with actions/checkout@v2, but is not currently
     my $self_git = eval { $d->git_root };
     skip "Not a git checkout", 1 if !$self_git;
     skip "Current git checkout is not the Doit git checkout", 1 # ... but probably a git directory in an upper directory
