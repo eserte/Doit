@@ -23,8 +23,6 @@ if (!is_in_path('git')) {
     plan skip_all => 'git not in PATH';
 }
 
-plan skip_all => "git_short_status does not work as expected (TODO)" if $ENV{GITHUB_ACTIONS};
-
 plan 'no_plan';
 
 my $d = Doit->init;
@@ -70,6 +68,7 @@ if ($ENV{HOME} && -x "$ENV{HOME}/bin/sh/git-short-status") {
 ######################################################################
 # Tests with the Doit repository (if checked out)
 SKIP: {
+    skip "git_short_status does not work as expected (TODO)" if $ENV{GITHUB_ACTIONS}; # maybe because of git-lfs?
     my $self_git = eval { $d->git_root };
     skip "Not a git checkout", 1 if !$self_git;
     skip "Current git checkout is not the Doit git checkout", 1 # ... but probably a git directory in an upper directory
