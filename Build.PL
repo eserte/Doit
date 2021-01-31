@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2020 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020,2021 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -388,6 +388,7 @@ sub test_standard {
     for my $distro_spec ('debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6', 'alpine:latest') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
 	for my $more_testing (0, 1) {
+	    next if $more_testing && $distro_spec eq 'centos:6'; # centos:6 is unmaintained since Nov 2020, and some yum operations don't work anymore. See also https://support.plesk.com/hc/en-us/articles/360017922619-After-November-30th-2020-updating-system-packages-on-Plesk-server-with-CentOS-6-fails-Cannot-find-a-valid-baseurl-for-repo-base
 	    local $ENV{XXX_MORE_TESTING} = $more_testing;
 	    $doit->system('./Build', 'test_in_docker');
 	}
