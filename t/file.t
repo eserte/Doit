@@ -232,6 +232,17 @@ for my $opt_def (
     no_leftover_tmp $tempdir;
 }
 
+{ # dry-run with non-existing file
+    for my $testfile ("$tempdir/non-existing", "$tempdir/non-existting-dir/non-existing") {
+	is $doit_dryrun->file_atomic_write($testfile, sub {
+					       my $fh = shift;
+					       print $fh "this is dry run mode\n";
+					   }), 1;
+	ok !-e $testfile, 'file still non-existing after dry-run';
+	no_leftover_tmp $tempdir;
+    }
+}
+
 SKIP: {
     skip "No BSD::Resource available", 1
 	if !eval { require BSD::Resource; 1 };
