@@ -25,6 +25,7 @@ matrix:
     - perl: "5.18"
       env: HARNESS_OPTIONS=c:j4
       os: osx
+      osx_image: xcode12.5
 
 # Second five
     - perl: "5.12"
