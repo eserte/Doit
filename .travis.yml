@@ -1,53 +1,99 @@
 language: perl
 
+arch:
+  - arm64
+
 matrix:
   include:
-
-# First five
-    - perl: "5.26"
+    - dist: xenial
+      perl: 5.24
       env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
-      dist: xenial
 
-    - perl: "5.20"
+    - dist: bionic
+      perl: 5.26
       env: DO_DIST_INSTALL=1 DOIT_TEST_WITH_SUDO=1
-      dist: trusty
 
-    # Actually the perl here does not matter
-    - perl: "5.18"
+    - dist: focal
+      perl: 5.32
       env: USE_SYSTEM_PERL=1 WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1
-      dist: trusty
 
-    - perl: "5.16"
+    - dist: xenial
+      perl: 5.24
       env: DOIT_TEST_WITH_SUDO=0 HARNESS_OPTIONS=c:j4
-      dist: trusty
 
-    # The perl does not matter here, system perl will be used
-    - perl: "5.18"
+    - dist: bionic
+      perl: 5.26
       env: HARNESS_OPTIONS=c:j4
-      os: osx
-      osx_image: xcode12.5
 
-# Second five
-    - perl: "5.12"
+    - dist: focal
+      perl: 5.32
       env: WITH_IPC_RUN=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
-      dist: trusty
 
-    - perl: "5.10"
+    - dist: xenial
+      perl: 5.24
       env: DOIT_TEST_WITH_SUDO=0 HARNESS_OPTIONS=c:j4
-      dist: trusty
 
-    - perl: "5.8"
+    - dist: bionic
+      perl: 5.26
       env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
-      dist: trusty
 
-    # Actually the perl here does not matter
-    - perl: "5.22"
+    - dist: focal
+      perl: 5.32
       env: USE_SYSTEM_PERL=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
-      dist: xenial
 
-    - perl: "5.30"
+    - dist: xenial
+      perl: 5.24
       env: WITH_IPC_RUN=1 DOIT_TEST_WITH_SUDO=1
-      dist: xenial
+
+#matrix:
+#  include:
+#
+## First five
+#    - perl: "5.26"
+#      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+#      dist: xenial
+#
+#    - perl: "5.20"
+#      env: DO_DIST_INSTALL=1 DOIT_TEST_WITH_SUDO=1
+#      dist: trusty
+#
+#    # Actually the perl here does not matter
+#    - perl: "5.18"
+#      env: USE_SYSTEM_PERL=1 WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1
+#      dist: trusty
+#
+#    - perl: "5.16"
+#      env: DOIT_TEST_WITH_SUDO=0 HARNESS_OPTIONS=c:j4
+#      dist: trusty
+#
+#    # The perl does not matter here, system perl will be used
+#    - perl: "5.18"
+#      env: HARNESS_OPTIONS=c:j4
+#      os: osx
+#      osx_image: xcode12.5
+#
+## Second five
+#    - perl: "5.12"
+#      env: WITH_IPC_RUN=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+#      dist: trusty
+#
+#    - perl: "5.10"
+#      env: DOIT_TEST_WITH_SUDO=0 HARNESS_OPTIONS=c:j4
+#      dist: trusty
+#
+#    - perl: "5.8"
+#      env: WITH_IPC_RUN=1 WITH_NET_OPENSSH=1 WITH_BSD_RESOURCE=1 WITH_DEVEL_HIDE=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+#      dist: trusty
+#
+#    # Actually the perl here does not matter
+#    - perl: "5.22"
+#      env: USE_SYSTEM_PERL=1 DOIT_TEST_WITH_SUDO=1 HARNESS_OPTIONS=c:j4
+#      dist: xenial
+#
+#    - perl: "5.30"
+#      env: WITH_IPC_RUN=1 DOIT_TEST_WITH_SUDO=1
+#      dist: xenial
+#sudo: true
 
 before_install:
  - if [ "$USE_SYSTEM_PERL" = 1 ]; then perlbrew off; fi
@@ -76,9 +122,9 @@ addons:
 
 script:
  - perl Build.PL && ./Build && ./Build test && sudo ./Build test_xt
- # Cannot install on MacOSX
- - if [ "$TRAVIS_OS_NAME" = "linux" -a "$DO_DIST_INSTALL" = "" ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build install && ./Build test-installed; fi
- - if [ "$TRAVIS_OS_NAME" = "linux" -a "$DO_DIST_INSTALL" = 1  ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build dist_install_and_test; fi
+ # Cannot install on MacOSX, and on arm64 only focal works here
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a "$TRAVIS_DIST" = "focal" -a "$DO_DIST_INSTALL" = "" ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build install && ./Build test-installed; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a "$TRAVIS_DIST" = "focal" -a "$DO_DIST_INSTALL" = 1  ]; then $(if [[ "$USE_SYSTEM_PERL" = 1 ]]; then echo sudo; fi) ./Build dist_install_and_test; fi
 
 branches:
   except:
@@ -86,4 +132,3 @@ branches:
     - /github-actions/
     - /doozer/
     - /^\d+\.[\d_]+$/
-sudo: true
