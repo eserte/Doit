@@ -36,12 +36,14 @@ $d->add_component('deb');
     is_deeply \@missing_packages, ['this-does-not-exist'], 'expected list of missing packages';
 }
 
-SKIP: {
-    skip "no /usr/bin/perl available, so there's no perl package", 1
-	if !-x "/usr/bin/perl";
+my $test_package = 'dpkg'; # most likely to be installed on an debian/ubuntu system
 
-    my @missing_packages = $d->deb_missing_packages('perl');
-    is_deeply \@missing_packages, [], 'exepcted list of missing packages (perl already installed)';
+SKIP: {
+    skip "no /usr/bin/$test_package available, so there's no $test_package package", 1
+	if !-x "/usr/bin/$test_package";
+
+    my @missing_packages = $d->deb_missing_packages($test_package);
+    is_deeply \@missing_packages, [], "exepcted list of missing packages ($test_package already installed)";
 }
 
 SKIP: {
@@ -49,8 +51,8 @@ SKIP: {
 	if !$ENV{GITHUB_ACTIONS};
 
     {
-	my @installed_packages = $d->deb_install_packages('perl');
-	is_deeply \@installed_packages, [], 'perl was already installed';
+	my @installed_packages = $d->deb_install_packages($test_package);
+	is_deeply \@installed_packages, [], "$test_package was already installed";
     }
 }
 
