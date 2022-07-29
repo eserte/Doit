@@ -76,7 +76,8 @@ jobs:
         sudo apt-get install -q --no-install-recommends \
             cpanminus \
             libdevel-cover-perl \
-            libcapture-tiny-perl libipc-run-perl libdevel-hide-perl
+            libcapture-tiny-perl libipc-run-perl libwww-perl \
+            libdevel-hide-perl
         sudo cpanm --quiet --notest Devel::Cover::Report::Coveralls
     - name: Build and test with coverage
       env:
