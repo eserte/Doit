@@ -24,6 +24,7 @@ Doit::Git - commands for dealing with the git revision control system
     my @files     = $doit->git_get_changed_files;
     my $boolean   = $doit->git_is_shallow;
     my $branch    = $doit->git_current_branch;
+    my $dbranch   = $doit->git_get_default_branch;
 
     $self->git_config(
         key       => 'user.email',
@@ -279,6 +280,24 @@ C<git status> and parsing its output. Otherwise it is missing. Mainly
 used for internal testing purposes.
 
 =back
+
+=head3 git_get_default_branch
+
+    my $dbranch = $doit->git_get_default_branch(
+        directory => $directory,
+        origin    => $nickname,
+        method    => $method, # "remote", "symbolic-ref", or an array ref with possible values
+    );
+
+Return the default branch in the given directory I<$directory> (or the
+current working directory if not specified).
+
+By default, the C<remote> method is used, which may access a remote
+system and thus be slow. Another possible method is C<symbolic-ref>,
+which uses locally available information and is thus faster, but may
+return a wrong or no result at all in some cases.
+
+May fail if the default branch cannot be determined.
 
 =head3 git_config (informational command)
 
