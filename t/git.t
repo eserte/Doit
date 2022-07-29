@@ -230,6 +230,32 @@ SKIP: {
 			  ), 0, "handling repository_aliases";
     ok !$d->git_is_shallow(directory => $workdir2), 'cloned directory is not shallow';
 
+    for my $default_branch_method_def (
+	[[qw(symbolic-ref remote)]],
+	['symbolic-ref',   'may-fail'],
+	['remote'],
+	[],
+	['does-not-exist', 'expect-fail'],
+    ) {
+	my($default_branch_method, $possible_fail) = @$default_branch_method_def;
+	my @args = (
+	    directory => $workdir2,
+	    method    => $default_branch_method,
+	);
+	if ($possible_fail) {
+	    my $res = eval { $d->git_get_default_branch(@args) };
+	    if ($possible_fail eq 'may-fail') {
+		if (!$@) {
+		    like $res, qr{^(master|main)$};
+		}
+	    } else {
+		like $@, qr{Unhandled git_get_default_branch method 'does-not-exist'}, 'got error for unhandled method';
+	    }
+	} else {
+	    like $d->git_get_default_branch(@args), qr{^(master|main)$}, "git_get_default_branch with method " . (!defined $default_branch_method ? "undef" : ref $default_branch_method eq 'ARRAY' ? join(", ", @$default_branch_method) : $default_branch_method);
+	}
+    }
+
     is $d->git_repo_update(
 			   repository => $workdir,
 			   repository_aliases => ["unused-repository-alias"],
