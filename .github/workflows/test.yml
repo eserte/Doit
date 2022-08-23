@@ -27,7 +27,9 @@ jobs:
           - config_name: macos-latest
             os: macos-latest
             install_optional_dependencies: false
-          # os: windows-latest: XXX windows not yet working --- TODO
+          - config_name: windows-latest
+            os: windows-latest
+            install_optional_dependencies: false
 
     steps:
     - uses: actions/checkout@v2
