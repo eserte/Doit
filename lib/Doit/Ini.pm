@@ -15,7 +15,7 @@ package Doit::Ini;
 
 use strict;
 use warnings;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use File::Temp ();
 
@@ -112,7 +112,24 @@ sub ini_change {
     package
 	Doit::Ini::Config::IniFiles;
     use base 'Doit::Ini::ConfigBase';
-    sub available { eval { die "NYI"; require Config::IniFiles; 1 } }
+    sub available { eval { require Config::IniFiles; 1 } }
+    sub new { bless { }, shift }
+    sub read_file {
+	my($self, $filename) = @_;
+	$self->{c} = $self->{o} = Config::IniFiles->new(-file => $filename);
+	$self->{o}->ReadConfig(-file => $filename);
+    }
+    sub set_value {
+	my($self, $section, $key, $val) = @_;
+	$self->confobj->setval($section, $key, $val);
+    }
+    sub dump_ini {
+	my($self) = @_;
+	my $ini;
+	open my $fh, '>', \$ini or die $!;
+	$self->{o}->WriteConfig($fh);
+	$ini;
+    }
 }
 
 {
