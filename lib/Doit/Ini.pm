@@ -15,7 +15,7 @@ package Doit::Ini;
 
 use strict;
 use warnings;
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use File::Temp ();
 
@@ -25,7 +25,7 @@ my @try_implementations = qw(Config::IOD::INI Config::IniFiles Config::IniMan);
 my %allowed_implementation = map { ($_,1) } @try_implementations;
 
 sub new { bless {}, shift }
-sub functions { qw(ini_change ini_set_implementation) }
+sub functions { qw(ini_change ini_set_implementation ini_adapter_class) }
 
 sub ini_set_implementation {
     my(undef, @new_implementations) = @_;
@@ -35,6 +35,17 @@ sub ini_set_implementation {
 	}
     }
     @try_implementations = @new_implementations;
+}
+
+sub ini_adapter_class {
+    my(undef) = @_;
+    for my $impl (@try_implementations) {
+	my $adapter_class = "Doit::Ini::$impl";
+	if ($adapter_class->available) {
+	    return $adapter_class;
+	}
+    }
+    undef;
 }
 
 sub ini_change {
@@ -59,14 +70,7 @@ sub ini_change {
 	};
     }
 
-    my $use_adapter_class;
-    for my $impl (@try_implementations) {
-	my $adapter_class = "Doit::Ini::$impl";
-	if ($adapter_class->available) {
-	    $use_adapter_class = $adapter_class;
-	    last;
-	}
-    }
+    my $use_adapter_class = $doit->ini_adapter_class;
     if (!$use_adapter_class) {
 	error "No usable ini implementation found, tried: @try_implementations";
     }

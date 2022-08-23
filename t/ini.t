@@ -68,4 +68,6 @@ EOF
 	my $new_ini = slurp("$tmp");
 	is $new_ini, $orig_ini, 'all changes in ini file were reverted';
     }
+
+    is $doit->ini_adapter_class, 'Doit::Ini::Config::IOD::INI';
 }
