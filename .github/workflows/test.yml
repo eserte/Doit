@@ -96,7 +96,7 @@ jobs:
             libdevel-cover-perl \
             libcapture-tiny-perl libipc-run-perl libwww-perl \
             libdevel-hide-perl libconfig-inifiles-perl
-        sudo cpanm --quiet --notest Devel::Cover::Report::Coveralls
+        sudo cpanm --quiet --notest Devel::Cover::Report::Coveralls Config::IOD::INI
     - name: Build and test with coverage
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
