@@ -324,6 +324,12 @@ EOF
 	    'git',
 	);
 	my $packages_spec = join(" \\\n", map { "    $_" } @packages);
+	if ($distro_spec =~ m{^(ubuntu:precise)$}) {
+	    # See https://gist.github.com/dergachev/f5da514802fcbbb441a1
+	    $dockerfile .= <<'EOF'
+RUN sed -i.bak -r 's/(archive|security).ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
+EOF
+	}
 	$dockerfile .= <<"EOF";
 ENV DEBIAN_FRONTEND noninteractive 
 
