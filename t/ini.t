@@ -101,3 +101,27 @@ EOF
 	}
     }
 }
+
+eval {
+    $doit->ini_set_implementation('Non::Existing::Ini::Module');
+};
+like $@, qr{The implementation 'Non::Existing::Ini::Module' is unknown}, 'expected error on unknown module';
+
+{
+    no warnings 'redefine', 'once';
+    local *Doit::Ini::Config::IOD::INI::available = sub { 0 };
+    local *Doit::Ini::Config::IniFiles::available = sub { 0 };
+    local *Doit::Ini::Config::IniMan::available   = sub { 0 };
+    is $doit->ini_adapter_class, undef, 'simulate unavailable ini implementation';
+    eval {
+	$doit->ini_change('/does/not/matter', sub { });
+    };
+    like $@, qr{No usable ini implementation found, tried:}, 'simulate failure to run ini_change without ini implementations';
+}
+
+eval {
+    $doit->ini_change('/does/not/matter', sub { }, sub { });
+};
+like $@, qr{Too many arguments, only one code reference is allowed}, 'expected error message';
+
+ok !$doit->ini_change('/does/not/matter'), 'no change parameters specified';
