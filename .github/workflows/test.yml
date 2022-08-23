@@ -10,18 +10,34 @@ on:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}
+    name: Test on ${{ matrix.config_name }}
     runs-on: ${{ matrix.os }}
     strategy:
-     matrix:
-## XXX windows not yet working --- TODO
-#       os: [ubuntu-latest, windows-latest, macos-latest]
-       os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+      matrix:
+        include:
+          - config_name: ubuntu-20.04
+            os: ubuntu-20.04
+            install_optional_dependencies: false
+          - config_name: ubuntu-22.04
+            os: ubuntu-22.04
+            install_optional_dependencies: false
+          - config_name: ubuntu-22.04 with optional dependencies
+            os: ubuntu-22.04
+            install_optional_dependencies: true
+          - config_name: macos-latest
+            os: macos-latest
+            install_optional_dependencies: false
+          # os: windows-latest: XXX windows not yet working --- TODO
 
     steps:
     - uses: actions/checkout@v2
       with:
         clean: false
+    - run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y libipc-run-perl libnet-openssh-perl libbsd-resource-perl libdevel-hide-perl libconfig-inifiles-perl
+      if: ${{ matrix.install_optional_dependencies }}
+
     - name: Build and test
       run: |
         perl Build.PL
