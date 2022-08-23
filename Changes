@@ -1,5 +1,26 @@
 Revision history for Doit.
 
+0.025_56 2022-08-23
+	- features
+	  - new components
+	    - Doit::Ini
+	    - Doit::Pip
+	  - Doit::Deb: deb_install_key may use also wget
+	  - Doit::Git: new function git_get_default_branch
+	- fixes
+	  - Doit::File works now better in dry-run mode
+	  - git_repo_update: handle some edge cases
+	- build improvments
+	  - test_in_docker works for alpine
+	  - test_standard: more configurations
+	  - docker builds: configure safe git directories
+	- tests
+	  - github: new tests using special perl containers
+	  - github: test ubuntu-20.04 and 22.04
+	  - travis-ci: new configuration using arm64
+	  - new test file t/deb.t for Doit::Deb
+	  - various test improvements
+
 0.025_55 2020-01-26
 	- features
 	  - ability to bootstrap perl
