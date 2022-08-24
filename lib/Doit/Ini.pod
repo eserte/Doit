@@ -8,7 +8,7 @@ Doit::Ini - commands for changing ini files
     my $doit = Doit->init;
     $doit->add_component('ini'); # requires Config::IOD::INI or Config::IniFiles to be installed
 
-    $doit->ini_change('/path/to/file.ini', 'section1.key1' => 'newval1', 'section2.key2' => 'newval2', ...);
+    my $changed = $doit->ini_change('/path/to/file.ini', 'section1.key1' => 'newval1', 'section2.key2' => 'newval2', ...);
 
     $doit->ini_set_implementation('Config::IniFiles');
     $doit->ini_change('/path/to/file.ini', sub {
@@ -43,8 +43,9 @@ The following commands are added to the Doit runner object:
 
 =head3 ini_change
 
-Change an existing ini file. There is a simple mode with key-value
-arguments, and a mode where an anonymous subroutine may be provided.
+Change an existing ini file. Return 1 if a change was actually done,
+otherwise 0. There is a simple mode with key-value arguments, and a
+mode where an anonymous subroutine may be provided.
 
     $doit->ini_change("/path/to/file.ini", "section.key" => "newval", ...)
 

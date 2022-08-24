@@ -50,7 +50,7 @@ sub ini_adapter_class {
 
 sub ini_change {
     my($doit, $filename, @changes) = @_;
-    return if !@changes;
+    return 0 if !@changes;
 
     my $code;
     if (ref $changes[0] eq 'CODE') {

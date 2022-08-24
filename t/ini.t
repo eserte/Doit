@@ -85,7 +85,7 @@ EOF
 	    diag "Testing $ini_class";
 
 	    $doit->ini_set_implementation($ini_class);
-	    ok $doit->ini_change("$tmp", "wifi-security.psk" => "new-secret", "connection.id" => "non-public"), 'changes detected';
+	    is $doit->ini_change("$tmp", "wifi-security.psk" => "new-secret", "connection.id" => "non-public"), 1, 'changes detected';
 	    expected_line_endings("$tmp", 'unix');
 	    {
 		my $new_ini = slurp("$tmp");
@@ -94,26 +94,26 @@ EOF
 	    }
 
 	    if ($ini_class eq 'Config::IOD::INI') {
-		ok $doit->ini_change("$tmp", sub {
+		is $doit->ini_change("$tmp", sub {
 					 my($self) = @_;
 					 my $confobj = $self->confobj;
 					 isa_ok $confobj, 'Config::IOD::Document';
 					 # undo the changes done above
 					 $confobj->set_value('wifi-security', 'psk', 'secret');
 					 $confobj->set_value('connection', 'id', 'public');
-				     }), 'changes detected';
+				     }), 1, 'changes detected';
 	    } else {
-		ok $doit->ini_change("$tmp", sub {
+		is $doit->ini_change("$tmp", sub {
 					 my($self) = @_;
 					 my $confobj = $self->confobj;
 					 isa_ok $confobj, 'Config::IniFiles';
 					 # undo the changes done above
 					 $confobj->setval('wifi-security', 'psk', 'secret');
 					 $confobj->setval('connection', 'id', 'public');
-				     }), 'changes detected';
+				     }), 1, 'changes detected';
 	    }
 
-	    ok !$doit->ini_change("$tmp", "wifi-security.psk" => "secret"), 'no changes detected';
+	    is $doit->ini_change("$tmp", "wifi-security.psk" => "secret"), 0, 'no changes detected';
 
 	    if ($ini_class eq 'Config::IniFiles') {
 		# workaround known problem: some newlines get lost with Config::IniFiles
@@ -171,4 +171,4 @@ eval {
 };
 like $@, qr{Too many arguments, only one code reference is allowed}, 'expected error message';
 
-ok !$doit->ini_change('/does/not/matter'), 'no change parameters specified';
+is $doit->ini_change('/does/not/matter'), 0, 'no change parameters specified';
