@@ -632,6 +632,14 @@ Additional options to pass to the underlying C<Net::OpenSSH> object.
 See L<Net::OpenSSH/master_opts>. Cannot be used if a C<Net::OpenSSH>
 object was passed in this method call.
 
+For example, to specify a connection timeout:
+
+    $doit->do_ssh_connect('user@host', master_opts => [-o => "ConnectTimeout=2"]);
+
+Or using another identity:
+
+    $doit->do_ssh_connect('user@host', master_opts => [-i => $bootstrap_privkey_file]);
+
 =item C<< put_to_remote => I<$method> >>
 
 Method to copy files to the remote side. Possible options are
