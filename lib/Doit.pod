@@ -366,9 +366,10 @@ details may be streamlined or even changed.
     $doit->write_binary($filename, $content);
     $doit->write_binary({quiet=>$level, atomic=>$bool}, $filename, $content);
 
-Make sure that the file I<$filename> has the content I<$content>. The
-given content should be unencoded (raw, binary, octets). If you need a
-specific encoding, then it has to be encoded before:
+Make sure that the file I<$filename> has the content I<$content>.
+Return 1 if a change was done, otherwise 0. The given content should
+be unencoded (raw, binary, octets). If you need a specific encoding,
+then it has to be encoded before:
 
     $doit->write_binary($filename, Encode::encode_utf8($character_content));
 
