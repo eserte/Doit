@@ -14,7 +14,35 @@ plan skip_all => 'No suitable ini module available'
     if !eval { require Config::IOD::INI; 1 } && !eval { require Config::IniFiles; 1 };
 plan 'no_plan';
 
-sub slurp ($) { open my $fh, shift or die $!; local $/; <$fh> }
+sub slurp ($) { open my $fh, shift or die $!; binmode $fh; local $/; <$fh> }
+
+sub line_endings ($) {
+    my($filename) = @_;
+    open my $fh, $filename
+	or die "Can't open $filename: $!";
+    binmode $fh;
+    my $unix = 0;
+    my $dos = 0;
+    while(<$fh>) {
+	/\r\n$/ and $dos++, next;
+	$unix++;
+    }
+    if ($unix > 0 && $dos > 0) {
+	'mixed';
+    } elsif ($unix) {
+	'unix';
+    } elsif ($dos) {
+	'dos';
+    } else {
+	'empty';
+    }
+}
+
+sub expected_line_endings ($$) {
+    my($filename, $expected) = @_;
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    is line_endings($filename), $expected, "expected line endings in $filename";
+}
 
 my $doit = Doit->init;
 $doit->add_component('ini');
@@ -41,20 +69,24 @@ auth-alg=open
 key-mgmt=wpa-psk
 psk=secret
 EOF
+    $orig_ini =~ s/\r//g if $^O eq 'MSWin32';
 
     my $tmp = File::Temp->new;
+    binmode($tmp);
     $tmp->print($orig_ini);
     $tmp->close;
+    expected_line_endings("$tmp", 'unix');
 
     for my $ini_class (qw(Config::IOD::INI Config::IniFiles)) {
     SKIP: {
-	    skip "$ini_class not available", 8
+	    skip "$ini_class not available", 1
 		if !eval qq{ require $ini_class; 1 };
 
 	    diag "Testing $ini_class";
 
 	    $doit->ini_set_implementation($ini_class);
 	    ok $doit->ini_change("$tmp", "wifi-security.psk" => "new-secret", "connection.id" => "non-public"), 'changes detected';
+	    expected_line_endings("$tmp", 'unix');
 	    {
 		my $new_ini = slurp("$tmp");
 		like $new_ini, qr{psk=new-secret}, 'found 1st changed value';
@@ -85,11 +117,26 @@ EOF
 
 	    if ($ini_class eq 'Config::IniFiles') {
 		# workaround known problem: some newlines get lost with Config::IniFiles
-		$doit->change_file(
-		    "$tmp",
-		    { match => qr{^; comment 2}, replace => "; comment 2\n\n" },
-		    { match => qr{^; comment 3}, replace => "; comment 3\n\n" },
-		);
+		# $doit->change_file seems to have problems just adding empty lines on Windows, so do it "manually"
+		open my $fh, "<", "$tmp" or die $!;
+		binmode $fh;
+		open my $ofh, ">", "$tmp~" or die $!;
+		binmode $ofh;
+		while(<$fh>) {
+		    print $ofh $_;
+		    if (/^; comment [23]/) {
+			print $ofh "\n";
+		    }
+		}
+		close $ofh or die $!;
+		close $fh;
+		$doit->rename("$tmp~", "$tmp");
+		#$doit->change_file(
+		#    "$tmp",
+		#    { match => qr{^; comment 2}, replace => "; comment 2\n\n" },
+		#    { match => qr{^; comment 3}, replace => "; comment 3\n\n" },
+		#);
+		expected_line_endings("$tmp", 'unix');
 	    }
 
 	    {
@@ -97,7 +144,7 @@ EOF
 		is $new_ini, $orig_ini, 'all changes in ini file were reverted';
 	    }
 
-	    is $doit->ini_adapter_class, "Doit::Ini::$ini_class";
+	    is $doit->ini_adapter_class, "Doit::Ini::$ini_class", 'expected adapter class';
 	}
     }
 }

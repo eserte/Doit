@@ -127,6 +127,7 @@ sub ini_change {
 	my($self) = @_;
 	my $ini;
 	open my $fh, '>', \$ini or die $!;
+	binmode $fh;
 	$self->{o}->WriteConfig($fh);
 	$ini;
     }

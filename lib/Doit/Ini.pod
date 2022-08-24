@@ -92,6 +92,10 @@ C<ini_change> tries to do minimal changes, preserving whitespace,
 comments and order of sections andkeys. However, it seems that some
 whitespace may be lost when using C<Config::IniFiles>.
 
+Currently Unix newlines are used when writing files, even on Windows
+systems. This may change in future (i.e. preserving original line
+endings).
+
 =head1 AUTHOR
 
 Slaven Rezic <srezic@cpan.org>
