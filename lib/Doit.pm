@@ -757,6 +757,24 @@ use warnings;
 	}
     }
 
+    sub _open2 {
+	my($instr, @args) = @_;
+	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
+
+	require IPC::Open2;
+
+	my($chld_out, $chld_in);
+	my $pid = IPC::Open2::open2($chld_out, $chld_in, @args);
+	print $chld_in $instr;
+	close $chld_in;
+	local $/;
+	my $buf = <$chld_out>;
+	close $chld_out;
+	waitpid $pid, 0;
+
+	$buf;
+    }
+
     sub cmd_open2 {
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
@@ -765,19 +783,8 @@ use warnings;
 	my $instr = delete $options{instr}; $instr = '' if !defined $instr;
 	error "Unhandled options: " . join(" ", %options) if %options;
 
-	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
-
-	require IPC::Open2;
-
 	my $code = sub {
-	    my($chld_out, $chld_in);
-	    my $pid = IPC::Open2::open2($chld_out, $chld_in, @args);
-	    print $chld_in $instr;
-	    close $chld_in;
-	    local $/;
-	    my $buf = <$chld_out>;
-	    close $chld_out;
-	    waitpid $pid, 0;
+	    my $buf = _open2($instr, @args);
 	    $? == 0
 		or _handle_dollar_questionmark($quiet||$info ? (prefix_msg => "open2 command '@args' failed: ") : ());
 	    $buf;
