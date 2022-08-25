@@ -684,17 +684,7 @@ use warnings;
 				     if ($quiet) {
 					 "copy $from $real_to";
 				     } else {
-					 if (eval { require IPC::Run; 1 }) {
-					     my $diff;
-					     if (eval { IPC::Run::run(['diff', '-u', $real_to, $from], '>', \$diff); 1 }) {
-						 "copy $from $real_to\ndiff:\n$diff";
-					     } else {
-						 "copy $from $real_to\n(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
-					     }
-					 } else {
-					     my $diffref = _qx('diff', '-u', $real_to, $from);
-					     "copy $from $real_to\ndiff:\n$$diffref";
-					 }
+					 "copy $from $real_to\ndiff:\n" . _diff_files($real_to, $from);
 				     }
 				 }
 			     },
@@ -1242,35 +1232,7 @@ use warnings;
 					 }
 				     } else {
 					 if ($need_diff) {
-					     if (eval { require IPC::Run; 1 }) { # no temporary file required
-						 my $diff;
-						 if (eval { IPC::Run::run(['diff', '-u', $filename, '-'], '<', \$content, '>', \$diff); 1 }) {
-						     "Replace existing file $filename with diff:\n$diff";
-						 } else {
-						     "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
-						 }
-					     } else {
-						 my $diff;
-						 if (eval { require File::Temp; 1 }) {
-						     my($tempfh,$tempfile) = File::Temp::tempfile(UNLINK => 1);
-						     print $tempfh $content;
-						     if (close $tempfh) {
-							 my $diffref = _qx('diff', '-u', $filename, $tempfile);
-							 $diff = $$diffref;
-							 unlink $tempfile;
-							 if (length $diff) {
-							     $diff = "Replace existing file $filename with diff:\n$diff";
-							 } else {
-							     $diff = "(diff not available, probably no diff utility installed)";
-							 }
-						     } else {
-							 $diff = "(diff not available, error in tempfile creation ($!))";
-						     }
-						 } else {
-						     $diff = "(diff not available, neither IPC::Run nor File::Temp available)";
-						 }
-						 $diff;
-					     }
+					     "Replace existing file $filename with diff:\n" . _diff_files($filename, \$content);
 					 } else {
 					     "Create new file $filename with content:\n$content";
 					 }
@@ -1486,15 +1448,7 @@ use warnings;
 				     or error "Can't rename $tmpfile to $file: $!";
 			     },
 			     msg => do {
-				 my $diff;
-				 if (eval { require IPC::Run; 1 }) {
-				     if (!eval { IPC::Run::run(['diff', '-u', $file, $tmpfile], '>', \$diff); 1 }) {
-					 $diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
-				     }
-				 } else {
-				     $diff = `diff -u '$file' '$tmpfile'`;
-				 }
-				 "Final changes as diff:\n$diff";
+				 "Final changes as diff:\n" . _diff_files($file, $tmpfile);
 			     },
 			     rv => $no_of_changes,
 			    };
@@ -1505,6 +1459,22 @@ use warnings;
 	} else {
 	    Doit::Commands->return_zero;
 	}
+    }
+
+    sub _diff_files {
+	my($file1, $file2) = @_;
+
+	my $stdin;
+	if (ref $file2) {
+	    $stdin = $$file2;
+	    $file2 = '-';
+	}
+
+	my($diff, $diff_stderr) = eval { _open3($stdin, 'diff', '-u', $file1, $file2) };
+	if ($@) {
+	    $diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+	}
+	"$diff$diff_stderr";
     }
 
 }
