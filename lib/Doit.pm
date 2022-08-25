@@ -808,6 +808,46 @@ use warnings;
 	$self->cmd_open2(\%options, @args);
     }
 
+    sub _open3 {
+	my($instr, @args) = @_;
+	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
+
+	require IO::Select;
+	require IPC::Open3;
+	require Symbol;
+
+	my($chld_out, $chld_in, $chld_err);
+	$chld_err = Symbol::gensym();
+	my $pid = IPC::Open3::open3((defined $instr ? $chld_in : undef), $chld_out, $chld_err, @args);
+	if (defined $instr) {
+	    print $chld_in $instr;
+	    close $chld_in;
+	}
+
+	my $sel = IO::Select->new;
+	$sel->add($chld_out);
+	$sel->add($chld_err);
+
+	my %buf = ($chld_out => '', $chld_err => '');
+	while(my @ready_fhs = $sel->can_read()) {
+	    for my $ready_fh (@ready_fhs) {
+		my $buf = '';
+		while (sysread $ready_fh, $buf, 1024, length $buf) { }
+		if ($buf eq '') { # eof
+		    $sel->remove($ready_fh);
+		    $ready_fh->close;
+		    last if $sel->count == 0;
+		} else {
+		    $buf{$ready_fh} .= $buf;
+		}
+	    }
+	}
+
+	waitpid $pid, 0;
+
+	($buf{$chld_out}, $buf{$chld_err});
+    }
+
     sub cmd_open3 {
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
@@ -818,44 +858,11 @@ use warnings;
 	my $statusref = delete $options{statusref};
 	error "Unhandled options: " . join(" ", %options) if %options;
 
-	@args = Doit::Win32Util::win32_quote_list(@args) if Doit::IS_WIN;
-
-	require IO::Select;
-	require IPC::Open3;
-	require Symbol;
-
 	my $code = sub {
-	    my($chld_out, $chld_in, $chld_err);
-	    $chld_err = Symbol::gensym();
-	    my $pid = IPC::Open3::open3((defined $instr ? $chld_in : undef), $chld_out, $chld_err, @args);
-	    if (defined $instr) {
-		print $chld_in $instr;
-		close $chld_in;
-	    }
-
-	    my $sel = IO::Select->new;
-	    $sel->add($chld_out);
-	    $sel->add($chld_err);
-
-	    my %buf = ($chld_out => '', $chld_err => '');
-	    while(my @ready_fhs = $sel->can_read()) {
-		for my $ready_fh (@ready_fhs) {
-		    my $buf = '';
-		    while (sysread $ready_fh, $buf, 1024, length $buf) { }
-		    if ($buf eq '') { # eof
-			$sel->remove($ready_fh);
-			$ready_fh->close;
-			last if $sel->count == 0;
-		    } else {
-			$buf{$ready_fh} .= $buf;
-		    }
-		}
-	    }
-
-	    waitpid $pid, 0;
+	    my($stdout, $stderr) = _open3($instr, @args);
 
 	    if ($errref) {
-		$$errref = $buf{$chld_err};
+		$$errref = $stderr;
 	    }
 
 	    if ($statusref) {
@@ -866,7 +873,7 @@ use warnings;
 		}
 	    }
 
-	    $buf{$chld_out};
+	    $stdout;
 	};
 
 	my @commands;
