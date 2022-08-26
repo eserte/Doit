@@ -1176,6 +1176,16 @@ use warnings;
 	}
     }
 
+    sub cmd_which {
+	my($self, @args) = @_;
+	if (@args != 1) {
+	    error "Expecting exactly one argument: command";
+	}
+	require Doit::Extcmd;
+	my $path = Doit::Extcmd::is_in_path($args[0]);
+	Doit::Commands->new({ rv => $path, code => sub {} });
+    }
+
     sub cmd_write_binary {
 	my($self, @args) = @_;
 	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
@@ -1648,6 +1658,7 @@ use warnings;
 		 qw(cond_run), # conditional run
 		 qw(touch), # like unix touch
 		 qw(ln_nsf), # like unix ln -nsf
+		 qw(which), # like unix which
 		 qw(create_file_if_nonexisting), # does the half of touch
 		 qw(write_binary), # like File::Slurper
 		 qw(change_file), # own invention
