@@ -163,7 +163,7 @@ use warnings;
 {
     package Doit::Util;
     use Exporter 'import';
-    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup copy_stat get_sudo_cmd) }
+    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup copy_stat get_sudo_cmd is_in_path) }
     $INC{'Doit/Util.pm'} = __FILE__; # XXX hack
     use Doit::Log;
 
@@ -234,6 +234,54 @@ use warnings;
 	return ('sudo');
     }
 
+    sub is_in_path {
+	my($prog) = @_;
+
+	if (!defined &_file_name_is_absolute) {
+	    if (eval { require File::Spec; defined &File::Spec::file_name_is_absolute }) {
+		*_file_name_is_absolute = \&File::Spec::file_name_is_absolute;
+	    } else {
+		*_file_name_is_absolute = sub {
+		    my $file = shift;
+		    my $r;
+		    if ($^O eq 'MSWin32') {
+			$r = ($file =~ m;^([a-z]:(/|\\)|\\\\|//);i);
+		    } else {
+			$r = ($file =~ m|^/|);
+		    }
+		    $r;
+		};
+	    }
+	}
+
+	if (_file_name_is_absolute($prog)) {
+	    if ($^O eq 'MSWin32') {
+		return $prog       if (-f $prog && -x $prog);
+		return "$prog.bat" if (-f "$prog.bat" && -x "$prog.bat");
+		return "$prog.com" if (-f "$prog.com" && -x "$prog.com");
+		return "$prog.exe" if (-f "$prog.exe" && -x "$prog.exe");
+		return "$prog.cmd" if (-f "$prog.cmd" && -x "$prog.cmd");
+	    } else {
+		return $prog if -f $prog and -x $prog;
+	    }
+	}
+	require Config;
+	%Config::Config = %Config::Config if 0; # cease -w
+	my $sep = $Config::Config{'path_sep'} || ':';
+	foreach (split(/$sep/o, $ENV{PATH})) {
+	    if ($^O eq 'MSWin32') {
+		# maybe use $ENV{PATHEXT} like maybe_command in ExtUtils/MM_Win32.pm?
+		return "$_\\$prog"     if (-f "$_\\$prog" && -x "$_\\$prog");
+		return "$_\\$prog.bat" if (-f "$_\\$prog.bat" && -x "$_\\$prog.bat");
+		return "$_\\$prog.com" if (-f "$_\\$prog.com" && -x "$_\\$prog.com");
+		return "$_\\$prog.exe" if (-f "$_\\$prog.exe" && -x "$_\\$prog.exe");
+		return "$_\\$prog.cmd" if (-f "$_\\$prog.cmd" && -x "$_\\$prog.cmd");
+	    } else {
+		return "$_/$prog" if (-x "$_/$prog" && !-d "$_/$prog");
+	    }
+	}
+	undef;
+    }
 }
 
 {
@@ -1181,8 +1229,7 @@ use warnings;
 	if (@args != 1) {
 	    error "Expecting exactly one argument: command";
 	}
-	require Doit::Extcmd;
-	my $path = Doit::Extcmd::is_in_path($args[0]);
+	my $path = Doit::Util::is_in_path($args[0]);
 	Doit::Commands->new({ rv => $path, code => sub {} });
     }
 
