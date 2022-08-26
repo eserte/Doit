@@ -29,6 +29,11 @@ if ($man3ext !~ m{^(3|3pm)$}) {
     diag "Non-standard man3 extension: .$man3ext instead of .3";
 }
 
+my $troff_rx = qr{(
+		      troff      # e.g. Linux file(1)
+		  |   \[nt\]roff # e.g. Solaris file(1)
+		  )}x;
+
 ok -s bsd_glob("$man3path/Doit.$man3ext*"),     'non-empty manpage for Doit'
     or diag($doit->info_qx(qw(ls -al), $man3path));
 ok -s bsd_glob("$man3path/Doit*Deb.$man3ext*"), 'non-empty manpage for Doit::Deb'
@@ -37,8 +42,8 @@ ok -s bsd_glob("$man3path/Doit*Deb.$man3ext*"), 'non-empty manpage for Doit::Deb
 my $file_prg = is_in_path('file');
 SKIP: {
     skip "file command not installed", 1 if !$file_prg;
-    like get_filetype(bsd_glob("$man3path/Doit.$man3ext*")),     qr{troff}, 'Doit manpage looks like a manpage';
-    like get_filetype(bsd_glob("$man3path/Doit*Deb.$man3ext*")), qr{troff}, 'Doit::Deb manpage looks like a manpage';
+    like get_filetype(bsd_glob("$man3path/Doit.$man3ext*")),     $troff_rx, 'Doit manpage looks like a manpage';
+    like get_filetype(bsd_glob("$man3path/Doit*Deb.$man3ext*")), $troff_rx, 'Doit::Deb manpage looks like a manpage';
 }
 
 sub get_filetype {
