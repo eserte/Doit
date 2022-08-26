@@ -1477,9 +1477,29 @@ use warnings;
 	    $file2 = '-';
 	}
 
-	my($diff, $diff_stderr) = eval { _open3($stdin, 'diff', '-u', $file1, $file2) };
-	if ($@) {
-	    $diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+	my($diff, $diff_stderr);
+	if (eval { require IPC::Run; 1 }) {
+	    IPC::Run::run(['diff', '-u', $file1, $file2], (defined $stdin ? ('<', \$stdin) : ()), '>', \$diff, '2>', \$diff_stderr);
+	} else {
+	    if ($^O eq 'MSWin32') { # list systems with unreliable IPC::Open3 here
+		my $tmp;
+		if ($file2 eq '-') {
+		    require File::Temp;
+		    $tmp = File::Temp->new;
+		    binmode($tmp); # XXX yes or no?
+		    $tmp->print($stdin);
+		    $tmp->close;
+		    $file2 = "$tmp";
+		}
+		my $diffref = _qx('diff', '-u', $file1, $file2);
+		$diff = $$diffref;
+		$diff_stderr = '';
+	    } else {
+		($diff, $diff_stderr) = eval { _open3($stdin, 'diff', '-u', $file1, $file2) };
+		if ($@) {
+		    $diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+		}
+	    }
 	}
 	"$diff$diff_stderr";
     }
