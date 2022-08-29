@@ -1,5 +1,29 @@
 Revision history for Doit.
 
+0.025_57 2022-08-29
+	- features
+	  - new informational command which
+	  - can_openssl available as informational command from the ssl component
+	- fixes and improvements
+	  - minor changes in new ini component (ini_change return value, use binmode)
+	- documentation
+	  - add documentation for Doit::Ini
+	  - add documentation for Doit::Util
+	  - examples for do_ssh_connect with master_opts
+	- build
+	  - make docker-testing ubuntu:precise possible
+	- tests
+	  - github: test windows
+	  - github: more tests with optional dependencies
+	  - add some test helpers mimic some solaris specialities
+	  - ini.t: test for line endings
+	  - ini.t: fix for Windows
+	  - man.t: fix for Solaris
+	- internal
+	  - new _open2 and _open3 functions usable within Doit
+	  - new _diff_files function usable within Doit
+	  - move Doit::Extcmd::is_in_path implementation to Doit::Util
+
 0.025_56 2022-08-23
 	- features
 	  - new components
@@ -10,7 +34,7 @@ Revision history for Doit.
 	- fixes
 	  - Doit::File works now better in dry-run mode
 	  - git_repo_update: handle some edge cases
-	- build improvments
+	- build improvements
 	  - test_in_docker works for alpine
 	  - test_standard: more configurations
 	  - docker builds: configure safe git directories

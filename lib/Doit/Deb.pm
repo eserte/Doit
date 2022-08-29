@@ -15,7 +15,7 @@ package Doit::Deb; # Convention: all commands here should be prefixed with 'deb_
 
 use strict;
 use warnings;
-our $VERSION = '0.023';
+our $VERSION = '0.024';
 
 use Doit::Log;
 use Doit::Util 'get_sudo_cmd';
