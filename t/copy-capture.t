@@ -16,7 +16,6 @@ BEGIN {
 plan 'no_plan';
 
 use Doit;
-use Doit::Extcmd qw(is_in_path);
 
 sub slurp ($) { open my $fh, shift or die $!; local $/; <$fh> }
 
@@ -68,7 +67,7 @@ $doit->write_binary({quiet => 2}, "test-file", "changed content");
     };
     is $stdout, '';
     like colorstrip($stderr), qr{^\QINFO: copy test-file test-file-copied}, 'changed contents';
-    if (is_in_path 'diff') {
+    if ($doit->which('diff')) {
 	like $stderr, qr{^\Q--- test-file-copied}sm, 'looks like a diff header';
 	like $stderr, qr{^\Q+++ test-file}sm, 'looks like a diff header';
 	like $stderr, qr{^\Q-content}sm, 'looks like diff body';

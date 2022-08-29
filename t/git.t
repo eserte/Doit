@@ -14,18 +14,18 @@ use File::Temp qw(tempdir);
 use Test::More;
 
 use Doit;
-use Doit::Extcmd qw(is_in_path);
 use Doit::Util qw(in_directory);
 
 use TestUtil qw(is_dir_eq);
 
-if (!is_in_path('git')) {
+my $d = Doit->init;
+
+if (!$d->which('git')) {
     plan skip_all => 'git not in PATH';
 }
 
 plan 'no_plan';
 
-my $d = Doit->init;
 $d->add_component('git');
 
 my $git_less_directory;

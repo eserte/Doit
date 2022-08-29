@@ -12,18 +12,18 @@ use lib $FindBin::RealBin;
 use Test::More;
 
 use Doit;
-use Doit::Extcmd qw(is_in_path);
+
+my $d = Doit->init;
 
 plan skip_all => 'Only for linux' if $^O ne 'linux';
 for my $exe (qw(dpkg apt-get)) {
-    if (!is_in_path($exe)) {
+    if (!$d->which($exe)) {
 	plan skip_all => "$exe not in PATH (maybe not a Debian system?)";
     }
 }
 
 plan 'no_plan';
 
-my $d = Doit->init;
 $d->add_component('deb');
 
 {

@@ -6,7 +6,6 @@
 #
 
 use Doit;
-use Doit::Extcmd;
 use Doit::Util 'new_scope_cleanup';
 use File::Glob 'bsd_glob';
 use File::Temp 'tempdir';
@@ -372,7 +371,7 @@ sub get_another_filesystem {
     return { skip => "Hangs on travis-ci" } if $ENV{TRAVIS}; # reason unknown
     return { skip => "Mounting fs only implemented for linux" } if $^O ne 'linux';
     return { skip => "Cannot mount in linux containers" } if TestUtil::in_linux_container($doit);
-    return { skip => "dd not available" } if !Doit::Extcmd::is_in_path("dd");
+    return { skip => "dd not available" } if !$doit->which("dd");
     return { skip => "mkfs not available" } if !-x "/sbin/mkfs";
     my $sudo = TestUtil::get_sudo($doit, info => \my %info);
     return { skip => $info{error} } if !$sudo;
