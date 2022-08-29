@@ -21,7 +21,6 @@ use Cwd qw(realpath getcwd);
 use Digest::MD5 qw(md5_hex);
 use File::Basename;
 use Doit;
-use Doit::Extcmd qw(is_in_path);
 use Doit::Log;
 use Doit::Util qw(in_directory);
 
@@ -433,7 +432,7 @@ sub test_pod (;$) {
 sub test_cpan_versions {
     my($distdir) = @_;
 
-    if (is_in_path "cpan_check_versions") {
+    if ($doit->which("cpan_check_versions")) {
 	in_directory {
 	    $doit->system('cpan_check_versions', '-remote');
 	} $distdir;
@@ -582,7 +581,7 @@ sub cover {
 
 sub show_cover {
     cover();
-    my $browser = $^O eq 'darwin' ? 'open' : is_in_path('xdg-open') ? 'xdg-open' : 'firefox';
+    my $browser = $^O eq 'darwin' ? 'open' : $doit->which('xdg-open') ? 'xdg-open' : 'firefox';
     $doit->system($browser, "$FindBin::RealBin/cover_db/coverage.html");
 }
 
