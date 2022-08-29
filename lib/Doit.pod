@@ -552,6 +552,17 @@ Like L</qx>, but with the option C<< info=>1 >> set.
 
 Like L</system>, but with the option C<< info=>1 >> set.
 
+=head2 MISC INFORMATIONAL COMMANDS
+
+Informational commands also run in dry-run mode.
+
+=head3 which
+
+    $doit->which($program)
+
+Return the path to the given I<$program>, or C<undef> if it cannot be
+found in user's PATH.
+
 =head2 REMOTE AND USER-SWITCHING FUNCTIONS
 
 It's possible to run Perl code or Doit functionality on remote
