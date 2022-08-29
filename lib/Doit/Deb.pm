@@ -141,7 +141,7 @@ sub deb_install_key {
 	    $self->system(get_sudo_cmd(), 'apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
 	} elsif ($url) {
 	    my @fetch_cmd;
-	    if (-x "/usr/bin/curl") { # XXX avoid Doit::ExtCmd::is_in_path until remote sync issues with nested components are resolved
+	    if ($self->which('curl')) {
 		@fetch_cmd = ('curl', '-fsSL', $url);
 	    } else {
 		@fetch_cmd = ('wget', '-O-', $url); # other alternative would be lwp-request

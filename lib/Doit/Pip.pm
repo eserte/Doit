@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2020 Slaven Rezic. All rights reserved.
+# Copyright (C) 2020,2022 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -16,17 +16,16 @@ package Doit::Pip; # Convention: all commands here should be prefixed with 'pip_
 use strict;
 use warnings;
 
-our $VERSION = '0.011';
+our $VERSION = '0.012';
 
 use Doit::Log;
 
 sub new { bless {}, shift }
 sub functions { qw(pip_install_packages pip_missing_packages can_pip) }
-sub add_component { qw(extcmd) }
 
 sub can_pip {
-    require Doit::Extcmd;
-    Doit::Extcmd::is_in_path('pip3') ? 1 : 0;
+    my($self) = @_;
+    $self->which('pip3') ? 1 : 0;
 }
 
 sub pip_install_packages {
