@@ -13,7 +13,6 @@ use File::Glob qw(bsd_glob);
 use Test::More;
 
 use Doit;
-use Doit::Extcmd 'is_in_path';
 
 my $man3ext = $Config{'man3ext'};
 my $man3path = "$FindBin::RealBin/../blib/man3";
@@ -39,7 +38,7 @@ ok -s bsd_glob("$man3path/Doit.$man3ext*"),     'non-empty manpage for Doit'
 ok -s bsd_glob("$man3path/Doit*Deb.$man3ext*"), 'non-empty manpage for Doit::Deb'
     or diag($doit->info_qx(qw(ls -al), $man3path));
 
-my $file_prg = is_in_path('file');
+my $file_prg = $doit->which('file');
 SKIP: {
     skip "file command not installed", 1 if !$file_prg;
     like get_filetype(bsd_glob("$man3path/Doit.$man3ext*")),     $troff_rx, 'Doit manpage looks like a manpage';
@@ -50,7 +49,7 @@ sub get_filetype {
     my($file) = @_;
     chomp(my($filetype) = $doit->info_qx({quiet => 1}, $file_prg, $file));
     if ($filetype =~ /ReStructuredText file, ASCII text/) {
-	skip "Mis-detection of file type in debian:bullseye, see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=949878", 1;
+	skip "Mis-detection of file type in debian:bullseye and ubuntu:20.04, see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=949878", 1;
     }
     $filetype;
 }
