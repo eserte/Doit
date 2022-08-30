@@ -73,7 +73,7 @@ $doit->write_binary({quiet => 2}, "test-file", "changed content");
 	like $stderr, qr{^\Q-content}sm, 'looks like diff body';
 	like $stderr, qr{^\Q+changed content}sm, 'looks like diff body';
     } elsif ($Doit::diff_cmd[0] eq 'fc') {
-	like $stderr, qr{^\QComparing files test-file-copied and TEST-FILE}sm, 'looks like a FC header';
+	#like $stderr, qr{^\QComparing files test-file-copied and TEST-FILE}sm, 'looks like a FC header'; # could be localized and there's no easy way to force/query a locale on Windows
 	like $stderr, qr{^\Q***** test-file-copied}smi, 'first file in FC output';
 	like $stderr, qr{^\Q***** TEST-FILE}smi, 'second file in FC output'; # case insensitive check, unclear if this may be lowercase sometimes
     }
@@ -89,7 +89,7 @@ if ($^O eq 'MSWin32' && $Doit::diff_cmd[0] eq 'diff' && $doit->which('fc')) {
     };
     is $stdout, '';
     like colorstrip($stderr), qr{^\QINFO: copy test-file test-file-copied-fc}, 'changed contents';
-    like $stderr, qr{^\QComparing files test-file-copied-fc and TEST-FILE}sm, 'looks like a FC header';
+    #like $stderr, qr{^\QComparing files test-file-copied-fc and TEST-FILE}sm, 'looks like a FC header'; # see above
     like $stderr, qr{^\Q***** test-file-copied-fc}smi, 'first file in FC output';
     like $stderr, qr{^\Q***** TEST-FILE}smi, 'second file in FC output'; # case insensitive check, unclear if this may be lowercase sometimes
 }
