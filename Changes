@@ -1,5 +1,9 @@
 Revision history for Doit.
 
+0.025_58 2022-08-30
+	- internal
+	  - _diff_files may fallback to "fc" instead of "diff" on Windows
+
 0.025_57 2022-08-29
 	- features
 	  - new informational command which
