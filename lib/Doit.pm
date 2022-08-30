@@ -1550,12 +1550,16 @@ use warnings;
 		if !@diff_cmd;
 	}
 
+	my $cannot_use_dash;
 	if ($^O eq 'MSWin32' && $diff_cmd[0] eq 'fc') { # FC cannot handle forward slashes
 	    s{/}{\\}g for ($file1, $file2);
+	    if ($file2 eq '-') {
+		$cannot_use_dash = 1;
+	    }
 	}
 
 	my($diff, $diff_stderr);
-	if (eval { require IPC::Run; 1 }) {
+	if (!$cannot_use_dash && eval { require IPC::Run; 1 }) {
 	    if (!eval {
 		IPC::Run::run([@diff_cmd, $file1, $file2], (defined $stdin ? ('<', \$stdin) : ()), '>', \$diff, '2>', \$diff_stderr); 1;
 	    }) {
@@ -1563,7 +1567,7 @@ use warnings;
 		$diff_stderr = '';
 	    }
 	} else {
-	    if ($^O eq 'MSWin32') { # list systems with unreliable IPC::Open3 here
+	    if ($^O eq 'MSWin32' || $cannot_use_dash) { # list systems with unreliable IPC::Open3 here
 		my $tmp;
 		if ($file2 eq '-') {
 		    require File::Temp;
