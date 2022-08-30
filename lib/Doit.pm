@@ -1536,7 +1536,12 @@ use warnings;
 
 	my($diff, $diff_stderr);
 	if (eval { require IPC::Run; 1 }) {
-	    IPC::Run::run(['diff', '-u', $file1, $file2], (defined $stdin ? ('<', \$stdin) : ()), '>', \$diff, '2>', \$diff_stderr);
+	    if (!eval {
+		IPC::Run::run(['diff', '-u', $file1, $file2], (defined $stdin ? ('<', \$stdin) : ()), '>', \$diff, '2>', \$diff_stderr); 1;
+	    }) {
+		$diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
+		$diff_stderr = '';
+	    }
 	} else {
 	    if ($^O eq 'MSWin32') { # list systems with unreliable IPC::Open3 here
 		my $tmp;
