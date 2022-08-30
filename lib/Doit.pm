@@ -383,6 +383,7 @@ use warnings;
     use Doit::Log;
 
     my $diff_error_shown;
+    our @diff_cmd;
 
     sub _new {
 	my $class = shift;
@@ -1534,10 +1535,29 @@ use warnings;
 	    $file2 = '-';
 	}
 
+	if (!@diff_cmd) {
+	    my @diff_candidates = (['diff', '-u']);
+	    if ($^O eq 'MSWin32') {
+		push @diff_candidates, ['fc'];
+	    }
+	    for my $diff_candidate (@diff_candidates) {
+		if (Doit::Util::is_in_path($diff_candidate->[0])) {
+		    @diff_cmd = @$diff_candidate;
+		    last;
+		}
+	    }
+	    return "(diff not available" . (!$diff_error_shown++ ? ", error: none of the candidates (" . join(", ", map { $_->[0] } @diff_candidates) . ") exist" : "") . ")"
+		if !@diff_cmd;
+	}
+
+	if ($^O eq 'MSWin32' && $diff_cmd[0] eq 'fc') { # FC cannot handle forward slashes
+	    s{/}{\\}g for ($file1, $file2);
+	}
+
 	my($diff, $diff_stderr);
 	if (eval { require IPC::Run; 1 }) {
 	    if (!eval {
-		IPC::Run::run(['diff', '-u', $file1, $file2], (defined $stdin ? ('<', \$stdin) : ()), '>', \$diff, '2>', \$diff_stderr); 1;
+		IPC::Run::run([@diff_cmd, $file1, $file2], (defined $stdin ? ('<', \$stdin) : ()), '>', \$diff, '2>', \$diff_stderr); 1;
 	    }) {
 		$diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
 		$diff_stderr = '';
@@ -1553,11 +1573,11 @@ use warnings;
 		    $tmp->close;
 		    $file2 = "$tmp";
 		}
-		my $diffref = _qx('diff', '-u', $file1, $file2);
+		my $diffref = _qx(@diff_cmd, $file1, $file2);
 		$diff = $$diffref;
 		$diff_stderr = '';
 	    } else {
-		($diff, $diff_stderr) = eval { _open3($stdin, 'diff', '-u', $file1, $file2) };
+		($diff, $diff_stderr) = eval { _open3($stdin, @diff_cmd, $file1, $file2) };
 		if ($@) {
 		    $diff = "(diff not available" . (!$diff_error_shown++ ? ", error: $@" : "") . ")";
 		}
