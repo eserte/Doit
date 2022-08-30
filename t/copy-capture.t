@@ -67,11 +67,15 @@ $doit->write_binary({quiet => 2}, "test-file", "changed content");
     };
     is $stdout, '';
     like colorstrip($stderr), qr{^\QINFO: copy test-file test-file-copied}, 'changed contents';
-    if ($doit->which('diff')) {
+    if ($Doit::diff_cmd[0] eq 'diff') {
 	like $stderr, qr{^\Q--- test-file-copied}sm, 'looks like a diff header';
 	like $stderr, qr{^\Q+++ test-file}sm, 'looks like a diff header';
 	like $stderr, qr{^\Q-content}sm, 'looks like diff body';
 	like $stderr, qr{^\Q+changed content}sm, 'looks like diff body';
+    } elsif ($Doit::diff_cmd[0] eq 'fc') {
+	like $stderr, qr{^\QComparing files test-file-copied and TEST-FILE}sm, 'looks like a FC header';
+	like $stderr, qr{^\Q***** test-file-copied}smi, 'first file in FC output';
+	like $stderr, qr{^\Q***** TEST-FILE}smi, 'second file in FC output'; # case insensitive check, unclear if this may be lowercase sometimes
     }
     is slurp("test-file-copied"), "changed content";
 }
