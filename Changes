@@ -1,5 +1,8 @@
 Revision history for Doit.
 
+0.026	 2022-09-01
+	- stable release, no changes since 0.025_59
+
 0.025_59 2022-08-31
 	- tests
 	  - fix diff-related tests on windows
