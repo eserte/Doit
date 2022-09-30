@@ -841,7 +841,7 @@ use warnings;
 
 	my @commands;
 	push @commands, {
-			 ($info ? (rv => $code->(), code => sub {}) : (code => $code)),
+			 (code => $code, $info ? (run_always => 1) : ()),
 			 ($quiet ? () : (msg => "@args")),
 			};
 	Doit::Commands->new(@commands);
@@ -924,7 +924,7 @@ use warnings;
 
 	my @commands;
 	push @commands, {
-			 ($info ? (rv => $code->(), code => sub {}) : (code => $code)),
+			 (code => $code, $info ? (run_always => 1) : ()),
 			 ($quiet ? () : (msg => "@args")),
 			};
 	Doit::Commands->new(@commands);
@@ -971,7 +971,7 @@ use warnings;
 
 	my @commands;
 	push @commands, {
-			 ($info ? (rv => $code->(), code => sub {}) : (code => $code)),
+			 (code => $code, $info ? (run_always => 1) : ()),
 			 ($quiet ? () : (msg => "@args")),
 			};
 	Doit::Commands->new(@commands);
@@ -1083,18 +1083,11 @@ use warnings;
 
 	my @commands;
 	push @commands, {
-			 ($info
-			  ? (
-			     rv   => do { $code->(); 1 },
-			     code => sub {},
-			    )
-			  : (
-			     rv   => 1,
-			     code => $code,
-			    )
-			 ),
-			 ($quiet ? () : (msg  => "@args" . _show_cwd($show_cwd))),
-			};
+	    rv   => 1,
+	    code => $code,
+	    ($info ? (run_always => 1) : ()),
+	    ($quiet ? () : (msg  => "@args" . _show_cwd($show_cwd))),
+	};
 	Doit::Commands->new(@commands);
     }
 
@@ -1634,13 +1627,17 @@ use warnings;
 	my $rv;
 	for my $command ($self->commands) {
 	    if (exists $command->{msg}) {
-		Doit::Log::info($command->{msg} . " (dry-run)");
+		Doit::Log::info($command->{msg} . ($command->{run_always} ? "" : " (dry-run)"));
 	    }
 	    if (exists $command->{code}) {
+		my $this_rv;
+		if ($command->{run_always}) {
+		    $this_rv = $command->{code}->();
+		} # else $this_rv stays undefined
 		if (exists $command->{rv}) {
 		    $rv = $command->{rv};
 		} else {
-		    # Well, in dry-run mode we have no real return value...
+		    $rv = $this_rv;
 		}
 	    }
 	}
