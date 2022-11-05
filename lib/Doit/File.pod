@@ -11,12 +11,12 @@ Doit::File - commands for file creation
     $doit->file_atomic_write('/path/to/file', sub {
         my $fh = shift;
         print $fh "Hello, world!\n";
-    };
+    });
 
     $doit->file_atomic_write('/path/to/file', sub {
         my($fh, $filename) = @_;
 	$doit->system("a_system_cmd > $filename");
-    }, tmpsuffix => '.my.tmp';
+    }, tmpsuffix => '.my.tmp');
 
 =head1 DESCRIPTION
 
