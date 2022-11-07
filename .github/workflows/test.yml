@@ -32,7 +32,7 @@ jobs:
             install_optional_dependencies: true
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         clean: false
     - run: |
@@ -73,7 +73,7 @@ jobs:
           - perlimage: 5.36.0-slim-bullseye
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Preinstall, Configure, Build and Test
       env:
         HARNESS_TIMER:   1
@@ -88,7 +88,7 @@ jobs:
     name: Test coverage
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         clean: false
     - name: install Devel::Cover::Report::Coveralls and optional Doit deps
