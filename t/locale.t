@@ -25,7 +25,7 @@ ok $doit->can('locale_enable_locale'), "found method from component 'locale'";
 SKIP: {
     my $test_count = 2;
 
-    skip "Locale-adding code only active on travis", $test_count if !$ENV{TRAVIS};
+    skip "Locale-adding code only active on travis", $test_count if !$ENV{TRAVIS} && !$ENV{GITHUB_ACTIONS};
 
     my $sudo = TestUtil::get_sudo($doit, info => \my %info);
     skip $info{error}, $test_count if !$sudo;

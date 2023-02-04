@@ -51,7 +51,7 @@ if ($ENV{TRAVIS}) {
     }
 }
 
-if ($ENV{TRAVIS}) {
+if ($ENV{TRAVIS} || $ENV{GITHUB_ACTIONS}) {
     my $test_package = 'perl@5.18';
     $d->brew_install_packages($test_package);
     my @missing_packages = $d->brew_missing_packages($test_package);
