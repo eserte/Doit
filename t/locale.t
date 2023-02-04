@@ -43,6 +43,8 @@ SKIP: {
 	my $try_locales_rx = '(' . join('|', map { quotemeta $_ } @try_locales) . ')';
 	ok grep { /$try_locales_rx/ } split /\n/, $all_locales;
     }
+
+    ok !$sudo->locale_enable_locale([@try_locales]), '2nd install does nothing';
 }
 
 __END__
