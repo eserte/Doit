@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2023 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -16,7 +16,7 @@ package Doit::Fork;
 use Doit; # does strict + warnings
 
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
 
@@ -55,6 +55,7 @@ sub do_connect {
     $pipe_to_fork->writer;
     $pipe_from_fork->reader;
     $self->{rpc} = Doit::RPC::Client->new($pipe_from_fork, $pipe_to_fork, label => "fork:", debug => $debug);
+    $self->{pid} = $worker_pid;
 
     $self;
 }
