@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2020,2021,2022 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020,2021,2022,2023 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -445,15 +445,7 @@ EOF
 }
 
 sub git_checks {
-    $doit->add_component('git');
-
-    my $status = $doit->git_short_status;
-    if ($status eq '<<') {
-	error 'Working directory has uncomitted changes: ' . `git status`;
-    }
-    if ($status eq '*') {
-	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
-    }
+    _check_clean_git();
 
     my $Doit_VERSION = _get_Doit_VERSION();
 
@@ -972,6 +964,19 @@ sub release {
     $doit->system('git', 'push', 'origin', 'master', $Doit_VERSION);
 }
 
+sub ci_precheck {
+    my @ci_systems = ('github-actions', 'appveyor');
+
+    _check_clean_git();
+
+    for my $ci_system (@ci_systems) {
+	$doit->system('git', 'push', 'origin', "+HEAD:XXX-${ci_system}");
+    }
+
+    # check-ci is available here: https://github.com/eserte/srezic-misc/blob/master/scripts/check-ci
+    $doit->system('check-ci', (map { "--$_" } @ci_systems));
+}
+
 sub _prove_path {
     my @directory_candidates = ($Config{bin}, dirname(realpath $^X));
     my @basename_candidates = ('prove', "prove$Config{version}");
@@ -1050,6 +1055,18 @@ sub _add_Dockerfile_invalidate_cmd {
 # are executed at least once a day
 RUN echo @{[ POSIX::strftime("%F", localtime) ]}
 EOF
+}
+
+sub _check_clean_git {
+    $doit->add_component('git');
+
+    my $status = $doit->git_short_status;
+    if ($status eq '<<') {
+	error 'Working directory has uncomitted changes: ' . `git status`;
+    }
+    if ($status eq '*') {
+	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
+    }
 }
 
 # REPO BEGIN
