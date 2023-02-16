@@ -13,10 +13,11 @@
 
 package Doit::Fork;
 
-use Doit; # does strict + warnings
+use Doit;
 
-use vars qw($VERSION);
-$VERSION = '0.02';
+use strict;
+use warnings;
+our $VERSION = '0.02';
 
 use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
 
