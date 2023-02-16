@@ -39,7 +39,8 @@ sub lwp_mirror_wrapper {
     my $res = eval { $doit->lwp_mirror($url, $text, @ua_opts, @more_ua_opts) };
     if ($@ && (
 	       $@ =~ /503 Service Unavailable: Back-end server is at capacity/ ||
-	       $@ =~ /599 Internal Exception: Timed out while waiting for socket to become ready for reading/
+	       $@ =~ /599 Internal Exception: Timed out while waiting for socket to become ready for reading/ ||
+	       $@ =~ /502 Bad Gateway/
 	      )) {
 	skip "Unrecoverable backend error ($@), skipping remaining tests", 1;
     }
