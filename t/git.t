@@ -28,6 +28,9 @@ plan 'no_plan';
 
 $d->add_component('git');
 
+my $git_version = $d->info_qx({quiet=>1}, 'git', '--version');
+diag $git_version;
+
 my $git_less_directory;
 if (-d '/' && !-d '/.git') {
     $git_less_directory = '/';
@@ -326,7 +329,7 @@ SKIP: {
 	    like $history[0], qr{actually some content};
 
 	    local $TODO;
-	    if ($d->info_qx({quiet=>1}, 'git', '--version') =~ /^git version 1\.7\./) {
+	    if ($git_version =~ /^git version 1\.7\./) {
 		$TODO = "git version 1.7.x detected --- this version actually fetches two commits with --depth=1";
 	    }
 	    is scalar(@history), 1, '--depth=1 was effective'
