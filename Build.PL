@@ -204,15 +204,24 @@ EOF
     if ($ENV{XXX_INVALIDATE_CACHE}) { # XXX this will be a proper option in future!
 	_add_Dockerfile_invalidate_cmd(\$dockerfile);
     }
+
     my $add_opts = {};
     $dockerfile .= _fix_Dockerfile_for_dist($distro_spec, $add_opts);
+    _docker_add_distro_specific_files(dir => $dir, distro_spec => $distro_spec);
+    if (-e "$dir/.distro_support") {
+	$dockerfile .= <<'EOF';
+COPY .distro_support .distro_support
+RUN .distro_support/run.sh
+EOF
+    }
+
     if ($distro_spec =~ m{^centos:}) {
 	######################################################################
 	# CentOS
 	# From https://fedoraproject.org/wiki/EPEL/FAQ#How_can_I_install_the_packages_from_the_EPEL_software_repository.3F
 	if      ($distro_spec =~ m{:6$}) {
 	    $dockerfile .= <<"EOF";
-RUN rpm -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
+RUN rpm -Uvh https://dl.fedoraproject.org/pub/archive/epel/6/x86_64/epel-release-6-8.noarch.rpm
 EOF
 	} elsif ($distro_spec =~ m{:7$}) {
 	    $dockerfile .= <<"EOF";
@@ -393,7 +402,6 @@ sub test_standard {
     for my $distro_spec ('ubuntu:jammy', 'debian:bullseye', 'ubuntu:focal', 'debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6', 'alpine:latest') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
 	for my $more_testing (0, 1) {
-	    next if $more_testing && $distro_spec eq 'centos:6'; # centos:6 is unmaintained since Nov 2020, and some yum operations don't work anymore. See also https://support.plesk.com/hc/en-us/articles/360017922619-After-November-30th-2020-updating-system-packages-on-Plesk-server-with-CentOS-6-fails-Cannot-find-a-valid-baseurl-for-repo-base
 	    local $ENV{XXX_MORE_TESTING} = $more_testing;
 	    $doit->system('./Build', 'test_in_docker');
 	}
@@ -1055,6 +1063,98 @@ sub _add_Dockerfile_invalidate_cmd {
 # are executed at least once a day
 RUN echo @{[ POSIX::strftime("%F", localtime) ]}
 EOF
+}
+
+sub _docker_add_distro_specific_files {
+    my %opts = @_;
+    my $dir         = delete $opts{dir}         || die 'Please specify dir';
+    my $distro_spec = delete $opts{distro_spec} || die 'Please specify distro_spec';
+    die 'Unhandled options: ' . join(' ', %opts) if %opts;
+
+    if ($distro_spec eq 'centos:6') {
+	$doit->mkdir("$dir/.distro_support");
+	# Instructions from https://gcore.de/de/hilfe/linux/centos6-repo-nach-eol-anpassen.php
+	$doit->write_binary("$dir/.distro_support/CentOS.repo", <<'EOF');
+[base]
+name=CentOS-6.10 - Base
+baseurl=http://vault.centos.org/6.10/os/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=1
+metadata_expire=never
+
+#released updates
+[updates]
+name=CentOS-6.10 - Updates
+baseurl=http://vault.centos.org/6.10/updates/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=1
+metadata_expire=never
+
+# additional packages that may be useful
+[extras]
+name=CentOS-6.10 - Extras
+baseurl=http://vault.centos.org/6.10/extras/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=1
+metadata_expire=never
+
+# additional packages that extend functionality of existing packages
+[centosplus]
+name=CentOS-6.10 - CentOSPlus
+baseurl=http://vault.centos.org/6.10/centosplus/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=0
+metadata_expire=never
+
+#contrib - packages by Centos Users
+[contrib]
+name=CentOS-6.10 - Contrib
+baseurl=http://vault.centos.org/6.10/contrib/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=0
+metadata_expire=never
+EOF
+	$doit->write_binary("$dir/.distro_support/epel.repo", <<'EOF');
+[epel]
+name=Extra Packages for Enterprise Linux 6 - $basearch
+baseurl=https://archives.fedoraproject.org/pub/archive/epel/6/$basearch
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+metadata_expire=never
+
+[epel-debuginfo]
+name=Extra Packages for Enterprise Linux 6 - $basearch - Debug
+baseurl=https://archives.fedoraproject.org/pub/archive/epel/6/$basearch/debug
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+gpgcheck=1
+metadata_expire=never
+
+[epel-source]
+name=Extra Packages for Enterprise Linux 6 - $basearch - Source
+baseurl=https://archives.fedoraproject.org/pub/archive/epel/6/SRPMS
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+gpgcheck=1
+metadata_expire=never
+EOF
+	$doit->write_binary("$dir/.distro_support/run.sh", <<'EOF');
+#! /bin/sh
+set -ex
+rm -f /etc/yum.repos.d/CentOS*.repo
+rm -f /etc/yum.repos.d/epel.repo
+cp .distro_support/CentOS.repo /etc/yum.repos.d/
+cp .distro_support/epel.repo /etc/yum.repos.d/
+yum clean all
+EOF
+	$doit->chmod(0755, "$dir/.distro_support/run.sh");
+    }
 }
 
 sub _check_clean_git {
