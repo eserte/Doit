@@ -341,7 +341,7 @@ EOF
 	$dockerfile .= <<"EOF";
 ENV DEBIAN_FRONTEND noninteractive 
 
-RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends \\
+RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} \\
 $packages_spec
 
 EOF
@@ -358,7 +358,7 @@ EOF
 	    );
 	    my $more_packages_spec = join(" \\\n", map { "    $_" } @more_packages);
 	    $dockerfile .= <<"EOF";
-RUN apt-get install -y --no-install-recommends \\
+RUN apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} \\
 $more_packages_spec
 
 ENV TRAVIS 1
@@ -1042,15 +1042,21 @@ EOF
 # apt_get_update_opts).
 sub _fix_Dockerfile_for_dist {
     my($distro_spec, $add_opts_ref) = @_;
-    if ($distro_spec =~ m{^debian:(wheezy|7)$}) {
+    if ($distro_spec =~ m{^debian:(wheezy|jessie|7|8)$}) {
+	my $codename = $1;
+	if    ($codename eq '7') { $codename = 'wheezy' }
+	elsif ($codename eq '8') { $codename = 'jessie' }
 	# https://unix.stackexchange.com/questions/508724/failed-to-fetch-jessie-backports-repository
-	$add_opts_ref->{apt_get_update_opts} = ' -o Acquire::Check-Valid-Until=false'; # with leading space
+	$add_opts_ref->{apt_get_update_opts}  = ' -o Acquire::Check-Valid-Until=false';
+	# https://askubuntu.com/questions/74345/how-do-i-bypass-ignore-the-gpg-signature-checks-of-apt
+	$add_opts_ref->{apt_get_install_opts} = ' -o APT::Get::AllowUnauthenticated=true';
 	<<EOF;
-RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian wheezy main'                   >  /etc/apt/sources.list
-RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian-security/ wheezy/updates main' >> /etc/apt/sources.list
+RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian $codename main'                   >  /etc/apt/sources.list
+RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian-security/ $codename/updates main' >> /etc/apt/sources.list
 EOF
     } else {
 	$add_opts_ref->{apt_get_update_opts} = '';
+	$add_opts_ref->{apt_get_install_opts} = '';
 	'';
     }
 }
