@@ -399,7 +399,7 @@ sub test_standard {
     $doit->system('./Build');
     $doit->system('./Build', 'test');
     Doit::Log::set_label(undef);
-    for my $distro_spec ('ubuntu:jammy', 'debian:bullseye', 'ubuntu:focal', 'debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6', 'alpine:latest') {
+    for my $distro_spec ('debian:bookworm', 'ubuntu:jammy', 'debian:bullseye', 'ubuntu:focal', 'debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6', 'alpine:latest') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
 	for my $more_testing (0, 1) {
 	    local $ENV{XXX_MORE_TESTING} = $more_testing;
