@@ -1042,10 +1042,11 @@ EOF
 # apt_get_update_opts).
 sub _fix_Dockerfile_for_dist {
     my($distro_spec, $add_opts_ref) = @_;
-    if ($distro_spec =~ m{^debian:(wheezy|jessie|7|8)$}) {
+    if ($distro_spec =~ m{^debian:(wheezy|jessie|stretch|7|8|9)$}) {
 	my $codename = $1;
 	if    ($codename eq '7') { $codename = 'wheezy' }
 	elsif ($codename eq '8') { $codename = 'jessie' }
+	elsif ($codename eq '9') { $codename = 'stretch' }
 	# https://unix.stackexchange.com/questions/508724/failed-to-fetch-jessie-backports-repository
 	$add_opts_ref->{apt_get_update_opts}  = ' -o Acquire::Check-Valid-Until=false';
 	# https://askubuntu.com/questions/74345/how-do-i-bypass-ignore-the-gpg-signature-checks-of-apt
