@@ -19,7 +19,8 @@ if (!eval { require HTTP::Tiny; 1 }) {
 my $ua = HTTP::Tiny->new(timeout => 20);
 
 #my $httpbin_url = 'https://httpbin.org';
-my $httpbin_url = 'http://eu.httpbin.org';
+#my $httpbin_url = 'http://eu.httpbin.org';
+my $httpbin_url = 'http://httpbingo.org';
 
 {
     my $resp = $ua->get($httpbin_url);
