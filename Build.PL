@@ -286,7 +286,7 @@ RUN yum -y install \\
     "perl(LWP::UserAgent)" \\
     file
 
-ENV TRAVIS 1
+ENV GITHUB_ACTIONS 1
 ENV DOIT_TEST_WITH_SUDO 1
 
 EOF
@@ -315,7 +315,7 @@ EOF
 	    $dockerfile .= <<"EOF";
 RUN apk add py3-pip
 
-#ENV TRAVIS 1
+#ENV GITHUB_ACTIONS 1
 ENV DOIT_TEST_WITH_SUDO 1
 
 EOF
@@ -361,7 +361,7 @@ EOF
 RUN apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} \\
 $more_packages_spec
 
-ENV TRAVIS 1
+ENV GITHUB_ACTIONS 1
 ENV DOIT_TEST_WITH_SUDO 1
 
 EOF
