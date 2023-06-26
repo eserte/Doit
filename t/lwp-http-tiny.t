@@ -40,7 +40,8 @@ sub lwp_mirror_wrapper {
     if ($@ && (
 	       $@ =~ /503 Service Unavailable: Back-end server is at capacity/ ||
 	       $@ =~ /599 Internal Exception: Timed out while waiting for socket to become ready for reading/ ||
-	       $@ =~ /502 Bad Gateway/
+	       $@ =~ /502 Bad Gateway/ ||
+	       $@ =~ /504 Gateway Time-out/
 	      )) {
 	skip "Unrecoverable backend error ($@), skipping remaining tests", 1;
     }
@@ -53,9 +54,11 @@ in_directory {
 	my($res, $err);
 
 	($res, $err) = lwp_mirror_wrapper("$httpbin_url/get",   "mirrored.txt");
-	is $res, 1, 'mirror was done';
+	is $res, 1, 'mirror was done'
+	    or diag "lwp_mirror failed with: $err";
 	($res, $err) = lwp_mirror_wrapper("$httpbin_url/cache", "mirrored.txt");
-	is $res, 0, 'no change';
+	is $res, 0, 'no change'
+	    or diag "lwp_mirror failed with: $err";
 
 	($res, $err) = lwp_mirror_wrapper("$httpbin_url/status/500", "mirrored.txt", debug => 1);
 	like $err, qr{ERROR.*mirroring failed: 500 }, 'got status 500';
