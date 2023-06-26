@@ -23,7 +23,7 @@ my $httpbin_url = 'http://eu.httpbin.org';
 
 {
     my $resp = $ua->get($httpbin_url);
-    plan skip_all => "Cannot fetch successfully from $httpbin_url" if !$resp->{success};
+    plan skip_all => "Cannot fetch successfully from $httpbin_url ($resp->{status} $resp->{reason})" if !$resp->{success};
 }
     
 plan 'no_plan';
