@@ -57,12 +57,13 @@ jobs:
         ./Build test
         sudo ./Build test_xt
       if: "!startsWith(matrix.os,'windows-')"
-    - name: Build and test on Windows
-      run: |
-        c:\strawberry\perl\bin\perl Build.PL
-        c:\strawberry\perl\bin\perl Build
-        c:\strawberry\perl\bin\perl Build test
-      if: "startsWith(matrix.os, 'windows-')"
+## Running dist_install_and_test is enough, see below
+#    - name: Build and test on Windows
+#      run: |
+#        c:\strawberry\perl\bin\perl Build.PL
+#        c:\strawberry\perl\bin\perl Build
+#        c:\strawberry\perl\bin\perl Build test
+#      if: "startsWith(matrix.os, 'windows-')"
 
     - name: dist_install_and_test
       run: |
