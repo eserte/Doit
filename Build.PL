@@ -548,9 +548,10 @@ sub dist_install_and_test {
 	in_directory {
 	    $doit->system($^X, 'Build.PL');
 	    my @Build = $^O eq 'MSWin32' ? ($^X, 'Build') : ('./Build');
+	    my @sudo = $^O eq 'MSWin32' ? () : ('sudo');
 	    $doit->system(@Build);
 	    $doit->system(@Build, 'test');
-	    $doit->system(@Build, 'install');
+	    $doit->system(@sudo, @Build, 'install');
 	    $doit->system(@Build, 'test-installed');
 	} "Doit-$Doit_VERSION";
     } $dir;
