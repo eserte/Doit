@@ -84,6 +84,27 @@ EOF
 
 	    diag "Testing $ini_class";
 
+	    {
+		my $HoH = $doit->ini_info_as_HoH("$tmp");
+		is_deeply($HoH, {
+		    connection => {
+			id => "public",
+			type => "wifi",
+			permissions => "",
+		    },
+		    wifi => {
+			"mac-address-blacklist" => "",
+			mode => "infrastructure",
+			ssid => "ssid",
+		    },
+		    "wifi-security" => {
+			"auth-alg" => "open",
+			"key-mgmt" => "wpa-psk",
+			"psk" => "secret",
+		    }
+		}, "ini_info_as_HoH output for class $ini_class");
+	    }
+
 	    $doit->ini_set_implementation($ini_class);
 	    is $doit->ini_change("$tmp", "wifi-security.psk" => "new-secret", "connection.id" => "non-public"), 1, 'changes detected';
 	    expected_line_endings("$tmp", 'unix');

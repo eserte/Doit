@@ -16,6 +16,8 @@ Doit::Ini - commands for changing ini files
         $self->confobj->setval('section', 'key', 'newval');
     });
 
+    my $HoH = $doit->ini_info_as_HoH('/path/to/file.ini');
+
 =head1 DESCRIPTION
 
 B<Doit::Ini> is a L<Doit> component providing methods for changing
@@ -68,6 +70,13 @@ used. It's also possible to use other methods e.g. to insert new keys
 or delete existing ones. To make sure that a specific ini
 implementation module is used, call L</ini_set_implementation> with a
 single module.
+
+=head3 ini_info_as_HoH
+
+    my $HoH = $doit->ini_info_as_HoH('/path/to/file.ini');
+
+Return a hash-of-hash reference of the ini contents. First hash level
+is the ini sections, second hash level is the ini parameters.
 
 =head3 ini_set_implementation
 
