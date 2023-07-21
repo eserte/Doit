@@ -332,6 +332,23 @@ EOF
 	    'git',
 	);
 	my $packages_spec = join(" \\\n", map { "    $_" } @packages);
+	my $more_packages_spec = '';
+	if ($more_testing) {
+	    my @more_packages = (
+		'libbsd-resource-perl',
+		'libcapture-tiny-perl',
+		'libconfig-inifiles-perl',
+		'libcpan-meta-perl',
+		'libdevel-hide-perl',
+		'libwww-perl',
+		'perl-modules',
+		'locales',
+		'file',
+		($distro_spec eq 'ubuntu:precise' ? () : 'python3-pip'),
+	    );
+	    $more_packages_spec = join(" \\\n", map { "    $_" } @more_packages);
+	}
+
 	if ($distro_spec =~ m{^(ubuntu:precise)$}) {
 	    # See https://gist.github.com/dergachev/f5da514802fcbbb441a1
 	    $dockerfile .= <<'EOF'
@@ -342,25 +359,12 @@ EOF
 ENV DEBIAN_FRONTEND noninteractive 
 
 RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} \\
-$packages_spec
+$packages_spec \\
+$more_packages_spec
 
 EOF
 	if ($more_testing) {
-	    my @more_packages = (
-		'libbsd-resource-perl',
-		'libcapture-tiny-perl',
-		'libcpan-meta-perl',
-		'libwww-perl',
-		'perl-modules',
-		'locales',
-		'file',
-		($distro_spec eq 'ubuntu:precise' ? () : 'python3-pip'),
-	    );
-	    my $more_packages_spec = join(" \\\n", map { "    $_" } @more_packages);
 	    $dockerfile .= <<"EOF";
-RUN apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} \\
-$more_packages_spec
-
 ENV GITHUB_ACTIONS 1
 ENV DOIT_TEST_WITH_SUDO 1
 
