@@ -34,9 +34,10 @@ jobs:
             dist_install_and_test: true
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         clean: false
+        show-progress: false
     - run: |
         sudo apt-get update -qq
         sudo apt-get install -y libipc-run-perl libnet-openssh-perl libbsd-resource-perl libdevel-hide-perl libconfig-inifiles-perl locales
