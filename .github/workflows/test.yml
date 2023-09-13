@@ -98,6 +98,7 @@ jobs:
           #- image: debian:bookworm
 
     steps:
+    # Note: checkout@v4 does not work with older debians (e.g.stretch)
     - uses: actions/checkout@v3
     - name: Preinstall, Configure, Build and Test
       env:
@@ -114,9 +115,10 @@ jobs:
     name: Test coverage
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         clean: false
+        show-progress: false
     - name: install Devel::Cover::Report::Coveralls and optional Doit deps
       run: |
         sudo apt-get update -qq
