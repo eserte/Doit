@@ -1,0 +1,16 @@
+name: CI on FreeBSD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on FreeBSD
+    runs-on: macos-12
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        clean: false
+        show-progress: false
+    - run: |
+        which perl
