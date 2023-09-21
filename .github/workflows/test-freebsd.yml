@@ -12,5 +12,12 @@ jobs:
       with:
         clean: false
         show-progress: false
-    - run: |
-        which perl
+    - uses: vmactions/freebsd-vm@v0
+      with:
+        usesh: true
+        prepare: |
+          pkg install -y perl5
+        run: |
+          perl Build.PL
+          ./Build
+          ./Build test
