@@ -15,7 +15,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-20.04, macos-latest, windows-latest]
     steps:
-      - uses: eserte/sandbox/.github/actions/install-doit-from-github@master
+      - uses: eserte/Doit/.github/actions/install-doit-from-github@master
       - run: |
           perl -MDoit -MDoit::Log -E "info 'hello world'"
 
@@ -44,6 +44,6 @@ jobs:
       - run: |
           dnf update --quiet -y && dnf install --quiet -y perl
         if: startsWith(matrix.image, 'fedora:')
-      - uses: eserte/sandbox/.github/actions/install-doit-from-github@master
+      - uses: eserte/Doit/.github/actions/install-doit-from-github@master
       - run: |
           perl -MDoit -MDoit::Log -E "info 'hello world'"
