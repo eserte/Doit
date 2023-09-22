@@ -2,6 +2,9 @@ name: CI
 
 on:
   push:
+    paths-ignore:
+      - '.github/workflows/*install-doit-from-github*'
+      - '.github/actions/install-doit-from-github/**'
     branches-ignore:
       - '*travis*'
       - '*appveyor*'
