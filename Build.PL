@@ -403,13 +403,36 @@ sub test_standard {
     $doit->system('./Build');
     $doit->system('./Build', 'test');
     Doit::Log::set_label(undef);
+    my @results;
     for my $distro_spec ('debian:bookworm', 'ubuntu:jammy', 'debian:bullseye', 'ubuntu:focal', 'debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6', 'alpine:latest') {
 	local $ENV{DISTRO_SPEC} = $distro_spec;
 	for my $more_testing (0, 1) {
 	    local $ENV{XXX_MORE_TESTING} = $more_testing;
+	    my $t0 = time; # currently not hires, should be fine for now
 	    $doit->system('./Build', 'test_in_docker');
+	    my $t1 = time;
+	    push @results, { distro => $distro_spec, more_testing => $more_testing, result => 'pass', time => ($t1-$t0)."s" };
 	}
     }
+
+    my $report = "test_standard results\n";
+    my @cols = qw(distro more_testing result time);
+    my @col_widths;
+    for my $col (@cols) {
+	my $max_width;
+	for my $result (@results) {
+	    my $width = length $result->{$col};
+	    $max_width = $width if !defined $max_width || $max_width < $width;
+	}
+	push @col_widths, $max_width;
+    }
+    for my $result (@results) {
+	for my $col_i (0 .. $#cols) {
+	    $report .= sprintf "%-${col_widths[$col_i]}s ", $result->{$cols[$col_i]};
+	}
+	$report .= "\n";
+    }
+    info $report;
 }
 
 sub test_kwalitee (;$) {
