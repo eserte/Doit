@@ -15,7 +15,7 @@ package Doit::Ini;
 
 use strict;
 use warnings;
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use File::Temp ();
 
@@ -132,7 +132,7 @@ sub ini_info_as_HoH {
     sub new { bless { }, shift }
     sub read_file {
 	my($self, $filename) = @_;
-	$self->{c} = $self->{o} = Config::IniFiles->new(-file => $filename);
+	$self->{c} = $self->{o} = Config::IniFiles->new(-file => $filename, -fallback => 'GLOBAL');
 	$self->{o}->ReadConfig(-file => $filename);
     }
     sub set_value {

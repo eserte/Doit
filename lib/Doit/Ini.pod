@@ -39,6 +39,10 @@ C<libconfig-inifiles-perl>.
 
 =back
 
+Non-ini files (e.g. shell config files) can also be handled with some
+restrictions (see L</BUGS>). A pseudo section "GLOBAL" is used for
+section-less key-values.
+
 =head2 DOIT COMMANDS
 
 The following commands are added to the Doit runner object:
@@ -105,6 +109,9 @@ whitespace may be lost when using C<Config::IniFiles>.
 Currently Unix newlines are used when writing files, even on Windows
 systems. This may change in future (i.e. preserving original line
 endings).
+
+C<Config::IOD::INI> and C<Config::IniFiles> handle quotes in values
+differently: the former strips quotation marks, the latter keeps it.
 
 =head1 AUTHOR
 
