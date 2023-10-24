@@ -847,14 +847,18 @@ sub _debian_package {
 	    }
 	    $version =~ s{_}{-}; # replace "devel" version specifier
 	    if ($add_distro_version) {
-		chomp(my $dist_id = $doit->qx({quiet=>1}, 'lsb_release', '-si'));
-		chomp(my $rel     = $doit->qx({quiet=>1}, 'lsb_release', '-sr'));
-		if ($dist_id eq 'Debian') {
+		my $osr = _read_os_release();
+		if (!$osr) {
+		    error 'Cannot read /etc/os-release --- please specify --version manually';
+		}
+		my $dist_id = $osr->{ID};
+		my $rel = $osr->{VERSION_ID};
+		if ($dist_id eq 'debian') {
 		    $rel =~ s{^(\d+).*}{$1};
 		    $version .= "+deb${rel}u${add_distro_version}";
-		} elsif ($dist_id eq 'LinuxMint') {
+		} elsif ($dist_id eq 'linuxmint') {
 		    $version .= "+linuxmint${rel}u${add_distro_version}";
-		} elsif ($dist_id eq 'Ubuntu') {
+		} elsif ($dist_id eq 'ubuntu') {
 		    $version .= "~ubuntu${rel}.${add_distro_version}";
 		} else {
 		    error "No distro version support for '$dist_id'";
@@ -926,7 +930,6 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends \\
     dh-make-perl \\
-    lsb-release \\
     git
 
 # XXX This is depending on the current perl module and should be configurable
@@ -1202,6 +1205,20 @@ sub _check_clean_git {
     }
     if ($status eq '*') {
 	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
+    }
+}
+
+sub _read_os_release {
+    if (open my $fh, '<', '/etc/os-release') {
+	my %c;
+	while(<$fh>) {
+	    if (my($k,$v) = $_ =~ m{^(.*?)="?(.*?)"?$}) {
+		$c{$k} = $v;
+	    }
+	}
+	\%c;
+    } else {
+	undef;
     }
 }
 
