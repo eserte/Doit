@@ -193,7 +193,7 @@ sub test_in_docker {
     my $more_testing = $ENV{XXX_MORE_TESTING}; # XXX this will be a proper option in future!
     Doit::Log::set_label("[$distro_spec" . ($more_testing ? " (more)" : "") . "]");
     for my $tool (qw(docker)) {
-	$doit->qx('which', $tool); # existence check
+	$doit->which($tool) or error "$tool is missing";
     }
     require File::Temp;
     my $dir = File::Temp::tempdir("Doit_test_in_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
@@ -826,8 +826,8 @@ sub debian_package {
 sub _debian_package {
     my(%opts) = @_;
 
-    for my $tool (qw(dh-make-perl)) { # XXX maybe add git here?
-	$doit->qx('which', $tool); # existence check
+    for my $tool (qw(dh-make-perl)) { # git is checked if needed
+	$doit->which($tool) or error "$tool is missing";
     }
 
     my $distdir = distdir(temporary => 1);
@@ -835,6 +835,7 @@ sub _debian_package {
     my $version = delete $opts{'--version'};
     my $add_distro_version = delete $opts{'--add-distro-version'};
     if (!defined $version) {
+	$doit->which('git') or error 'git is missing --- please install it or alternatively specify --version manually';
 	chomp(my $git_describe = eval { $doit->info_qx('git', 'describe') }); # XXX what if this fails? Optionally made fatal?
 	if (defined $git_describe) {
 	    if ($git_describe =~ m{^([0-9\._]+)$}) {
@@ -884,7 +885,7 @@ sub debian_package_with_docker {
 	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
     }
     for my $tool (qw(docker)) {
-	$doit->qx('which', $tool); # existence check
+	$doit->which($tool) or error "$tool is missing";
     }
 
     # Cannot access directories outside of /Users when working
