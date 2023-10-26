@@ -22,7 +22,7 @@ use Digest::MD5 qw(md5_hex);
 use File::Basename;
 use Doit;
 use Doit::Log;
-use Doit::Util qw(in_directory);
+use Doit::Util qw(in_directory get_os_release);
 
 my $doit = Doit->init;
 
@@ -847,7 +847,7 @@ sub _debian_package {
 	    }
 	    $version =~ s{_}{-}; # replace "devel" version specifier
 	    if ($add_distro_version) {
-		my $osr = _read_os_release();
+		my $osr = get_os_release();
 		if (!$osr) {
 		    error 'Cannot read /etc/os-release --- please specify --version manually';
 		}
@@ -1205,20 +1205,6 @@ sub _check_clean_git {
     }
     if ($status eq '*') {
 	error 'Working directory has files not under git control (and not in .gitignore or .git/info/exclude): ' . `git status`;
-    }
-}
-
-sub _read_os_release {
-    if (open my $fh, '<', '/etc/os-release') {
-	my %c;
-	while(<$fh>) {
-	    if (my($k,$v) = $_ =~ m{^(.*?)="?(.*?)"?$}) {
-		$c{$k} = $v;
-	    }
-	}
-	\%c;
-    } else {
-	undef;
     }
 }
 

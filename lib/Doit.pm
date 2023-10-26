@@ -163,7 +163,7 @@ use warnings;
 {
     package Doit::Util;
     use Exporter 'import';
-    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup copy_stat get_sudo_cmd is_in_path) }
+    our @EXPORT; BEGIN { @EXPORT = qw(in_directory new_scope_cleanup copy_stat get_sudo_cmd is_in_path get_os_release) }
     $INC{'Doit/Util.pm'} = __FILE__; # XXX hack
     use Doit::Log;
 
@@ -281,6 +281,28 @@ use warnings;
 	    }
 	}
 	undef;
+    }
+
+    {
+	my %cached_os_release_per_file;
+	sub get_os_release {
+	    my(%opts) = @_;
+	    my $file = delete $opts{file} || '/etc/os-release';
+	    my $refresh = delete $opts{refresh} || 0;
+	    error 'Unhandled options: ' . join(' ', %opts) if %opts;
+	    if ($refresh || !$cached_os_release_per_file{$file}) {
+		if (open my $fh, '<', $file) {
+		    my %c;
+		    while(<$fh>) {
+			if (my($k,$v) = $_ =~ m{^(.*?)="?(.*?)"?$}) {
+			    $c{$k} = $v;
+			}
+		    }
+		    $cached_os_release_per_file{$file} = \%c;
+		}
+	    }
+	    $cached_os_release_per_file{$file};
+	}
     }
 }
 
