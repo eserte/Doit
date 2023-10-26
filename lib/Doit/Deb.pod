@@ -70,7 +70,8 @@ Return 1 if the key was actually installed, otherwise 0.
 To add a Debian repository to F</etc/apt/sources.list.d> the following
 approach may be used:
 
-    chomp(my $distro = $doit->info_qx({quiet=>1},qw(lsb_release -cs)));
+    use Doit::Util qw(get_os_release);
+    my $distro = get_os_release()->{VERSION_CODENAME};
     if ($doit->write_binary("/etc/apt/sources.list.d", "deb http://debs.example.org $distro main\n")) {
         $doit->system(qw(apt-get update));
     }
