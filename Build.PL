@@ -928,12 +928,12 @@ EOF
 
 ENV DEBIAN_FRONTEND noninteractive 
 
-RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends \\
+RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get$add_opts->{apt_get_install_opts} install -y --no-install-recommends \\
     dh-make-perl \\
     git
 
 # XXX This is depending on the current perl module and should be configurable
-RUN apt-get install -y --no-install-recommends \\
+RUN apt-get$add_opts->{apt_get_install_opts} install -y --no-install-recommends \\
     libipc-run-perl \\
     libnet-openssh-perl
 
