@@ -284,6 +284,7 @@ RUN yum -y install \\
     "perl(BSD::Resource)" \\
     "perl(CPAN::Meta::Validator)" \\
     "perl(LWP::UserAgent)" \\
+    "perl(Config::IniFiles)" \\
     file
 
 ENV GITHUB_ACTIONS 1
