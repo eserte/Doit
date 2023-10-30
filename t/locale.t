@@ -9,6 +9,7 @@ use strict;
 use Test::More;
 
 use Doit;
+use Doit::Util qw(get_os_release);
 
 return 1 if caller();
 
@@ -18,10 +19,21 @@ require FindBin;
 unshift @INC, $FindBin::RealBin;
 require TestUtil;
 
+my $os_id = do {
+    my $os_release = get_os_release();
+    if ($os_release) {
+	$os_release->{ID};
+    } else {
+	'';
+    }
+};
+
 my $doit = Doit->init;
 $doit->add_component('locale');
 ok $doit->can('locale_enable_locale'), "found method from component 'locale'";
-
+if ($os_id =~ m{^(fedora|rocky|centos)$}) {
+    $doit->add_component('rpm'); # see also XXX comment in Doit::Locale
+}
 SKIP: {
     my $test_count = 2;
 
