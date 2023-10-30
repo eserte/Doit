@@ -1,5 +1,9 @@
 Revision history for Doit.
 
+0.026_53 2023-10-30
+	- tests
+	  - disable atime tests by default
+
 0.026_52 2023-10-30
 	- build
 	  - more support for rpm-based systems in test_in_docker
