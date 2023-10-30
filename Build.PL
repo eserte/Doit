@@ -215,19 +215,15 @@ RUN .distro_support/run.sh
 EOF
     }
 
-    if ($distro_spec =~ m{^centos:}) {
+    if ($distro_spec =~ m{^(centos|rockylinux|fedora):}) {
 	######################################################################
 	# CentOS
 	# From https://fedoraproject.org/wiki/EPEL/FAQ#How_can_I_install_the_packages_from_the_EPEL_software_repository.3F
-	if      ($distro_spec =~ m{:6$}) {
+	if      ($distro_spec eq 'centos:6') {
 	    $dockerfile .= <<"EOF";
 RUN rpm -Uvh https://dl.fedoraproject.org/pub/archive/epel/6/x86_64/epel-release-6-8.noarch.rpm
 EOF
-	} elsif ($distro_spec =~ m{:7$}) {
-	    $dockerfile .= <<"EOF";
-RUN yum -y install epel-release
-EOF
-	} elsif ($distro_spec =~ m{:8$}) {
+	} elsif ($distro_spec eq 'centos:7' || $distro_spec eq 'rockylinux:8') {
 	    $dockerfile .= <<"EOF";
 RUN yum -y install epel-release
 EOF
@@ -238,32 +234,44 @@ EOF
 RUN yum -y install \\
     sudo \\
     rsync \\
-    "perl(ExtUtils::MakeMaker)" \\
     "perl(Digest::MD5)" \\
+    "perl(ExtUtils::MakeMaker)" \\
+    "perl(FindBin)" \\
+    "perl(Hash::Util)" \\
+    "perl(Sys::Hostname)" \\
     "perl(Test::More)" \\
+    "perl(Tie::File)" \\
     make \\
     git
 
 EOF
-	if ($distro_spec =~ m{:8$}) {
+	if ($distro_spec eq 'centos:8') {
 	    # Requires also PowerTools repo additionally to EPEL
 	    $dockerfile .= <<"EOF";
 RUN dnf -y install 'dnf-command(config-manager)'
 RUN yum config-manager --set-enabled PowerTools
+EOF
+	} elsif ($distro_spec eq 'rockylinux:8') {
+	    $dockerfile .= <<"EOF";
+RUN dnf -y --enablerepo=powertools install perl-IPC-Run
+EOF
+	} elsif ($distro_spec eq 'rockylinux:9') {
+	    $dockerfile .= <<"EOF";
+RUN dnf -y --enablerepo=crb install perl-IPC-Run
 EOF
 	}
 	$dockerfile .= <<"EOF";
 RUN yum -y install \\
     "perl(IPC::Run)"
 EOF
-	if ($distro_spec !~ m{:8$}) {
-	    # Currently not available in CentOS8
+	if ($distro_spec ne 'centos:8' && $distro_spec ne 'rockylinux:8' && $distro_spec ne 'rockylinux:9') {
+	    # Currently not available in CentOS8 and Rocky
 	    $dockerfile .= <<"EOF";
 RUN yum -y install \\
     "perl(Net::OpenSSH)"
 EOF
 	}
-	if ($distro_spec =~ m{:6$}) {
+	if ($distro_spec eq 'centos:6') {
 	    $dockerfile .= <<"EOF";
 RUN curl -L https://cpanmin.us | perl - App::cpanminus
 
@@ -291,7 +299,7 @@ ENV GITHUB_ACTIONS 1
 ENV DOIT_TEST_WITH_SUDO 1
 
 EOF
-	    if ($distro_spec =~ m{:6$}) {
+	    if ($distro_spec eq 'centos:6') {
 		$dockerfile .= <<"EOF";
 # Term::ANSIColor exists, but is too old (no colorstrip function)
 RUN cpanm --quiet --notest "Term::ANSIColor~>=2.01"
