@@ -1,5 +1,18 @@
 Revision history for Doit.
 
+0.026_51 2023-10-30
+	- features
+	  - Doit::Util: new function get_os_release
+	  - Doit::Ini can handle shell config files better
+	- build improvements
+	  - test_standard: show report about test results
+	  - use which command instead of system() call in Build.Pl
+	  - more hacks for older debian versions
+	- tests
+	  - git.t: use "master" as test branch everywhere
+	  - github: use another action for freebsd testing
+	  - freebsd testing: another test run after installing optional deps
+
 0.026_50 2023-10-05
 	- features
 	  - new module Doit::Fork
