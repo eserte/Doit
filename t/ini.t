@@ -210,8 +210,8 @@ EOF
 		# compare with get_os_release
 		my $os_release = get_os_release();
 		ok $os_release, 'if /etc/os-release exists, than a hash should be returned';
-		is $os_release_contents->{GLOBAL}->{ID}, $os_release->{ID}, 'ID from ini parser and get_os_release() is the same';
 		if ($ini_class ne 'Config::IniFiles') { # double quotes are not stripped with Config::IniFiles
+		    is $os_release_contents->{GLOBAL}->{ID}, $os_release->{ID}, 'ID from ini parser and get_os_release() is the same';
 		    is_deeply $os_release_contents->{GLOBAL}, $os_release, 'os-release contents from ini parser and get_os_release() are the same';
 		}
 	    }
