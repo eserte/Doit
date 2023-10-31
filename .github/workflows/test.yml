@@ -58,6 +58,7 @@ jobs:
       run: |
         perl Build.PL
         ./Build
+        if [ "$(uname)" = "Linux" ]; then echo "INFO: setting coredumpsize for SIGABRT tests"; ulimit -c 4; fi
         ./Build test
         sudo ./Build test_xt
       if: "!startsWith(matrix.os,'windows-')"
