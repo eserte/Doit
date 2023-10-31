@@ -1099,6 +1099,17 @@ sub _fix_Dockerfile_for_dist {
 RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian $codename main'                   >  /etc/apt/sources.list
 RUN echo 'deb [check-valid-until=no] http://archive.debian.org/debian-security/ $codename/updates main' >> /etc/apt/sources.list
 EOF
+    } elsif ($distro_spec =~ m{^perl:(5\.18\.\d+|.*stretch)$}) { # XXX add more perl versions based on jessie/stretch/... containers
+	# docker perl images are based on debian base images; older
+	# ones need patching
+	$add_opts_ref->{apt_get_install_opts} = ' -o APT::Get::AllowUnauthenticated=true';
+	<<'EOF';
+RUN perl -i -pe \
+    's{deb http://(?:http.debian.net|deb.debian.org)/debian (\S+) main}{deb [check-valid-until=no] http://archive.debian.org/debian $1 main}; \
+     s{deb http://security.debian.org.* ([^/]+)/updates main}{deb [check-valid-until=no] http://archive.debian.org/debian-security/ $1/updates main}; \
+     $_ = "" if m{^deb .*-updates main}; \
+    ' /etc/apt/sources.list
+EOF
     } else {
 	$add_opts_ref->{apt_get_update_opts} = '';
 	$add_opts_ref->{apt_get_install_opts} = '';
