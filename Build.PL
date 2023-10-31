@@ -333,29 +333,33 @@ EOF
     } else {
 	######################################################################
 	# Debian-like (Debian, Ubuntu, LinuxMint ...)
-	my @packages = (
-	    'libipc-run-perl',
-	    ($distro_spec eq 'ubuntu:precise' ? () : 'libnet-openssh-perl'),
-	    'sudo',
-	    'rsync',
-	    'git',
-	);
-	my $packages_spec = join(" \\\n", map { "    $_" } @packages);
-	my $more_packages_spec = '';
-	if ($more_testing) {
-	    my @more_packages = (
-		'libbsd-resource-perl',
-		'libcapture-tiny-perl',
-		'libconfig-inifiles-perl',
-		'libcpan-meta-perl',
-		'libdevel-hide-perl',
-		'libwww-perl',
-		'perl-modules',
-		'locales',
-		'file',
-		($distro_spec eq 'ubuntu:precise' ? () : 'python3-pip'),
-	    );
-	    $more_packages_spec = join(" \\\n", map { "    $_" } @more_packages);
+	my $packages_spec;
+	{
+	    my @packages;
+	    {
+		push @packages, (
+		    'libipc-run-perl',
+		    ($distro_spec eq 'ubuntu:precise' ? () : 'libnet-openssh-perl'),
+		    'sudo',
+		    'rsync',
+		    'git',
+		);
+	    }
+	    if ($more_testing) {
+		push @packages, (
+		    'libbsd-resource-perl',
+		    'libcapture-tiny-perl',
+		    'libconfig-inifiles-perl',
+		    'libcpan-meta-perl',
+		    'libdevel-hide-perl',
+		    'libwww-perl',
+		    'perl-modules',
+		    'locales',
+		    'file',
+		    ($distro_spec eq 'ubuntu:precise' ? () : 'python3-pip'),
+		);
+	    }
+	    $packages_spec = join(" \\\n", map { "    $_" } @packages);
 	}
 
 	if ($distro_spec =~ m{^(ubuntu:precise)$}) {
@@ -368,8 +372,7 @@ EOF
 ENV DEBIAN_FRONTEND noninteractive 
 
 RUN apt-get$add_opts->{apt_get_update_opts} update && apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} \\
-$packages_spec \\
-$more_packages_spec
+$packages_spec
 
 EOF
 	if ($more_testing) {
