@@ -684,8 +684,8 @@ sub install {
 		    $INST_ARCHLIB => "$opt{destdir}$Config{installarchlib}",
 		    $INST_BIN     => "$opt{destdir}$Config{installbin}",
 		    $INST_SCRIPT  => "$opt{destdir}$Config{installscript}",
-		    $INST_MAN1DIR => "$opt{destdir}$Config{installman1dir}",
-		    $INST_MAN3DIR => "$opt{destdir}$Config{installman3dir}",
+		    ($Config{installman1dir} ? ($INST_MAN1DIR => "$opt{destdir}$Config{installman1dir}") : ()),
+		    ($Config{installman3dir} ? ($INST_MAN3DIR => "$opt{destdir}$Config{installman3dir}") : ()),
 		)
 		:
 		($opt{installdirs}||'') eq 'vendor'
@@ -697,8 +697,8 @@ sub install {
 		    $INST_ARCHLIB => "$opt{destdir}$Config{installvendorarch}",
 		    $INST_BIN     => "$opt{destdir}$Config{installvendorbin}",
 		    $INST_SCRIPT  => "$opt{destdir}$Config{installvendorscript}",
-		    $INST_MAN1DIR => "$opt{destdir}$Config{installvendorman1dir}",
-		    $INST_MAN3DIR => "$opt{destdir}$Config{installvendorman3dir}",
+		    ($Config{installvendorman1dir} ? ($INST_MAN1DIR => "$opt{destdir}$Config{installvendorman1dir}") : ()),
+		    ($Config{installvendorman3dir} ? ($INST_MAN3DIR => "$opt{destdir}$Config{installvendorman3dir}") : ()),
 		)
 		: # default is site
 		(
@@ -708,8 +708,8 @@ sub install {
 		    $INST_ARCHLIB => "$opt{destdir}$Config{installsitearch}",
 		    $INST_BIN     => "$opt{destdir}$Config{installsitebin}",
 		    $INST_SCRIPT  => "$opt{destdir}$Config{installsitescript}",
-		    $INST_MAN1DIR => "$opt{destdir}$Config{installsiteman1dir}",
-		    $INST_MAN3DIR => "$opt{destdir}$Config{installsiteman3dir}",
+		    ($Config{installsiteman1dir} ? ($INST_MAN1DIR => "$opt{destdir}$Config{installsiteman1dir}") : ()),
+		    ($Config{installsiteman3dir} ? ($INST_MAN3DIR => "$opt{destdir}$Config{installsiteman3dir}") : ()),
 		)
 	    )
 	},
