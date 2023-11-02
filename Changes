@@ -1,5 +1,15 @@
 Revision history for Doit.
 
+0.027_51 2023-11-02
+	- build
+	  - generate MYMETA.* files
+	  - do not put .github files into dist
+	  - better Dockerfile support for (old) perl-based images
+	- tests
+	  - validate also META.yml
+	  - coredump testing only in controlled environments
+	  - skip some git.t tests in some situations
+
 0.027_50 2023-10-31
 	- installation fix: don't install manpages
           if no man directories are configured
