@@ -5,3 +5,7 @@
 /libdoit-perl_*_all.deb
 /Doit-*.tar.gz
 /pkg
+/META.json
+/META.yml
+/MYMETA.json
+/MYMETA.yml

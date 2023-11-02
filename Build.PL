@@ -781,6 +781,7 @@ sub _generate_META ($;$) {
 	abstract => 'a scripting framework',
 	license  => 'perl',
 	version  => MM->parse_version("$FindBin::RealBin/lib/Doit.pm"),
+	dynamic_config => 0,
 	prereqs  => {
 	    configure => {
 		requires => {
@@ -1076,6 +1077,12 @@ EOF
 	$preamble .= $argv_serialized;
 	$doit->write_binary({quiet=>1}, 'Build', $preamble . qq{# line 1 "Build.PL"\n} . $Build_PL_file_contents);
 	$doit->chmod(0755, 'Build');
+
+	eval {
+	    generate_META_json("MYMETA.json");
+	    generate_META_yml("MYMETA.yml" );
+	};
+	warning "Failure while generating MYMETA.* files, continue without.\nError was:\n$@" if $@;
     }
     exit;
 }
