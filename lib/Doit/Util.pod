@@ -64,9 +64,9 @@ issued.
 
 =head3 get_sudo_cmd
 
-Return an empty list if using C<sudo> is not required (i.e. the
-current user is the root user), otherwise returns a list with C<sudo>.
-Handy for writing commands like:
+Return an empty list if using C<sudo> is not required to become the
+root user (i.e. the current user is already the root user), otherwise
+returns a list with C<sudo>. Handy for writing commands like:
 
     $doit->system(get_sudo_cmd(), 'apt-get', '-y', 'install', @missing_packages);
 
