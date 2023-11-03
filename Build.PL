@@ -850,37 +850,24 @@ sub _debian_package {
     my $version = delete $opts{'--version'};
     my $add_distro_version = delete $opts{'--add-distro-version'};
     if (!defined $version) {
-	$doit->which('git') or error 'git is missing --- please install it or alternatively specify --version manually';
-	chomp(my $git_describe = eval { $doit->info_qx('git', 'describe') }); # XXX what if this fails? Optionally made fatal?
-	if (defined $git_describe) {
-	    if ($git_describe =~ m{^([0-9\._]+)$}) {
-		$version = $1;
-	    } elsif ($git_describe =~ m{^([0-9\._]+)-(\d+)-g(.*)}) {
-		$version = $1."+git".$2."+".$3."-1"; # XXX make "1" configurable?
+	$version = _basic_debian_version();
+	if ($add_distro_version) {
+	    my $osr = get_os_release();
+	    if (!$osr) {
+		error 'Cannot read /etc/os-release --- please specify --version manually';
+	    }
+	    my $dist_id = $osr->{ID};
+	    my $rel = $osr->{VERSION_ID};
+	    if ($dist_id eq 'debian') {
+		$rel =~ s{^(\d+).*}{$1};
+		$version .= "+deb${rel}u${add_distro_version}";
+	    } elsif ($dist_id eq 'linuxmint') {
+		$version .= "+linuxmint${rel}u${add_distro_version}";
+	    } elsif ($dist_id eq 'ubuntu') {
+		$version .= "~ubuntu${rel}.${add_distro_version}";
 	    } else {
-		error "Cannot parse output from git describe: '$git_describe'";
+		error "No distro version support for '$dist_id'";
 	    }
-	    $version =~ s{_}{-}; # replace "devel" version specifier
-	    if ($add_distro_version) {
-		my $osr = get_os_release();
-		if (!$osr) {
-		    error 'Cannot read /etc/os-release --- please specify --version manually';
-		}
-		my $dist_id = $osr->{ID};
-		my $rel = $osr->{VERSION_ID};
-		if ($dist_id eq 'debian') {
-		    $rel =~ s{^(\d+).*}{$1};
-		    $version .= "+deb${rel}u${add_distro_version}";
-		} elsif ($dist_id eq 'linuxmint') {
-		    $version .= "+linuxmint${rel}u${add_distro_version}";
-		} elsif ($dist_id eq 'ubuntu') {
-		    $version .= "~ubuntu${rel}.${add_distro_version}";
-		} else {
-		    error "No distro version support for '$dist_id'";
-		}
-	    }
-	} else {
-	    warning "No information using git-describe available --- use automatic version detection";
 	}
     }
 
@@ -896,6 +883,25 @@ sub _debian_package {
     } $distdir;
     $doit->copy($deb, basename($deb));
     print basename($deb), "\n";
+}
+
+sub _basic_debian_version {
+    my $version;
+    $doit->which('git') or error 'git is missing --- please install it or alternatively specify --version manually';
+    chomp(my $git_describe = eval { $doit->info_qx('git', 'describe') }); # XXX what if this fails? Optionally made fatal?
+    if (defined $git_describe) {
+	if ($git_describe =~ m{^([0-9\._]+)$}) {
+	    $version = $1;
+	} elsif ($git_describe =~ m{^([0-9\._]+)-(\d+)-g(.*)}) {
+	    $version = $1."+git".$2."+".$3."-1"; # XXX make "1" configurable?
+	} else {
+	    error "Cannot parse output from git describe: '$git_describe'";
+	}
+	$version =~ s{_}{-}; # replace "devel" version specifier
+    } else {
+	error "No information using git-describe available. Please specify --version manually.";
+    }
+    $version;
 }
 
 sub debian_package_with_docker {
