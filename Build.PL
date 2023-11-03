@@ -618,6 +618,7 @@ sub look {
 
 sub cover {
     $doit->system(_cover_path(), '--test');
+    $doit->unlink('MYMETA.json.lock'); # https://github.com/pjcj/Devel--Cover/issues/263
 }
 
 sub show_cover {
