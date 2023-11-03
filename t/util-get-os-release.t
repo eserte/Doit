@@ -64,6 +64,9 @@ EOF
 	VERSION_CODENAME => 'focal',
 	UBUNTU_CODENAME => 'focal',
     }, 'expected os-release contents (Ubuntu 20.04)';
+
+    my $os_release_2 = get_os_release(file => ['/this/file/does/not/exist', $os_release_file, '/this/file/also/does/not/exist']);
+    is_deeply $os_release_2, $os_release, 'using file array also works';
 }
 
 {
@@ -132,6 +135,32 @@ EOF
 	REDHAT_SUPPORT_PRODUCT => "centos",
 	REDHAT_SUPPORT_PRODUCT_VERSION => 7,
     }, 'expected os-release contents (CentOS 7; empty lines are ignored)';
+}
+
+{
+    my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
+    my $os_release_file = "$tempdir/os-release";
+    $doit->write_binary({quiet=>1}, $os_release_file, <<'EOF');
+NAME='Forty-Two OS'
+EOF
+    my $os_release = get_os_release(file => $os_release_file);
+    is_deeply $os_release, {
+	NAME => 'Forty-Two OS',
+    }, 'single quotes handled';
+
+    my $os_release_array = get_os_release(file => [$os_release_file]);
+    is_deeply $os_release_array, $os_release, 'using ARRAY form of file';
+
+    $doit->write_binary({quiet=>1}, $os_release_file, <<'EOF');
+NAME='Changed name'
+EOF
+    my $os_release_2 = get_os_release(file => $os_release_file);
+    is_deeply $os_release_2, $os_release, 'really got the cached version';
+
+    my $os_release_uncached = get_os_release(file => $os_release_file, refresh => 1);
+    is_deeply $os_release_uncached, {
+	NAME => 'Changed name',
+    }, 'refresh forced';
 }
 
 {

@@ -287,21 +287,24 @@ use warnings;
 	my %cached_os_release_per_file;
 	sub get_os_release {
 	    my(%opts) = @_;
-	    my $file = delete $opts{file} || '/etc/os-release';
+	    my $candidate_files = delete $opts{file} || ['/etc/os-release', '/usr/lib/os-release'];
 	    my $refresh = delete $opts{refresh} || 0;
 	    error 'Unhandled options: ' . join(' ', %opts) if %opts;
-	    if ($refresh || !$cached_os_release_per_file{$file}) {
-		if (open my $fh, '<', $file) {
-		    my %c;
-		    while(<$fh>) {
-			if (my($k,$v) = $_ =~ m{^(.*?)="?(.*?)"?$}) {
-			    $c{$k} = $v;
+	    for my $candidate_file (ref $candidate_files eq 'ARRAY' ? @$candidate_files : $candidate_files) {
+		if ($refresh || !$cached_os_release_per_file{$candidate_file}) {
+		    if (open my $fh, '<', $candidate_file) {
+			my %c;
+			while(<$fh>) {
+			    if (my($k,$v) = $_ =~ m{^(.*?)=["']?(.*?)["']?$}) {
+				$c{$k} = $v;
+			    }
 			}
+			$cached_os_release_per_file{$candidate_file} = \%c;
 		    }
-		    $cached_os_release_per_file{$file} = \%c;
 		}
+		return $cached_os_release_per_file{$candidate_file} if $cached_os_release_per_file{$candidate_file};
 	    }
-	    $cached_os_release_per_file{$file};
+	    undef;
 	}
     }
 }

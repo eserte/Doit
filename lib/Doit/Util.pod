@@ -72,8 +72,9 @@ returns a list with C<sudo>. Handy for writing commands like:
 
 =head3 get_os_release
 
-Return a hash reference of F</etc/os-release> contents, or undef if
-such a file does not exist. Usually the hash will contain keys like
+Return a hash reference of F</etc/os-release> or
+F</usr/lib/os-release> contents, or undef if such files do not exist.
+Usually the hash will contain keys like
 
     ID => 'ubuntu',
     VERSION_ID => '22.04'
@@ -83,11 +84,13 @@ a cache refresh use the option
 
     refresh => 1
 
-To specify another file than F</etc/os-release> use the option
+To specify another file or files than F</etc/os-release> (probably
+only useful for test purposes) use the option
 
-    file => /path/to/another/os-release
+    file => "/path/to/another/os-release"
+    file => ["/path/to/another/os-release", "/another/path/to/another/os-release"]
 
-This is probably only useful for test purposes.
+See also L<https://www.freedesktop.org/software/systemd/man/latest/os-release.html>.
 
 =head1 AUTHOR
 
