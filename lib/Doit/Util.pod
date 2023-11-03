@@ -21,9 +21,19 @@ Temporary change to the specified I<$directory> and execute the code
 in the enclosed block. After execution, the previous directory is
 restored. Dies if the specified I<$directory> does not exist.
 
-Note: commands like C<last> or C<return> apply to the enclosed block,
+B<Note>: commands like C<last> or C<return> apply to the enclosed block,
 not to the outer function. As this is confusing and the behavior may
 change it's best to avoid them.
+
+B<Note>: the directory change only applies to the current context, i.e.
+not to ssh/sudo/... runners, even if running on the same system. So
+the following does B<not> work as expected:
+
+    my $root_doit = $doit->do_sudo;
+    in_directory {
+        $doit->copy("/from", "to");
+        $root_doit->chown(0, 0, "to"); # will not use $directory/to!
+    } $directory;
 
 =head3 new_scope_cleanup
 
