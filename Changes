@@ -1,5 +1,8 @@
 Revision history for Doit.
 
+0.028    2023-11-03
+	- stable release, no changes since 0.027_51
+
 0.027_51 2023-11-02
 	- build
 	  - generate MYMETA.* files
