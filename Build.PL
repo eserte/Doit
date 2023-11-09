@@ -80,6 +80,7 @@ Getopt::Long::GetOptions(
     'install_base=s',
     'install_path=s%',
     'prefix=s',
+    'pureperl-only:1',
     'uninst:1',
     'verbose:1',
     'versionlib=s',
