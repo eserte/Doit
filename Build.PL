@@ -79,6 +79,7 @@ Getopt::Long::GetOptions(
     'installdirs=s',
     'install_base=s',
     'install_path=s%',
+    'jobs=i',
     'prefix=s',
     'pureperl-only:1',
     'uninst:1',
@@ -170,12 +171,16 @@ sub test {
     local $ENV{PERL_DL_NONLAZY} = 1;
     require File::Glob;
     require File::Spec;
+    local $ENV{HARNESS_OPTIONS} = $ENV{HARNESS_OPTIONS};
+    if ($opt{jobs} && (!defined $ENV{HARNESS_OPTIONS} || $ENV{HARNESS_OPTIONS} !~ /(^|:)j\d+($|:)/)) {
+	$doit->setenv(HARNESS_OPTIONS => (defined $ENV{HARNESS_OPTIONS} && $ENV{HARNESS_OPTIONS} ne '' ? $ENV{HARNESS_OPTIONS} . ':' : '') . "j$opt{jobs}")
+    }
     $doit->system($^X, "-MExtUtils::Command::MM", "-MTest::Harness", "-e", 'undef *Test::Harness::Switches; test_harness(0, "blib/lib", "blib/arch")', File::Glob::bsd_glob(File::Spec->catfile("t", "*.t")));
     # $doit->system(_prove_path(), '-b', 't'); # use right perl?
 }
 
 sub test_xt {
-    $doit->system(_prove_path(), '-b', 'xt'); # use right perl?
+    $doit->system(_prove_path(), '-b', ($opt{jobs} ? ('--jobs', $opt{jobs}) : ()), 'xt'); # use right perl?
 }
 
 sub test_installed {
