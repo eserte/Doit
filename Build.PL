@@ -16,7 +16,6 @@ use strict;
 use FindBin;
 use lib "$FindBin::RealBin/lib";
 
-use Config;
 use Cwd qw(realpath getcwd);
 use Digest::MD5 qw(md5_hex);
 use File::Basename;
@@ -34,9 +33,10 @@ my $Build_PL_file_contents = do {
 };
 my $Build_PL_md5hex = md5_hex $Build_PL_file_contents;
 
-for (@ARGV) {
-    if (/^[^-].*=.*/) { # looks like oldfashioned option without leading dash (e.g. "installdirs=vendor")
-	s/^/--/;
+for my $argv_i (0 .. $#ARGV) {
+    my $argv = $ARGV[$argv_i];
+    if ($argv =~ /^[^-].*=.*/ && ($argv_i == 0 || $ARGV[$argv_i-1] !~ /^--?config$/)) { # looks like oldfashioned option without leading dash (e.g. "installdirs=vendor"), but not if following --config
+	$argv =~ s/^/--/;
     }
 }
 
@@ -70,10 +70,6 @@ require Getopt::Long;
 my %opt = (verbose => 0, uninst => 0, destdir => '', create_packlist => 1);
 $Build_PL::ARGV=$Build_PL::ARGV if 0; # cease -w
 @ARGV = (@$Build_PL::ARGV, @ARGV);
-if ($ENV{PERL_MB_OPT}) {
-    require Text::ParseWords;
-    push @ARGV, Text::ParseWords::shellwords($ENV{PERL_MB_OPT});
-}
 Getopt::Long::GetOptions(
     \%opt,
     'allow_mb_mismatch=i',
@@ -99,6 +95,9 @@ $action =~ s/-/_/g;
 if (@ARGV) {
     error "No arguments allowed";
 }
+
+tie my %Config, 'CustomConfig', $opt{config};
+
 {
     no strict 'refs';
     &$action;
@@ -1072,6 +1071,13 @@ sub _cover_path {
 }
 
 sub _Build_PL_mode {
+    tie my %Config, 'CustomConfig'; # no options here!
+
+    if ($ENV{PERL_MB_OPT}) {
+	require Text::ParseWords;
+	push @ARGV, Text::ParseWords::shellwords($ENV{PERL_MB_OPT});
+    }
+
     require Data::Dumper;
     my $argv_serialized = "\n" . '$Build_PL::ARGV = ' . Data::Dumper->new([\@ARGV], [])->Indent(1)->Useqq(1)->Sortkeys(1)->Terse(1)->Dump . ";\n\n";
     {
@@ -1280,4 +1286,26 @@ sub y_or_n (;$) {
 }
 # REPO END
 
+{
+    package CustomConfig;
+    use Config '%Config';
+    use Tie::Hash;
+    our @ISA = qw(Tie::StdHash);
+
+    sub TIEHASH {
+	my($class, $custom_options) = @_;
+	bless { custom_options => $custom_options }, $class;
+    }
+
+    sub FETCH {
+	my($self, $key) = @_;
+	if (exists $self->{custom_options}->{$key}) {
+	    return $self->{original_hash}->{$key};
+	} else {
+	    return $Config::Config{$key};
+	}
+    }
+}
+
+1;
 __END__
