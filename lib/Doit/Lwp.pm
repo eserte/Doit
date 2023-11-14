@@ -43,7 +43,9 @@ sub lwp_mirror {
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     if (-e $filename && $refresh eq 'never') {
-	info "$url -> $filename already exists, do not refresh";
+	if ($debug) {
+	    info "$url -> $filename already exists, do not refresh";
+	}
 	return 0;
     }
 
