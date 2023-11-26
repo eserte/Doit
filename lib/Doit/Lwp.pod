@@ -40,8 +40,10 @@ By default, L<LWP::UserAgent> is used for doing the mirror. It is
 possible to use L<HTTP::Tiny> by passing an object of this class to
 the C<ua> option.
 
-Please note that LWP::UserAgent's mirror is L<not
-atomic|https://github.com/libwww-perl/libwww-perl/issues/217>.
+Please note that LWP::UserAgent's mirror is probably only atomic with
+recent L<LWP> (>= 6.61) and running on Unix-like systems. See also
+L<https://github.com/libwww-perl/libwww-perl/issues/217> and
+L<https://github.com/libwww-perl/libwww-perl/pull/401>.
 
 The command returns 1 if the resource was downloaded, otherwise 0.
 
