@@ -135,6 +135,17 @@ L<errno(2)>) case.
 Special handling is implemented for older perls (5.8.x), as a failing
 L<close|perlfunc/close> is not correctly detected here.
 
+=head3 file_digest_matches (informational command)
+
+    my $bool = $doit->file_digest_matches($file, $digest, $digest_algorithm);
+
+Return true if the given I<$file> exists and it's current digest
+(using algorithm C<$digest_algorithm> which defaults to C<MD5>)
+matches the specified I<$digest>. Otherwise false is returned.
+
+Other possible digest algorithms are listed in L<Digest>. Note that
+some of the listed algorithms may require additional CPAN modules.
+
 =head2 TODO
 
 =over
@@ -186,12 +197,12 @@ Slaven Rezic <srezic@cpan.org>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2017,2018 Slaven Rezic. All rights reserved.
+Copyright (c) 2017,2018,2021,2023 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<Doit>, L<File::Temp>.
+L<Doit>, L<File::Temp>, L<Digest>, L<Digest::file>, L<Digest::MD5>.
 
 =cut
