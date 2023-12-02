@@ -12,12 +12,12 @@ use lib "$FindBin::RealBin";
 use File::Temp 'tempdir';
 use Test::More 'no_plan';
 use Doit;
-use Doit::File 'digest_matches';
 
 use TestUtil qw(module_exists);
 
 my $d = Doit->init;
 $d->add_component('guarded');
+$d->add_component('file');
 
 my $tmpdir = tempdir(CLEANUP => 1, TMPDIR => 1);
 
@@ -28,7 +28,7 @@ my $tmpdir = tempdir(CLEANUP => 1, TMPDIR => 1);
 	(
 	 'create digested file (previously non-existent)',
 	 ensure => sub {
-	     digest_matches($file, "ff22941336956098ae9a564289d1bf1b");
+	     $d->file_digest_matches($file, "ff22941336956098ae9a564289d1bf1b");
 	 },
 	 using => sub {
 	     open my $fh, ">", $file;
@@ -42,7 +42,7 @@ my $tmpdir = tempdir(CLEANUP => 1, TMPDIR => 1);
 	(
 	 'digested file already exists',
 	 ensure => sub {
-	     digest_matches($file, "ff22941336956098ae9a564289d1bf1b");
+	     $d->file_digest_matches($file, "ff22941336956098ae9a564289d1bf1b");
 	 },
 	 using => sub {
 	     die "This should never run!";
@@ -57,7 +57,7 @@ my $tmpdir = tempdir(CLEANUP => 1, TMPDIR => 1);
 	$d->guarded_step
 	    ('use sha1',
 	     ensure => sub {
-		 digest_matches($file, "3c1bb0cd5d67dddc02fae50bf56d3a3a4cbc7204", "SHA1");
+		 $d->file_digest_matches($file, "3c1bb0cd5d67dddc02fae50bf56d3a3a4cbc7204", "SHA1");
 	     },
 	     using => sub {
 		 die "This should never run!";
@@ -72,7 +72,7 @@ my $tmpdir = tempdir(CLEANUP => 1, TMPDIR => 1);
 	(
 	 'create digested file (previously empty)',
 	 ensure => sub {
-	     digest_matches($file, "ff22941336956098ae9a564289d1bf1b");
+	     $d->file_digest_matches($file, "ff22941336956098ae9a564289d1bf1b");
 	 },
 	 using => sub {
 	     open my $fh, ">", $file;
@@ -87,7 +87,7 @@ my $tmpdir = tempdir(CLEANUP => 1, TMPDIR => 1);
 	    (
 	     'ensure never satisfied',
 	     ensure => sub {
-		 digest_matches($file, "wrong digest");
+		 $d->file_digest_matches($file, "wrong digest");
 	     },
 	     using => sub {
 		 open my $fh, ">", $file;
