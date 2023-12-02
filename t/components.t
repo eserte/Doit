@@ -7,7 +7,7 @@
 
 use strict;
 
-use File::Temp ();
+use File::Temp qw(tempdir);
 use Test::More;
 
 use Doit;
@@ -80,9 +80,10 @@ EOF
     $doit->add_component('testcomponent');
     ok $doit->call_with_runner('check_component_function', 'testcomponent_function'), 'available testcomponent locally';
     ok $doit->call_with_runner('check_component_function', 'file_atomic_write'),      'adding another component within a component works locally';
-    my $tmpfile = File::Temp->new;
-    $doit->testcomponent_function("$tmpfile");
-    is slurp("$tmpfile"), "Hello, world!\n", 'expected outcome of component function';
+    my $tempdir = tempdir("doit_XXXXXXXX", TMPDIR =>1, CLEANUP => 1);
+    my $tempfile = "$tempdir/test";
+    $doit->testcomponent_function($tempfile);
+    is slurp($tempfile), "Hello, world!\n", 'expected outcome of component function';
 }
 
 __END__
