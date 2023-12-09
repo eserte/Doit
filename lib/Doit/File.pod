@@ -137,14 +137,20 @@ L<close|perlfunc/close> is not correctly detected here.
 
 =head3 file_digest_matches (informational command)
 
-    my $bool = $doit->file_digest_matches($file, $digest, $digest_algorithm);
+    my $bool = $doit->file_digest_matches($file, $digest[, $digest_algorithm[, got_digest => \$got_digest]]);
 
 Return true if the given I<$file> exists and it's current digest
 (using algorithm C<$digest_algorithm> which defaults to C<MD5>)
-matches the specified I<$digest>. Otherwise false is returned.
+matches the specified I<$digest>. Fail if an unhandled
+C<$digest_algorithm> is specified. Otherwise false is returned.
 
 Other possible digest algorithms are listed in L<Digest>. Note that
 some of the listed algorithms may require additional CPAN modules.
+Core perl usually has C<MD5>, C<SHA-1>, C<SHA-256>, C<SHA-384> and
+C<SHA-512> available.
+
+If the C<got_digest> option is specified, then it should point to a
+scalar reference, which will be filled with the digest of the file.
 
 =head2 TODO
 

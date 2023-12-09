@@ -351,6 +351,38 @@ SKIP: {
     }
 }
 
+{
+    $doit->touch("$tempdir/empty");
+
+    {
+	eval { $doit->file_digest_matches("$tempdir/empty", "12345678", "This_Digest_Does_Not_Exist_".rand()) };
+	like $@, qr{ERROR:.*Cannot get digest This_Digest_Does_Not_Exist_\S+ from .*empty: Can't locate Digest.*This_Digest_Does_Not_Exist_\S+ in \@INC}, 'error message on invalid digest type';
+    }
+
+    {
+	eval { $doit->file_digest_matches("$tempdir/empty", "12345678", undef, unhandled_option => "val") };
+	like $@, qr{ERROR:.*Unhandled options: unhandled_option val}, 'error message on unhandled option';
+    }
+
+    {
+	my $got_digest = [];
+	eval { $doit->file_digest_matches("$tempdir/empty", "12345678", undef, got_digest => \$got_digest) };
+	like $@, qr{ERROR:.*Option got_digest needs to point to a scalar reference}, 'error message on wrong reference type';
+    }
+
+    {
+	my $got_digest;
+	ok !$doit->file_digest_matches("$tempdir/empty", "12345678", undef, got_digest => \$got_digest), 'digest does not match';
+	is $got_digest, "d41d8cd98f00b204e9800998ecf8427e", 'got MD5 digest';
+    }
+
+    {
+	my $got_digest;
+	ok !$doit->file_digest_matches("$tempdir/does_not_exist", "12345678", undef, got_digest => \$got_digest), 'digest on non-existing file';
+	is $got_digest, undef, 'got_digest variable still undefined';
+    }
+}
+
 # Find or even create another filesystem for
 # cross-mount tests. Currently implemted:
 # - if /run/user/$uid exists, then use this one (usually

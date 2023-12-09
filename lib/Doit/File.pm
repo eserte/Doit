@@ -160,11 +160,21 @@ sub _make_writeable {
 }
 
 sub file_digest_matches {
-    my(undef, $file, $digest, $type) = @_;
+    my(undef, $file, $digest, $type, %options) = @_;
+    my $got_digest_ref = delete $options{got_digest};
+    error "Option got_digest needs to point to a scalar reference"
+	if $got_digest_ref && ref $got_digest_ref ne 'SCALAR';
+    error "Unhandled options: " . join(" ", %options) if %options;
+
     return 0 if ! -r $file; # shortcut
     $type ||= 'MD5';
     require Digest::file;
-    eval { Digest::file::digest_file_hex($file, $type) } eq $digest;
+    my $got_digest = eval { Digest::file::digest_file_hex($file, $type) };
+    if (!$got_digest) {
+	error "Cannot get digest $type from $file: $@";
+    }
+    $$got_digest_ref = $got_digest if $got_digest_ref;
+    $got_digest eq $digest;
 }
 
 1;
