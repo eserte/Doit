@@ -11,6 +11,7 @@ use Test::More;
 use Sys::Hostname;
 
 use Doit;
+use Doit::Log;
 
 sub get_hostname {
     return hostname;
@@ -32,6 +33,9 @@ require FindBin;
 { no warnings 'once'; push @INC, "$FindBin::RealBin/../t"; }
 require TestUtil;
 
+#use constant TEST_DOCKER_IMAGE => 'debian:bookworm';
+use constant TEST_DOCKER_IMAGE => 'alpine:latest'; # fast than debian
+
 my $doit = Doit->init;
 
 plan skip_all => 'docker not in PATH'
@@ -44,8 +48,14 @@ eval {
     $doit->system('docker', 'rm', $name);
 };
 eval {
-    $doit->system('docker', 'run', '--detach', '-h', $name, "--name=$name", 'debian:bookworm', 'sleep', '3600');
-    $doit->system('docker', 'exec', $name, 'sh', '-c', 'apt-get update && apt-get install -y perl-modules');
+    $doit->system('docker', 'run', '--detach', '-h', $name, "--name=$name", TEST_DOCKER_IMAGE, 'sleep', '3600');
+    if (TEST_DOCKER_IMAGE =~ /^(debian|ubuntu):/) {
+	$doit->system('docker', 'exec', $name, 'sh', '-c', 'apt-get update && apt-get install -y perl-modules');
+    } elsif (TEST_DOCKER_IMAGE =~ /^alpine:/) {
+	$doit->system('docker', 'exec', $name, 'sh', '-c', 'apk add perl');
+    } else {
+	error "Unsupported docker image " . TEST_DOCKER_IMAGE;
+    }
 };
 plan skip_all => "Cannot create docker container: $@"
     if $@;
