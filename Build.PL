@@ -175,8 +175,24 @@ sub test {
     if ($opt{jobs} && (!defined $ENV{HARNESS_OPTIONS} || $ENV{HARNESS_OPTIONS} !~ /(^|:)j\d+($|:)/)) {
 	$doit->setenv(HARNESS_OPTIONS => (defined $ENV{HARNESS_OPTIONS} && $ENV{HARNESS_OPTIONS} ne '' ? $ENV{HARNESS_OPTIONS} . ':' : '') . "j$opt{jobs}")
     }
-    $doit->system($^X, "-MExtUtils::Command::MM", "-MTest::Harness", "-e", 'undef *Test::Harness::Switches; test_harness(0, "blib/lib", "blib/arch")', File::Glob::bsd_glob(File::Spec->catfile("t", "*.t")));
-    # $doit->system(_prove_path(), '-b', 't'); # use right perl?
+    if (0) {
+	$doit->system(_prove_path(), '-b', 't'); # use right perl?
+    } else {
+	my @test_files = sort { lc $a cmp lc $b } File::Glob::bsd_glob(File::Spec->catfile("t", "*.t"));
+	if (0) {
+	    $doit->system($^X, "-MExtUtils::Command::MM", "-MTest::Harness", "-e", 'undef *Test::Harness::Switches; test_harness(0, "blib/lib", "blib/arch")', @test_files);
+	} else {
+	    require Test::Harness;
+	    if ($doit->is_dry_run) {
+		info "test @test_files (dry-run)";
+	    } else {
+		local @INC = @INC;
+		unshift @INC, map { File::Spec->rel2abs($_) } qw(blib/lib blib/arch);
+		info "test @test_files";
+		Test::Harness::runtests(@test_files);
+	    }
+	}
+    }
 }
 
 sub test_xt {
