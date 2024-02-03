@@ -85,7 +85,6 @@ jobs:
   test_in_container:
     name: Test with ${{ matrix.image }}
     runs-on: ubuntu-latest
-    container: ${{ matrix.image }}
     strategy:
       matrix:
         include:
@@ -102,18 +101,20 @@ jobs:
           #- image: debian:bookworm
 
     steps:
-    # Note: checkout@v4 does not work with older debians (e.g.stretch)
-    - uses: actions/checkout@v3
+    # Note: checkout@v4 does not work with older debians (e.g.stretch), so do this step *outside* the container
+    - uses: actions/checkout@v4
     - name: Preinstall, Configure, Build and Test
-      env:
-        HARNESS_TIMER:   1
-        HARNESS_OPTIONS: j8
       run: |
-        which cpanm 2>/dev/null || ( apt-get update -qq && apt-get install -qy --no-install-recommends cpanminus )
-        cpanm --quiet --installdeps --notest . || ( cat /github/home/.cpanm/work/*/build.log; false )
-        perl Build.PL
-        ./Build
-        ./Build test
+        docker run --quiet -v $(pwd):$(pwd) ${{ matrix.image }} sh -c "cd $(pwd); "'
+          set -ex
+          export HARNESS_TIMER=1
+          export HARNESS_OPTIONS=j8
+          which cpanm 2>/dev/null || ( apt-get update -qq && apt-get install -qy --no-install-recommends cpanminus )
+          cpanm --quiet --installdeps --notest . || ( cat /root/.cpanm/work/*/build.log; false )
+          perl Build.PL
+          ./Build
+          ./Build test
+        '
 
   coverage:
     name: Test coverage
