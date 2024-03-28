@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2024 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -15,7 +15,7 @@ package Doit::WinRPC;
 
 use strict;
 use warnings;
-our $VERSION = '0.011';
+our $VERSION = '0.012';
 
 our @ISA = ('Doit::RPC');
 
@@ -222,9 +222,9 @@ sub receive_data {
 	    $self->debug("finished reading data from $inname");
 
 	    $pipe->Write($length_buf)
-		or die "Error writing to pipe (length data)";
+		or die "Error writing to pipe (length data). Error: " . $pipe->Error;
 	    $pipe->Write($buf)
-		or die "Error writing to pipe (body data)";
+		or die "Error writing to pipe (body data). Error: " . $pipe->Error;
 	    $self->debug("finished sending data to $outname");
 	};
 
