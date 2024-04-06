@@ -100,6 +100,7 @@ jobs:
           - image: perl:5.38.0-slim-bookworm
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
+          - image: ubuntu:noble
 
     steps:
     # Note: checkout@v4 does not work with older debians (e.g.stretch), so do this step *outside* the container
