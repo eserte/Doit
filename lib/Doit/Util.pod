@@ -35,6 +35,9 @@ the following does B<not> work as expected:
         $root_doit->chown(0, 0, "to"); # will not use $directory/to!
     } $directory;
 
+The environment variable C<PWD> is also temporarily changed to the
+specified I<$directory>.
+
 =head3 new_scope_cleanup
 
     {
@@ -98,7 +101,7 @@ Slaven Rezic <srezic@cpan.org>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2022,2023 Slaven Rezic. All rights reserved.
+Copyright (c) 2022,2023,2024 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 

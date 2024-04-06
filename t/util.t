@@ -36,10 +36,13 @@ GetOptions("enable-atime-tests!" => \$enable_atime_tests)
 {
     my $change_dir = $^O eq 'MSWin32' ? 'C:/' : '/';
     my $orig_dir = getcwd;
+    my $old_pwd = $ENV{PWD};
     in_directory {
 	is getcwd, $change_dir, "directory was changed to $change_dir";
+	is $ENV{PWD}, $change_dir, "PWD environment variable too";
     } $change_dir;
     is getcwd, $orig_dir, "directory was restored to $orig_dir";
+    is $ENV{PWD}, $old_pwd, "PWD environment variable was restored to the old value";
 
     eval {
 	in_directory {

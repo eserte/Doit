@@ -177,6 +177,7 @@ use warnings;
     sub in_directory (&$) {
 	my($code, $dir) = @_;
 	my $scope_cleanup;
+	local $ENV{PWD} = $ENV{PWD};
 	if (defined $dir) {
 	    require Cwd;
 	    my $pwd = Cwd::getcwd();
@@ -190,6 +191,7 @@ use warnings;
 	    }
 	    chdir $dir
 		or error "Can't chdir to $dir: $!";
+	    $ENV{PWD} = $dir;
 	}
 	$code->();
     }
