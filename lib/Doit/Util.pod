@@ -35,6 +35,9 @@ the following does B<not> work as expected:
         $root_doit->chown(0, 0, "to"); # will not use $directory/to!
     } $directory;
 
+If I<$directory> is C<undef>, then the enclosed block will still be
+executed without changing the current directory.
+
 The environment variable C<PWD> is also temporarily changed to the
 specified I<$directory>.
 
