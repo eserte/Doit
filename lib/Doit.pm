@@ -2120,7 +2120,13 @@ use warnings;
 
     sub self_require (;$) {
 	my $realscript = shift;
-	if (!defined $realscript) { $realscript = $0 }
+	if (!defined $realscript) {
+	    if (defined $ENV{DOIT_SCRIPT}) {
+		$realscript = $ENV{DOIT_SCRIPT};
+	    } else {
+		$realscript = $0;
+	    }
+	}
 	my $self_require_script;
 	if (DOIT_TRACE) {
 	    $self_require_script .= q{$ENV{DOIT_TRACE} = 1; };
@@ -2128,7 +2134,9 @@ use warnings;
 	if ($realscript ne '-e') { # not a oneliner
 	    $self_require_script .=
 		q{$ENV{DOIT_IN_REMOTE} = 1; } .
-		q{require "} . File::Basename::basename($realscript) . q{"; };
+		q{unshift @INC, "} . File::Basename::dirname($realscript) . q{"; } .
+		q{require "} . File::Basename::basename($realscript) . q{"; } .
+		q{$ENV{DOIT_SCRIPT} = "} . $realscript . q{"; };
 	} else {
 	    $self_require_script .=
 		q{use Doit; };
@@ -2196,7 +2204,7 @@ use warnings;
 	# Run the server
 	my @cmd_worker =
 	    (
-	     'sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-I".File::Basename::dirname($0), "-e",
+	     'sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-e",
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
@@ -2369,8 +2377,8 @@ use warnings;
 	    @cmd_worker =
 	    (
 	     # @cmd not used here (no sudo)
-	     $perl, "-I.doit", "-I.doit\\lib", "-e",
-	     Doit::_ScriptTools::self_require($FindBin::RealScript) .
+	     $perl, "-I.doit\\lib", "-e",
+	     Doit::_ScriptTools::self_require(".doit\\$FindBin::RealScript") .
 	     q{use Doit::WinRPC; } .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
@@ -2382,9 +2390,9 @@ use warnings;
 	} else {
 	    @cmd_worker =
 	    (
-	     @cmd, $perl, "-I.doit", "-I.doit/lib", "-e",
+	     @cmd, $perl, "-I.doit/lib", "-e",
 	     (defined $umask ? qq{umask $umask; } : q{}) .
-	     Doit::_ScriptTools::self_require($FindBin::RealScript) .
+	     Doit::_ScriptTools::self_require(".doit/$FindBin::RealScript") .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
 	     q<sub _server_cleanup { unlink "> . $sock_path . q<" }> .
