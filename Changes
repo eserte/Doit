@@ -1,5 +1,37 @@
 Revision history for Doit.
 
+0.028_50 2024-04-26
+	- features
+	  - Doit::File: new command file_digest_matches
+	  - Doit::Lwp: lwp_mirror is quiet by default
+	  - Doit::Lwp: new refresh type "digest"
+	  - in_directory sets now $PWD environment variable
+	  - tracing with DOIT_TRACE environment variable
+	- fixes
+	  - better /etc/os-release handling
+	  - fix chained runner invocations (ssh -> sudo)
+	- documentation
+	  - document an in_directory trap
+	  - document in_directory with undefined $directory
+	  - get_sudo_cmd documentation clarification
+	  - mention non-atomic mirror method
+	  - documentation section for environment variables
+	- build
+	  - --config works now
+	  - --jobs option handling
+	  - --pureperl-only option handling
+	  - PERL_MB_OPT happens now at Build.PL time
+	  - helper _basic_debian_version in Build.PL
+	  - test with Test::Harness, not with prove
+	- tests
+	  - github freebsd testing now done on mac/hyve
+	  - github actions: switch to checkout@v4
+	  - lwp-http-tiny.t -> lwp-httpbin.t and now usable
+	    for both HTTP::Tiny and LWP
+	  - test add_components
+	  - docker.t tests done in alpine now (somewhat faster)
+	  - test in ubuntu:24.04 (noble)
+
 0.028    2023-11-03
 	- stable release, no changes since 0.027_51
 
