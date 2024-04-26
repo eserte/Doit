@@ -791,13 +791,53 @@ The following components are available:
 
 =back
 
+=head2 ENVIRONMENT
+
+=head3 Automatically set
+
+=over
+
+=item C<DOIT_IN_REMOTE>
+
+Set to a true value if a Doit-using script is currently run
+"remotely". Useful to do things in a Doit script only on the local
+system, for example:
+
+    use if !$ENV{DOIT_IN_REMOTE}, lib => "$ENV{HOME}/src/Doit/lib";
+    use Doit;
+    ...
+
+=item C<PWD>
+
+C<Doit::Util::in_directory> keeps track of the standard C<PWD>
+variable.
+
+=back
+
+=head3 User-settable variables
+
+=over
+
+=item C<DOIT_TRACE>
+
+May be set to a true value to enable command and connection tracing.
+
+    DOIT_TRACE=1 some_doit_script.pl
+
+=item C<TERM>
+
+If set on a non-Windows system (which is usually the case in a normal
+Unix terminal session), then coloring in C<Doit::Log> is enabled.
+
+=back
+
 =head1 AUTHOR
 
 Slaven Rezic <srezic@cpan.org>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2017,2018 Slaven Rezic. All rights reserved.
+Copyright (c) 2017,2018,2019,2020,2022,2023,2024 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
