@@ -1,5 +1,11 @@
 Revision history for Doit.
 
+0.028_51 2024-04-26
+	- features
+	  - Doit::Pip: new command pip_is_functional
+	- tests
+	  - do not fail if an existing pip is not functional
+
 0.028_50 2024-04-26
 	- features
 	  - Doit::File: new command file_digest_matches
