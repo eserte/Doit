@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2020 Slaven Rezic. All rights reserved.
+# Copyright (C) 2020,2024 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -18,7 +18,7 @@ use Doit;
 my $d = Doit->init;
 $d->add_component('pip');
 
-plan skip_all => "No pip available" if !$d->can_pip;
+plan skip_all => "No functional pip available" if !$d->pip_is_functional;
 plan 'no_plan';
 
 {

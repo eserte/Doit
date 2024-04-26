@@ -58,6 +58,14 @@ or
 
     $doit->rpm_install_packages(qw(python3-pip));
 
+=head3 pip_is_functional
+
+    my $functional = $doit->pip_is_functional;
+
+Return a boolean value if pip is installed and it might work.
+Currently it's just checked if C<pip3 --help> works. May return false
+if there are problems with the pip installation.
+
 =head1 AUTHOR
 
 Slaven Rezic <srezic@cpan.org>
