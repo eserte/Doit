@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2020,2022,2023 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020,2022,2023,2024 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -17,10 +17,11 @@ use warnings;
 
 {
     package Doit;
-    our $VERSION = '0.028';
+    our $VERSION = '0.028_50';
     $VERSION =~ s{_}{};
 
     use constant IS_WIN => $^O eq 'MSWin32';
+    use constant DOIT_TRACE => !!$ENV{'DOIT_TRACE'};
 }
 
 {
@@ -30,10 +31,11 @@ use warnings;
 	no warnings 'redefine';
 	*colored_error = sub ($) { Term::ANSIColor::colored($_[0], 'red on_black')};
 	*colored_info  = sub ($) { Term::ANSIColor::colored($_[0], 'green on_black')};
+	*colored_trace = sub ($) { Term::ANSIColor::colored($_[0], 'yellow on_black')};
     }
     sub _no_coloring {
 	no warnings 'redefine';
-	*colored_error = *colored_info = sub ($) { $_[0] };
+	*colored_error = *colored_info = *colored_trace = sub ($) { $_[0] };
     }
     {
 	my $can_coloring;
@@ -62,6 +64,7 @@ use warnings;
 
     my $current_label = '';
 
+    sub trace ($)   { print STDERR colored_trace("TRACE$current_label:"), " ", $_[0], "\n" }
     sub info ($)    { print STDERR colored_info("INFO$current_label:"), " ", $_[0], "\n" }
     sub warning ($) { print STDERR colored_error("WARN$current_label:"), " ", $_[0], "\n" }
     sub error ($)   { require Carp; Carp::croak(colored_error("ERROR$current_label:"), " ", $_[0]) }
@@ -1674,6 +1677,8 @@ use warnings;
 
 {
     package Doit::Runner;
+    use constant DOIT_TRACE => Doit::DOIT_TRACE;
+
     sub new {
 	my($class, $Doit, %options) = @_;
 	my $dryrun = delete $options{dryrun};
@@ -1697,8 +1702,10 @@ use warnings;
 	my $code = sub {
 	    my($self, @args) = @_;
 	    if ($self->{dryrun}) {
+		Doit::Log::trace("$meth @args (dry-run)") if DOIT_TRACE;
 		$self->{Doit}->$meth(@args)->show;
 	    } else {
+		Doit::Log::trace("$meth @args") if DOIT_TRACE;
 		$self->{Doit}->$meth(@args)->doit;
 	    }
 	};
@@ -2104,6 +2111,8 @@ use warnings;
 {
     package Doit::_ScriptTools;
 
+    use constant DOIT_TRACE => Doit::DOIT_TRACE;
+
     sub add_components {
 	my(@components) = @_;
 	q|for my $component_module (qw(| . join(" ", map { qq{$_->{module}} } @components) . q|)) { $d->add_component($component_module) } |;
@@ -2112,12 +2121,19 @@ use warnings;
     sub self_require (;$) {
 	my $realscript = shift;
 	if (!defined $realscript) { $realscript = $0 }
-	if ($realscript ne '-e') { # not a oneliner
-	    q{$ENV{DOIT_IN_REMOTE} = 1; } .
-	    q{require "} . File::Basename::basename($realscript) . q{"; };
-	} else {
-	    q{use Doit; };
+	my $self_require_script;
+	if (DOIT_TRACE) {
+	    $self_require_script .= q{$ENV{DOIT_TRACE} = 1; };
 	}
+	if ($realscript ne '-e') { # not a oneliner
+	    $self_require_script .=
+		q{$ENV{DOIT_IN_REMOTE} = 1; } .
+		q{require "} . File::Basename::basename($realscript) . q{"; };
+	} else {
+	    $self_require_script .=
+		q{use Doit; };
+	}
+	$self_require_script;
     }
 }
 
@@ -2127,6 +2143,8 @@ use warnings;
     our @ISA = ('Doit::_AnyRPCImpl');
 
     use Doit::Log;
+
+    use constant DOIT_TRACE => Doit::DOIT_TRACE;
 
     my $socket_count = 0;
 
@@ -2160,6 +2178,7 @@ use warnings;
 	# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=762465
 	{
 	    my @cmd = ('sudo', @sudo_opts, 'true');
+	    Doit::Log::trace("pre-test sudo; @cmd") if DOIT_TRACE;
 	    system @cmd;
 	    if ($? != 0) {
 		# Possible cases:
@@ -2185,6 +2204,7 @@ use warnings;
 	     ($LANS_PREFIX ? '' : q<END { unlink "> . $sock_path . q<" }>), # cleanup socket file, except if Linux Abstract Namespace Sockets are used
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
+	Doit::Log::trace("sudo worker: @cmd_worker") if DOIT_TRACE;
 	my $worker_pid = fork;
 	if (!defined $worker_pid) {
 	    die "fork failed: $!";
@@ -2199,6 +2219,7 @@ use warnings;
 	my($in, $out);
 	my @cmd_comm = ('sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
 			q{Doit::Comm->comm_to_sock("} . $LANS_PREFIX . $sock_path . q{", debug => shift)}, !!$debug);
+	Doit::Log::trace("sudo comm: @cmd_comm") if DOIT_TRACE;
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
 	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:", debug => $debug);
@@ -2216,6 +2237,8 @@ use warnings;
     our @ISA = ('Doit::_AnyRPCImpl');
 
     use Doit::Log;
+
+    use constant DOIT_TRACE => Doit::DOIT_TRACE;
 
     sub do_connect {
 	require File::Basename;
@@ -2257,8 +2280,10 @@ use warnings;
 	if (UNIVERSAL::isa($ssh_or_host, 'Net::OpenSSH')) {
 	    $ssh = $ssh_or_host;
 	    $host = $ssh->get_host; # XXX what about username/port/...?
+	    Doit::Log::trace("ssh: reuse Net::OpenSSH connection to $host") if DOIT_TRACE;
 	} else {
 	    $host = $ssh_or_host;
+	    Doit::Log::trace("ssh: connect to $host using " . join(" ", %ssh_new_opts)) if DOIT_TRACE;
 	    $ssh = Net::OpenSSH->new($host, %ssh_new_opts);
 	    $ssh->error
 		and error "Connection error to $host: " . $ssh->error;
@@ -2284,8 +2309,10 @@ use warnings;
 	}
 	if ($FindBin::RealScript ne '-e') {
 	    no warnings 'once';
+	    Doit::Log::trace("ssh: $put_to_remote $FindBin::RealBin/$FindBin::RealScript to .doit/") if DOIT_TRACE;
 	    $ssh->$put_to_remote({verbose => $debug}, "$FindBin::RealBin/$FindBin::RealScript", ".doit/"); # XXX verbose?
 	}
+	Doit::Log::trace("ssh: $put_to_remote " . __FILE__ . " to .doit/lib/") if DOIT_TRACE;
 	$ssh->$put_to_remote({verbose => $debug}, __FILE__, ".doit/lib/");
 	{
 	    my %seen_dir;
@@ -2314,6 +2341,7 @@ use warnings;
 		    $ssh->system(\%ssh_run_opts, $remote_cmd);
 		    $seen_dir{$target_dir} = 1;
 		}
+		Doit::Log::trace("ssh: $put_to_remote $from to $full_target") if DOIT_TRACE;
 		$ssh->$put_to_remote({verbose => $debug}, $from, $full_target);
 	    }
 	}
@@ -2366,6 +2394,7 @@ use warnings;
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
 	}
+	Doit::Log::trace("ssh worker: @cmd_worker") if DOIT_TRACE;
 	warn "remote perl cmd: @cmd_worker\n" if $debug;
 	my $worker_pid = $ssh->spawn(\%ssh_run_opts, @cmd_worker); # XXX what to do with worker pid?
 	$self->{worker_pid} = $worker_pid;
@@ -2386,6 +2415,7 @@ use warnings;
 	     !!$debug,
 	    );
 	}
+	Doit::Log::trace("ssh comm: @cmd_comm") if DOIT_TRACE;
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my($out, $in, $comm_pid) = $ssh->open2(@cmd_comm);
 	$self->{comm_pid} = $comm_pid;
