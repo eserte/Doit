@@ -807,6 +807,11 @@ system, for example:
     use Doit;
     ...
 
+=item C<DOIT_SCRIPT>
+
+Set to the (potentially relative) path of the Doit-using script for
+further runners (ssh, sudo).
+
 =item C<PWD>
 
 C<Doit::Util::in_directory> keeps track of the standard C<PWD>
