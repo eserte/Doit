@@ -478,6 +478,53 @@ EOF
     Doit::Log::set_label(undef);
 }
 
+BEGIN { $action_with_arg_handling{'test_package_in_docker'} = 1 }
+sub test_package_in_docker { # XXX Currently only support for deb packages
+    my $usage = sub { error(($_[0] ? "$_[0]\n" : "") . "usage: $0 test_package_in_docker -- --package package.deb dockerimage:tag") };
+    Getopt::Long::GetOptions(
+	"package=s"     => \my $package,
+    ) or $usage->();
+    $package or $usage->("--package is mandatory");
+    my $distro_spec = shift @ARGV or $usage->("dockerimage:tag missing");
+    @ARGV and $usage->("too many arguments");
+    if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
+	$usage->("Please set dockerimage:tag argument to something like 'debian:bookworm'");
+    }
+    Doit::Log::set_label("[$distro_spec]");
+    for my $tool (qw(docker)) {
+	$doit->which($tool) or error "$tool is missing";
+    }
+    require File::Temp;
+    my $dir = File::Temp::tempdir("Doit_test_in_docker_XXXXXXXX", TMPDIR => 1, CLEANUP => 1);
+    $doit->copy($package, $dir);
+    my $package_basename = basename($package);
+    my $dockerfile = <<"EOF";
+FROM $distro_spec
+
+COPY $package_basename /tmp/$package_basename
+EOF
+    my $add_opts = {};
+    $dockerfile .= _fix_Dockerfile_for_dist($distro_spec, $add_opts);
+
+    $dockerfile .= <<"EOF";
+ENV DEBIAN_FRONTEND noninteractive 
+RUN apt-get$add_opts->{apt_get_update_opts} update && \\
+    apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} /tmp/$package_basename && \\
+    apt-get install -y --no-install-recommends$add_opts->{apt_get_install_opts} rsync
+EOF
+
+    $doit->write_binary("$dir/Dockerfile", $dockerfile);
+    in_directory {
+	$doit->system(qw(docker build -t doit-test .));
+	$doit->system(
+		      qw(docker run), '-v', "$FindBin::RealBin:/data:ro", 'doit-test',
+		      'sh', '-c', 'rsync -a --no-owner --no-group --exclude=blib "--exclude=Doit-*.tar.gz" /data/ /tmp/Doit/ && cd /tmp/Doit && perl Build.PL && ./Build test'
+		     );
+    } $dir;
+
+    Doit::Log::set_label(undef);
+}
+
 # Run docker-based tests on a number of Linux distributions:
 # the stable ones of Debian, Ubuntu and CentOS, and some
 # older versions of these distributions.
