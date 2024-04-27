@@ -645,10 +645,7 @@ use warnings;
 
 	if ($doit) {
 	    my @commands =  {
-			     code => sub {
-				 system 'ln', '-nsf', $oldfile, $newfile;
-				 error "ln -nsf $oldfile $newfile failed" if $? != 0;
-			     },
+			     code => sub { _ln_nsf($oldfile, $newfile) },
 			     msg => "ln -nsf $oldfile $newfile",
 			     rv  => 1,
 			    };
@@ -1613,6 +1610,36 @@ use warnings;
 	"$diff$diff_stderr";
     }
 
+    sub _ln_nsf_system {
+	my($oldfile, $newfile) = @_;
+	system 'ln', '-nsf', $oldfile, $newfile;
+	error "ln -nsf $oldfile $newfile failed" if $? != 0;
+    }
+
+    sub _ln_nsf_perl {
+	my($oldfile, $newfile) = @_;
+	symlink $oldfile, $newfile or do {
+	    if ($!{EEXIST}) {
+		require File::Basename;
+		require File::Temp;
+		my $tmpfile = File::Basename::dirname($newfile) . "/" . File::Temp::mktemp('XXXXXXXX');
+		symlink $oldfile, $tmpfile
+		    or error "symlink $oldfile $tmpfile failed: $!";
+		rename $tmpfile, $newfile
+		    or error "rename $tmpfile $newfile failed: $!";
+	    } else {
+		error "symlink $oldfile $newfile failed: $!";
+	    }
+	};
+    }
+
+    BEGIN {
+	if ($ENV{DOIT__USE_LN_NSF_PERL}) {
+	    *_ln_nsf = \&_ln_nsf_perl;
+	} else {
+	    *_ln_nsf = \&_ln_nsf_system;
+	}
+    }
 }
 
 {
