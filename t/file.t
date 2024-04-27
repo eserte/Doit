@@ -354,9 +354,17 @@ SKIP: {
 {
     $doit->touch("$tempdir/empty");
 
-    {
+ SKIP: {
+	my $expected_error_message = qr{ERROR:.*Cannot get digest This_Digest_Does_Not_Exist_\S+ from .*empty: Can't locate Digest.*This_Digest_Does_Not_Exist_\S+ in \@INC};
 	eval { $doit->file_digest_matches("$tempdir/empty", "12345678", "This_Digest_Does_Not_Exist_".rand()) };
-	like $@, qr{ERROR:.*Cannot get digest This_Digest_Does_Not_Exist_\S+ from .*empty: Can't locate Digest.*This_Digest_Does_Not_Exist_\S+ in \@INC}, 'error message on invalid digest type';
+	my $err = $@;
+	if ($err !~ $expected_error_message) {
+	    # check for some known problematic perl + Digest combinations
+	    if ($Digest::VERSION > 1.16 && $] < 5.014) {
+		skip "Known problem with perl $] and Digest $Digest::VERSION, error message does not look as expected ($err)", 1;
+	    }
+	}
+	like $err, $expected_error_message, 'error message on invalid digest type';
     }
 
     {
