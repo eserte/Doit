@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2020,2021,2022,2023 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020,2021,2022,2023,2024 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -39,6 +39,8 @@ for my $argv_i (0 .. $#ARGV) {
 	$argv =~ s/^/--/;
     }
 }
+
+my %action_with_arg_handling;
 
 if (basename($0) eq 'Build.PL') {
     _Build_PL_mode();
@@ -94,8 +96,10 @@ Getopt::Long::GetOptions(
 
 my $action = shift || 'build';
 $action =~ s/-/_/g;
-if (@ARGV) {
-    error "No arguments allowed";
+if (!$action_with_arg_handling{$action}) {
+    if (@ARGV) {
+	error "No arguments allowed for action '$action'";
+    }
 }
 
 tie my %Config, 'CustomConfig', $opt{config};
@@ -206,12 +210,18 @@ sub test_installed {
     $doit->system(_prove_path(), $t_dir);
 }
 
+BEGIN { $action_with_arg_handling{'test_in_docker'} = 1 }
 sub test_in_docker {
-    my $distro_spec = $ENV{DISTRO_SPEC}; # XXX this should be a proper option!
+    my $usage = sub { error(($_[0] ? "$_[0]\n" : "") . "usage: $0 test_in_docker -- [--more-testing] dockerimage:tag") };
+    Getopt::Long::GetOptions(
+	"more-testing!"     => \my $more_testing,
+	"invalidate-cache!" => \my $do_invalidate_cache,
+    ) or $usage->();
+    my $distro_spec = shift @ARGV or $usage->("dockerimage:tag missing");
+    @ARGV and $usage->("too many arguments");
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
-	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
+	$usage->("Please set dockerimage:tag argument to something like 'debian:bookworm'");
     }
-    my $more_testing = $ENV{XXX_MORE_TESTING}; # XXX this will be a proper option in future!
     Doit::Log::set_label("[$distro_spec" . ($more_testing ? " (more)" : "") . "]");
     for my $tool (qw(docker)) {
 	$doit->which($tool) or error "$tool is missing";
@@ -222,7 +232,7 @@ sub test_in_docker {
 FROM $distro_spec
 
 EOF
-    if ($ENV{XXX_INVALIDATE_CACHE}) { # XXX this will be a proper option in future!
+    if ($do_invalidate_cache) {
 	_add_Dockerfile_invalidate_cmd(\$dockerfile);
     }
 
@@ -438,11 +448,9 @@ sub test_standard {
     Doit::Log::set_label(undef);
     my @results;
     for my $distro_spec ('debian:bookworm', 'ubuntu:jammy', 'debian:bullseye', 'ubuntu:focal', 'debian:buster', 'ubuntu:bionic', 'centos:7', 'debian:stretch', 'debian:jessie', 'ubuntu:xenial', 'ubuntu:precise', 'centos:6', 'alpine:latest') {
-	local $ENV{DISTRO_SPEC} = $distro_spec;
 	for my $more_testing (0, 1) {
-	    local $ENV{XXX_MORE_TESTING} = $more_testing;
 	    my $t0 = time; # currently not hires, should be fine for now
-	    $doit->system('./Build', 'test_in_docker');
+	    $doit->system('./Build', 'test_in_docker', '--', ($more_testing ? '--more-testing' : ()), $distro_spec);
 	    my $t1 = time;
 	    push @results, { distro => $distro_spec, more_testing => $more_testing, result => 'pass', time => ($t1-$t0)."s" };
 	}
@@ -637,13 +645,31 @@ sub look {
     } $distdir;
 }
 
+BEGIN { $action_with_arg_handling{'cover'} = 1 }
 sub cover {
-    $doit->system(_cover_path(), '--test');
+    my(@files) = @ARGV;
+    if (@files) {
+	for my $file (@files) {
+	    $doit->system($^X, '-MDevel::Cover', $file);
+	}
+    } else {
+	$doit->system(_cover_path(), '--test');
+    }
     $doit->unlink('MYMETA.json.lock'); # https://github.com/pjcj/Devel--Cover/issues/263
 }
 
+BEGIN { $action_with_arg_handling{'show_cover'} = 1 }
 sub show_cover {
-    cover();
+    Getopt::Long::GetOptions(
+	'show-only' => \my $show_only,
+    ) or error "usage: $0 show_cover -- --show-only [file ...]";
+    my @files = @ARGV;
+    if (@files && $show_only) { error "Cannot specify --show-only together with list of files" }
+    if ($show_only) {
+	$doit->system(_cover_path());
+    } else {
+	cover(@files);
+    }
     my $browser = $^O eq 'darwin' ? 'open' : $doit->which('xdg-open') ? 'xdg-open' : 'firefox';
     $doit->system($browser, "$FindBin::RealBin/cover_db/coverage.html");
 }
@@ -925,10 +951,16 @@ sub _basic_debian_version {
     $version;
 }
 
+BEGIN { $action_with_arg_handling{'debian_package_with_docker'} = 1 }
 sub debian_package_with_docker {
-    my $distro_spec = $ENV{DISTRO_SPEC}; # XXX this should be a proper option!
+    my $usage = sub { error(($_[0] ? "$_[0]\n" : "") . "usage: $0 debian_package_with_docker -- [--use-workdir] dockerimage:tag") };
+    Getopt::Long::GetOptions(
+	"use-workdir!" => \my $use_workdir,
+    ) or $usage->();
+    my $distro_spec = shift @ARGV or $usage->("dockerimage:tag missing");
+    @ARGV and $usage->("too many arguments");
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
-	error "Please set DISTRO_SPEC environment variable to something like 'debian:jessie'";
+	$usage->("Please set dockerimage:tag argument to something like 'debian:bookworm'");
     }
     for my $tool (qw(docker)) {
 	$doit->which($tool) or error "$tool is missing";
@@ -948,7 +980,6 @@ sub debian_package_with_docker {
 	$doit->mkdir($pkgdir);
     }
 
-    my $use_workdir = $ENV{USE_WORKDIR}; # XXX this should be a proper option
     if ($use_workdir) {
 	# no --cvs-exclude --- git-describe has to work
 	$doit->system('rsync', '-a', '--exclude=blib', '.', $dir);
