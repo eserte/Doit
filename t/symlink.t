@@ -32,7 +32,25 @@ chdir $tempdir or die "Can't chdir to $tempdir: $!";
 my $r = Doit->init;
 $DOIT = $r;
 
-{
+my $default_ln_nsf_implementation = (
+    \&Doit::_ln_nsf == \&Doit::_ln_nsf_system ? "system" :
+    \&Doit::_ln_nsf == \&Doit::_ln_nsf_perl   ? "perl" :
+    "UNKNOWN!"
+);
+
+my @implementations;
+push @implementations, ["default ($default_ln_nsf_implementation)", undef];
+if ($default_ln_nsf_implementation eq 'system') {
+    push @implementations, ["perl",   sub { no warnings 'redefine'; *Doit::_ln_nsf = \&Doit::_ln_nsf_perl }];
+} elsif ($default_ln_nsf_implementation eq 'perl') {
+    push @implementations, ["system", sub { no warnings 'redefine'; *Doit::_ln_nsf = \&Doit::_ln_nsf_system }];
+}
+
+for my $implementation (@implementations) {
+    my($implementation_label, $switch_code) = @$implementation;
+    diag "Run with implementation $implementation_label";
+    $switch_code->() if $switch_code;
+
     is $r->symlink("tmp/doit-test", "doit-test-symlink"), 1;
     ok -l "doit-test-symlink", 'symlink created';
     is readlink("doit-test-symlink"), "tmp/doit-test", 'symlink points to expected destination';
@@ -68,7 +86,7 @@ $DOIT = $r;
 	eval { $r->symlink("target", "unreadable/symlink") };
 	like $@, qr{ERROR.*\Q$errno_string{ENOENT}};
 	eval { $r->ln_nsf("target", "unreadable/symlink") };
-	like $@, qr{ln -nsf target unreadable/symlink failed};
+	like $@, qr{(ln -nsf|symlink) target unreadable/symlink failed};
     } "unreadable-dir";
 }
 
