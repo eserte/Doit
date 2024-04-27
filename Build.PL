@@ -959,8 +959,11 @@ sub debian_package_with_docker {
     ) or $usage->();
     my $distro_spec = shift @ARGV or $usage->("dockerimage:tag missing");
     @ARGV and $usage->("too many arguments");
+    if ($distro_spec eq 'self') {
+	$distro_spec = join ":", @{ get_os_release() }{qw(ID VERSION_CODENAME)};
+    }
     if (!$distro_spec || $distro_spec !~ m{^.*:.*$}) {
-	$usage->("Please set dockerimage:tag argument to something like 'debian:bookworm'");
+	$usage->("Please set dockerimage:tag argument to something like 'debian:bookworm' or 'self'");
     }
     for my $tool (qw(docker)) {
 	$doit->which($tool) or error "$tool is missing";
