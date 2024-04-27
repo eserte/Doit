@@ -171,7 +171,17 @@ sub clean {
 
 sub realclean { &clean }
 
+BEGIN { $action_with_arg_handling{'test'} = 1 }
 sub test {
+    my $usage = sub { error(($_[0] ? "$_[0]\n" : "") . "usage: $0 test -- [--no-build] [file...]") };
+    my $do_build = 1;
+    Getopt::Long::GetOptions(
+	'build!' => \$do_build,
+    ) or $usage->();
+    my @test_files = @ARGV; @ARGV = ();
+
+    build() if $do_build;
+
     local $ENV{PERL_DL_NONLAZY} = 1;
     require File::Glob;
     require File::Spec;
@@ -180,9 +190,11 @@ sub test {
 	$doit->setenv(HARNESS_OPTIONS => (defined $ENV{HARNESS_OPTIONS} && $ENV{HARNESS_OPTIONS} ne '' ? $ENV{HARNESS_OPTIONS} . ':' : '') . "j$opt{jobs}")
     }
     if (0) {
-	$doit->system(_prove_path(), '-b', 't'); # use right perl?
+	$doit->system(_prove_path(), '-b', 't', @test_files); # use right perl?
     } else {
-	my @test_files = sort { lc $a cmp lc $b } File::Glob::bsd_glob(File::Spec->catfile("t", "*.t"));
+	if (!@test_files) {
+	    @test_files = sort { lc $a cmp lc $b } File::Glob::bsd_glob(File::Spec->catfile("t", "*.t"));
+	}
 	if (0) {
 	    $doit->system($^X, "-MExtUtils::Command::MM", "-MTest::Harness", "-e", 'undef *Test::Harness::Switches; test_harness(0, "blib/lib", "blib/arch")', @test_files);
 	} else {
