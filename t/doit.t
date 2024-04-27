@@ -19,21 +19,11 @@ use File::Temp 'tempdir';
 use Getopt::Long;
 use Test::More 'no_plan';
 use Errno ();
-use Hash::Util qw(lock_keys);
 
 use Doit;
 use Doit::Log;
 
-use TestUtil qw(with_unreadable_directory $DOIT);
-
-my %errno_string =
-    (
-     EACCES => do { $! = Errno::EACCES(); "$!" }, # "Permission denied"
-     EEXIST => do { $! = Errno::EEXIST(); "$!" }, # "File exists"
-     ENOENT => do { $! = Errno::ENOENT(); "$!" },
-     ENOTEMPTY => do { $! = Errno::ENOTEMPTY(); "$!" }, # "Directory not empty"
-    );
-lock_keys %errno_string;
+use TestUtil qw(with_unreadable_directory $DOIT %errno_string);
 
 my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 chdir $tempdir or die "Can't chdir to $tempdir: $!";

@@ -21,13 +21,7 @@ use Test::More;
 
 use Doit;
 
-use TestUtil qw(with_unreadable_directory $DOIT);
-
-my %errno_string =
-    (
-     ENOENT => do { $! = Errno::ENOENT(); "$!" },
-    );
-lock_keys %errno_string;
+use TestUtil qw(with_unreadable_directory $DOIT %errno_string);
 
 plan skip_all => "symlinks not working or too hard on Windows" if $^O eq 'MSWin32';
 plan 'no_plan';

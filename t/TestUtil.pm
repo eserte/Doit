@@ -20,10 +20,21 @@ our $DOIT;
 
 use Exporter 'import';
 our @EXPORT = qw(get_sudo module_exists is_dir_eq);
-our @EXPORT_OK = qw(signal_kill_num with_unreadable_directory $DOIT);
+our @EXPORT_OK = qw(signal_kill_num with_unreadable_directory $DOIT %errno_string);
+
+use Hash::Util qw(lock_keys);
 
 use Doit::Log;
 use Doit::Util qw(new_scope_cleanup);
+
+our %errno_string =
+    (
+     EACCES => do { $! = Errno::EACCES(); "$!" }, # "Permission denied"
+     EEXIST => do { $! = Errno::EEXIST(); "$!" }, # "File exists"
+     ENOENT => do { $! = Errno::ENOENT(); "$!" },
+     ENOTEMPTY => do { $! = Errno::ENOTEMPTY(); "$!" }, # "Directory not empty"
+    );
+lock_keys %errno_string;
 
 sub get_sudo ($;@) {
     my($doit, %opts) = @_;
