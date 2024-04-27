@@ -994,10 +994,12 @@ sub _basic_debian_version {
 
 BEGIN { $action_with_arg_handling{'debian_package_with_docker'} = 1 }
 sub debian_package_with_docker {
-    my $usage = sub { error(($_[0] ? "$_[0]\n" : "") . "usage: $0 debian_package_with_docker -- [--use-workdir] dockerimage:tag") };
+    my $usage = sub { error(($_[0] ? "$_[0]\n" : "") . "usage: $0 debian_package_with_docker -- [--use-workdir | --tag ...] dockerimage:tag") };
     Getopt::Long::GetOptions(
 	"use-workdir!" => \my $use_workdir,
+	"tag=s"        => \my $tag,
     ) or $usage->();
+    $tag && $use_workdir and $usage->("Cannot use --use-workdir together with --tag");
     my $distro_spec = shift @ARGV or $usage->("dockerimage:tag missing");
     @ARGV and $usage->("too many arguments");
     if ($distro_spec eq 'self') {
@@ -1032,6 +1034,7 @@ sub debian_package_with_docker {
 	$doit->git_repo_update(
 	    repository => $FindBin::RealBin,
 	    directory  => $dir,
+	    ($tag ? (branch => $tag) : ()),
 	    # no: we need the full history for correct git version calculation: clone_opts => [qw(--depth=1)],
 	);
     }
