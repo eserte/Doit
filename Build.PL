@@ -120,20 +120,36 @@ sub build_libs {
     require File::Find;
     my @pm_files;
     File::Find::find(sub { no warnings 'once'; push @pm_files, $File::Find::name if /\.(pm|pod)$/ && -f $_ }, "lib");
+    my %seen_blib;
     for my $file (@pm_files) {
 	my $dest = 'blib/'.$file;
 	if (!-e $dest || -M $dest > -M $file) {
 	    $doit->make_path(dirname($dest));
 	    $doit->copy($file, $dest);
 	}
+	$seen_blib{$dest} = 1;
     }
+    File::Find::find
+	    ({
+	      wanted => sub {
+		  if (-f $_ && !$seen_blib{$File::Find::name}) {
+		      warning "Stray file $File::Find::name found, removing...";
+		      $doit->unlink($File::Find::name);
+		  }
+	      },
+	      no_chdir => 1,
+	     },
+	     "blib/lib", "blib/arch",
+	    );
 }
 
 sub manifypods {
     # Handles only Pods in .pod files (which is the case in the Doit distribution)
     require File::Find;
+    require File::Glob;
     require Pod::Man;
     my $mansep = $^O =~ m{^(MSWin32|cygwin)$} ? '.' : '::';
+    my %seen_blib_man;
     File::Find::find
 	    ({
 	      wanted => sub {
@@ -158,11 +174,24 @@ sub manifypods {
 			  }
 			  $doit->chmod(0644, $man); # XXX should this be changeable? like $PERM_RW in Makefile.PL?
 		      }
+		      $seen_blib_man{$man} = 1;
 		  }
 	      },
 	      no_chdir => 1,
 	     },
 	     "lib");
+    File::Find::find
+	    ({
+	      wanted => sub {
+		  if (-f $_ && !$seen_blib_man{$File::Find::name}) {
+		      warning "Stray file $File::Find::name found, removing...";
+		      $doit->unlink($File::Find::name);
+		  }
+	      },
+	      no_chdir => 1,
+	     },
+	     File::Glob::bsd_glob("blib/man*")
+	    );
 }
 
 sub clean {
