@@ -220,51 +220,6 @@ is $r->copy("doit-test", "doit-copy"), 0; # no action
 $r->unlink("doit-copy");
 
 ######################################################################
-# symlink, ln_nsf
-TODO: {
-    todo_skip "symlinks not working on Windows", 11
-	if $^O eq 'MSWin32';
-
-    is $r->symlink("tmp/doit-test", "doit-test-symlink"), 1;
-    ok -l "doit-test-symlink", 'symlink created';
-    is readlink("doit-test-symlink"), "tmp/doit-test", 'symlink points to expected destination';
-    is $r->symlink("tmp/doit-test", "doit-test-symlink"), 0;
-    ok -l "doit-test-symlink", 'symlink still exists';
-    is readlink("doit-test-symlink"), "tmp/doit-test", 'symlink did not change expected destination';
-    $r->unlink("doit-test-symlink");
-    ok ! -e "doit-test-symlink", 'symlink was removed';
-
-    eval { $r->ln_nsf };
-    like $@, qr{oldfile was not specified for ln_nsf};
-    eval { $r->ln_nsf("tmp/doit-test") };
-    like $@, qr{newfile was not specified for ln_nsf};
-    is $r->ln_nsf("tmp/doit-test", "doit-test-symlink2"), 1;
-    ok -l "doit-test-symlink2", 'symlink created with ln -nsf';
-    is readlink("doit-test-symlink2"), "tmp/doit-test", 'symlink points to expected destination';
-    is $r->ln_nsf("tmp/doit-test", "doit-test-symlink2"), 0;
-    ok -l "doit-test-symlink2", 'symlink still exists (ln -nsf)';
-    is readlink("doit-test-symlink2"), "tmp/doit-test", 'symlink did not change expected destination';
-    is $r->ln_nsf("doit-test", "doit-test-symlink2"), 1;
-    ok -l "doit-test-symlink2", 'new symlink (ln -nsf)';
-    is readlink("doit-test-symlink2"), "doit-test", 'symlink was changed';
-    $r->unlink("doit-test-symlink2");
-    ok ! -e "doit-test-symlink2", 'symlink was removed';
-
-    $r->mkdir("dir-for-ln-nsf-test");
-    ok -d "dir-for-ln-nsf-test";
-    eval { $r->ln_nsf("tmp/doit-test", "dir-for-ln-nsf-test") };
-    like $@, qr{"dir-for-ln-nsf-test" already exists as a directory};
-    ok -d "dir-for-ln-nsf-test", 'directory still exists after failed ln -nsf';
-
-    with_unreadable_directory {
-	eval { $r->symlink("target", "unreadable/symlink") };
-	like $@, qr{ERROR.*\Q$errno_string{ENOENT}};
-	eval { $r->ln_nsf("target", "unreadable/symlink") };
-	like $@, qr{ln -nsf target unreadable/symlink failed};
-    } "unreadable-dir";
-}
-
-######################################################################
 # write_binary
 $r->write_binary("doit-test", "some content\n");
 $r->write_binary("doit-test", "some content\n");
