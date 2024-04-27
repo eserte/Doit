@@ -1,5 +1,14 @@
 Revision history for Doit.
 
+0.028_52 2024-04-27
+	- features
+	  - alternative experimental ln_nsf implementation
+	    (currently switchable using an environment variable)
+	- tests
+	  - move symlink tests into own file t/symlink.t
+	  - move some common test functionality into TestUtil.pm
+	  - ignore file.t failures on certain perl+Digest combinations
+
 0.028_51 2024-04-26
 	- features
 	  - Doit::Pip: new command pip_is_functional
