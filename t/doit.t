@@ -4,12 +4,11 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2023 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2023,2024 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
-# Mail: slaven@rezic.de
-# WWW:  http://www.rezic.de/eserte/
+# WWW:  https://github.com/eserte/Doit
 #
 
 use strict;
@@ -24,9 +23,8 @@ use Hash::Util qw(lock_keys);
 
 use Doit;
 use Doit::Log;
-use Doit::Util qw(new_scope_cleanup);
 
-sub with_unreadable_directory (&$);
+use TestUtil qw(with_unreadable_directory $DOIT);
 
 my %errno_string =
     (
@@ -41,6 +39,7 @@ my $tempdir = tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
 chdir $tempdir or die "Can't chdir to $tempdir: $!";
 
 my $r = Doit->init;
+$DOIT = $r;
 my $has_ipc_run = $r->can_ipc_run;
 
 my $enable_atime_tests = $ENV{GITHUB_ACTIONS} || $ENV{DOIT_TEST_WITH_ATIME};
@@ -459,30 +458,5 @@ $r->mytest(1);
 $r->mytest(0);
 
 chdir '/'; # for File::Temp
-
-######################################################################
-# helpers
-
-sub with_unreadable_directory (&$) {
-    my($code, $unreadable_dir) = @_;
-    error "not a CODE ref: $code" if ref $code ne 'CODE';
-    error "missing unreadable dir" if !defined $unreadable_dir;
-
- SKIP: {
-	skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';
-	skip "unreadable directories behave differently on cygwin", 1 if $^O eq 'cygwin';
-	skip "unreadable directories not a problem for the superuser", 1 if $> == 0;
-
-	$r->mkdir($unreadable_dir);
-	$r->chmod(0000, $unreadable_dir);
-
-	my $cleanup = new_scope_cleanup {
-	    $r->chmod(0700, $unreadable_dir);
-	    $r->rmdir($unreadable_dir);
-	};
-
-	$code->();
-    }
-}
 
 __END__

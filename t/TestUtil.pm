@@ -3,25 +3,27 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2023 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2023,2024 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
-# Mail: slaven@rezic.de
-# WWW:  http://www.rezic.de/eserte/
+# WWW:  https://github.com/eserte/Doit
 #
 
 package TestUtil;
 
 use strict;
 use warnings;
-our $VERSION = '0.043';
+our $VERSION = '0.044';
+
+our $DOIT;
 
 use Exporter 'import';
 our @EXPORT = qw(get_sudo module_exists is_dir_eq);
-our @EXPORT_OK = qw(signal_kill_num);
+our @EXPORT_OK = qw(signal_kill_num with_unreadable_directory $DOIT);
 
 use Doit::Log;
+use Doit::Util qw(new_scope_cleanup);
 
 sub get_sudo ($;@) {
     my($doit, %opts) = @_;
@@ -109,6 +111,30 @@ sub signal_kill_num {
 	21; # actually SIGKILLTHR, see https://github.com/haiku/haiku/blob/master/headers/posix/signal.h and http://www.cpantesters.org/cpan/report/e0265104-b2d4-11e8-bafc-fcd8acac9ab4
     } else {
 	9;
+    }
+}
+
+# require $DOIT to be set before
+sub with_unreadable_directory (&$) {
+    my($code, $unreadable_dir) = @_;
+    error "not a CODE ref: $code" if ref $code ne 'CODE';
+    error "missing unreadable dir" if !defined $unreadable_dir;
+    error "Please import and set \$DOIT varianble!" if !$DOIT;
+
+ SKIP: {
+	Test::More::skip "unreadable directories behave differently on Windows", 1 if $^O eq 'MSWin32';
+	Test::More::skip "unreadable directories behave differently on cygwin", 1 if $^O eq 'cygwin';
+	Test::More::skip "unreadable directories not a problem for the superuser", 1 if $> == 0;
+
+	$DOIT->mkdir($unreadable_dir);
+	$DOIT->chmod(0000, $unreadable_dir);
+
+	my $cleanup = new_scope_cleanup {
+	    $DOIT->chmod(0700, $unreadable_dir);
+	    $DOIT->rmdir($unreadable_dir);
+	};
+
+	$code->();
     }
 }
 
