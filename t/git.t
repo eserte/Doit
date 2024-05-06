@@ -28,6 +28,9 @@ if (!$d->which('git')) {
 
 plan 'no_plan';
 
+my @warnings;
+$SIG{__WARN__} = sub { push @warnings, @_ };
+
 $d->add_component('git');
 
 my $git_version = $d->info_qx({quiet=>1}, 'git', '--version');
@@ -202,11 +205,8 @@ SKIP: {
 	is_dir_eq $d->git_root, $workdir, 'in_directory call without prototype';
     }, 'subdir');
 
-    # git_config
-    eval {
-	$d->git_config(key => "test.key", val => "test.val", unset => 1);
-    };
-    like $@, qr{ERROR.*Don't specify both 'unset' and 'val'};
+    # git_config, single values
+    is $d->git_config(key => "test.key", val => "test.val", unset => 1), 0, 'unset on non-existing key-val';
     is $d->git_config(key => "test.key"), undef, 'config key does not exist yet';
     is $d->git_config(key => "test.key", val => "test.val"), 1, 'there was a change';
     is $d->git_config(key => "test.key"), "test.val", 'config key now exists';
@@ -226,10 +226,52 @@ SKIP: {
 	eval { $d->git_config(key => "non-exis.tent-key", val => "test.val4", directory => $git_less_directory) };
 	like $@, qr{Command exited with exit code};
     }
+    # git_config, values with newlines
     is $d->git_config(key => "test.with.newlines", val => "line1\nline2\line3\n"), 1, 'newline key was added';
     is $d->git_config(key => "test.with.newlines"),       "line1\nline2\line3\n", 'we can deal with newlines';
     is $d->git_config(key => "test.with.newlines", val => "line1\nline2\line3\another line\n"), 1, 'newline key was changed';
     is $d->git_config(key => "test.with.newlines"),       "line1\nline2\line3\another line\n", 'last change was successful';
+
+    # git_config, multiple values, setting and getting
+    eval { $d->git_config(key => "test.multikey", val => ["test.val0", "test.val2"], all => 1) };
+    like $@, qr{\QCannot handle 'all' together with 'val'}, 'expected error message (all with val)';
+    is $d->git_config(key => "test.multikey", val => ["test.val0", "test.val2"]), 1, 'multiple config keys set';
+    is $d->git_config(key => "test.multikey", val => ["test.val0", "test.val2"]), 0, 'multiple config keys, no change';
+    is $d->git_config(key => "test.multikey"), "test.val2", 'get last of multiple config keys';
+    is_deeply [$d->git_config(key => "test.multikey", all => 1)], ["test.val0", "test.val2"], 'get all of multiple config keys';
+    is $d->git_config(key => "test.multikey", val => ["test.val1", "test.val2"]), 1, 'replacement of a value';
+    is_deeply [$d->git_config(key => "test.multikey", all => 1)], ["test.val1", "test.val2"], 'get all of multiple config keys after replacement';
+
+    # git_config, multiple values, replacing
+    eval { $d->git_config(key => "test.multikey", add => 1, val => ["test.val3", "test.val4"]) };
+    like $@, qr{\Q'add' only implemented for single-value 'val'}, 'expected error message with multi-value add';
+    eval { $d->git_config(key => "test.multikey", add => 1) };
+    like $@, qr{\Q'add' must be used together with 'val'}, 'expected error message with add without val';
+    is $d->git_config(key => "test.multikey", val => "test.val3", add => 1), 1, 'adding value';
+    is $d->git_config(key => "test.multikey", val => "test.val3", add => 1), 0, 'adding value without change (special case: last value)';
+    is $d->git_config(key => "test.multikey", val => "test.val1", add => 1), 0, 'adding value without change (non-last value)';
+    is_deeply [$d->git_config(key => "test.multikey", all => 1)], ["test.val1", "test.val2", "test.val3"], 'get all after adding value';
+    is $d->git_config(key => "test.multikey", unset => 1, val => "test.val3"), 1, 'unset specific value';
+    is $d->git_config(key => "test.multikey", unset => 1, val => "test.val3"), 0, 'unset specific value without change';
+    is_deeply [$d->git_config(key => "test.multikey", all => 1)], ["test.val1", "test.val2"], 'get all after unsetting specific value';
+
+    # git_config, multiple values, unsetting
+    eval { $d->git_config(key => "test.multikey", unset => 1) };
+    like $@, qr{\QMultiple values when using 'unset', please specify 'all => 1' if wanted}, 'expected error message (unset with multiple values)';
+    is_deeply [$d->git_config(key => "test.multikey", all => 1)], ["test.val1", "test.val2"], 'still not unset';
+    is $d->git_config(key => "test.multikey", val => []), 1, 'unset all using empty array';
+    is_deeply [$d->git_config(key => "test.multikey", all => 1)], [], 'get all after unsetting all';
+    is $d->git_config(key => "test.multikey", val => []), 0, 'unset all using empty array without change';
+    is $d->git_config(key => "test.multikey", val => ["test.val1", "test.val2"]), 1, 'filling config again';
+    is $d->git_config(key => "test.multikey", unset => 1, all => 1), 1, 'unset all using unset+all options';
+    is_deeply [$d->git_config(key => "test.multikey", all => 1)], [], 'get all after unsetting all using unset+all options';
+    eval { $d->git_config(key => "test.multikey", add => 1, unset => 1) };
+    like $@, qr{\Q'add' cannot be used together with 'unset'}, 'expected error message (add with unset)';
+
+    # git_config, quoting regexps
+    is $d->git_config(key => "test.multikey", val => ['+refs/pull/*/head:refs/remotes/origin/all-pr/*', '+refs/pull/*/merge:refs/remotes/origin/open-pr/*']), 1, 'multiple config keys set';
+    is $d->git_config(key => "test.multikey", unset => 1, val => '+refs/pull/*/head:refs/remotes/origin/all-pr/*'), 1, 'unsetting a value using quotemeta';
+    is_deeply [$d->git_config(key => "test.multikey")], ['+refs/pull/*/merge:refs/remotes/origin/open-pr/*'], 'left value as expected';
 
     # various clone tests
     is $d->git_repo_update(
@@ -572,6 +614,8 @@ SKIP: {
 }
 
 chdir "/"; # for File::Temp cleanup
+
+is_deeply \@warnings, [], 'no warnings';
 
 sub run_tests {
     my($repository, $directory) = @_;

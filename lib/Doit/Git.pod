@@ -299,22 +299,79 @@ return a wrong or no result at all in some cases.
 
 May fail if the default branch cannot be determined.
 
-=head3 git_config (informational command)
+=head3 git_config
+
+C<git_config> comes it several flavors, for just getting config values
+(which is just an informational command, running also in dry-run mode)
+and setting/changing or unsetting values.
+
+=head4 git_config (informational command)
 
     my $val = $doit->git_config(
         directory => $directory,
         key       => $key,
+        all       => 0, # default
+    );
+    my @vals = $doit->git_config(
+        directory => $directory,
+        key       => $key,
+        all       => 1,
     );
 
 Return the current value of I<$key>, or C<undef> if I<$key> does not
-exist.
+exist. If I<$key> has multiple values, then the last value is returned
+(which matches the behavior of C<git config --get>).
+
+If C<all> is set to a true value, then return a list of all values if
+the specified I<$key> has multiple values (by using C<git config
+--get-all> internally).
 
 C<directory> may be set to a I<$directory>, otherwise the current
 working directory is used for running L<git-config(1)>.
 
-Note that C<git_config> handles only simple (but common) cases. See
-L<git-config(1)> for the complete possibilities of git's configuration
-system.
+=head4 git_config (setting values)
+
+    my $val = $doit->git_config(
+        directory => $directory,
+        key       => $key,
+        val       => $val,
+    );
+
+Set the git config of I<$key> to I<$val>. If C<$val> is an array
+reference, then set or replace multiple values. As as special case, if
+C<$val> is the empty array reference, then the setting will be deleted
+(which is roughly equivalent to the C<git config> otpion
+C<--unset-all>.
+
+Return 1 if a change was done, otherwise 0.
+
+=head4 git_config (unsetting values)
+
+    my $val = $doit->git_config(
+        directory => $directory,
+        key       => $key,
+	unset     => 1,
+    );
+    my $val = $doit->git_config(
+        directory => $directory,
+        key       => $key,
+	unset     => 1,
+	all       => 1,
+    );
+    my $val = $doit->git_config(
+        directory => $directory,
+        key       => $key,
+	unset     => 1,
+        val       => $val,
+    );
+
+Unset values if C<< unset => 1 >> is specified. If neither C<val> nor
+C<all> is specified, a single-value config is assumed and the value is
+removed. C<git> may warn if multiple values exist. If C<all>
+is specified, then remove all values for this config key. If C<val> is
+specified, then remove just the specified value.
+
+Return 1 if a change was done, otherwise 0.
 
 =head1 AUTHOR
 
