@@ -15,7 +15,7 @@ package Doit::Git; # Convention: all commands here should be prefixed with 'git_
 
 use strict;
 use warnings;
-our $VERSION = '0.029';
+our $VERSION = '0.030';
 
 use Doit::Log;
 use Doit::Util qw(in_directory);
@@ -72,6 +72,7 @@ sub git_repo_update {
 			error
 			    "In $directory: remote $origin does not point to $repository" . (@repository_aliases ? " (or any of the following aliases: @repository_aliases)" : "") . ", but to $actual_repository\n" .
 			    "Please run manually\n" .
+			    "    cd $directory\n" .
 			    "    @change_cmd\n" .
 			    "or specify allow_remote_url_change=>1\n";
 		    }
