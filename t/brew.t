@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2024 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -41,8 +41,12 @@ if (0) {
     is_deeply(\@missing_packages, ['this-does-not-exist']);
 }
 
+my $cellar = $d->brew_get_cellar;
+ok defined $cellar, 'found a brew cellar';
+ok -d $cellar, "brew cellar $cellar is a directory";
+
 {
-    my($package) = bsd_glob("/usr/local/Cellar/*");
+    my($package) = bsd_glob("$cellar/*");
     if ($package) {
 	$package = basename $package;
 	my @missing_packages = $d->brew_missing_packages($package);
