@@ -1,5 +1,22 @@
 Revision history for Doit.
 
+0.028_53 2024-05-21
+	- features
+	  - new command brew_get_cellar
+	  - additional diagnostics in git_repo_update
+	  - git_config: support for multiple values
+	- fixes
+	  - Doit::Brew handles systems with /opt/homebrew/Cellar
+	- build
+	  - new action test_package_in_docker
+	  - Build.PL: option handling for some actions
+	  - build before test
+	  - build_libs+manifypods: remove stray files from blib
+	- tests
+	  - github actions: test macos-13 + macos-14, drop macos-11
+	  - github freebsd testing moved to ubuntu/qemu
+	  - new test script trace.t
+
 0.028_52 2024-04-27
 	- features
 	  - alternative experimental ln_nsf implementation
