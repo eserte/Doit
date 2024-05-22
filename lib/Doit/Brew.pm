@@ -56,11 +56,19 @@ sub brew_install_packages {
 
 sub brew_get_cellar {
     my($self) = @_;
+
+    # First try environment variables (fastest, no external command called)
     return $ENV{HOMEBREW_CELLAR}          if defined $ENV{HOMEBREW_CELLAR} && -d $ENV{HOMEBREW_CELLAR};
     return "$ENV{HOMEBREW_PREFIX}/Cellar" if defined $ENV{HOMEBREW_PREFIX} && -d "$ENV{HOMEBREW_PREFIX}/Cellar";
-    return "/usr/local/Cellar"            if -d "/usr/local/Cellar";
-    return "/opt/homebrew/Cellar"         if -d "/opt/homebrew/Cellar";
 
+    # Heuristics depending on architcture
+    chomp(my $arch = eval { $self->info_qx({quiet => 1}, qw(uname -m)) });
+    my @cellar_candidates = ($arch eq 'arm64' ? ('/opt/homebrew/Cellar', '/usr/local/Cellar') : ('/usr/local/Cellar', '/opt/homebrew/Cellar'));
+    for my $cellar_candidate (@cellar_candidates) {
+	return $cellar_candidate  if -d $cellar_candidate;
+    }
+
+    # use brew config (maybe slow?)
     for my $line (split /\n/, eval { $self->info_qx({quiet=>1}, 'brew', 'config') }) {
 	if ($line =~ /^\s*HOMEBREW_PREFIX:\s*(.*)/) {
 	    my $cellar = "$1/Cellar";
