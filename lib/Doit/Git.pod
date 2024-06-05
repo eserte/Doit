@@ -193,7 +193,7 @@ no test for this).
 
 Return the top directory of the git checkout for the given directory
 I<$directory>, or the current working directory if C<directory> is not
-given.
+given. Fail if the used directory is not git-controlled.
 
 =head3 git_get_commit_hash
 
