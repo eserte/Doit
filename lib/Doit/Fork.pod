@@ -15,6 +15,8 @@ Doit::Fork - run code in another process
     $doit->add_component('fork');
     my $fork = $doit->do_fork;
     info $fork->call_with_runner('run_test', 'test argument');
+    undef $fork;
+    info $Doit::Fork::last_exits[-1]->{msg};
 
 =head1 DESCRIPTION
 
@@ -28,6 +30,25 @@ the ability (unlike with normal forked processes) to call subroutines
 in these processes with possibly complex arguments and return values.
 
 Note that all communication is still synchronous.
+
+=head2 MODULE VARIABLES
+
+=over
+
+=item C<@last_exits>
+
+After destroying a fork (e.g. by using C<undef $fork> or on scope
+exits) the worker will exit, the process will be reaped and the exit
+information will be put into the module variable C<@last_exits> as a
+hash with at least the following elements: C<exitcode>, C<pid>,
+C<msg>. Only the information of the last 10 exits will be kept. This
+number can be changed by setting C<$keep_last_exits>.
+
+=item C<$keep_last_exits>
+
+The number of process information kept. By default 10.
+
+=back
 
 =head1 AUTHOR
 

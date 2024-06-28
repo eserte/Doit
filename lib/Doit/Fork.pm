@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2023 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2023,2024 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -17,11 +17,14 @@ use Doit;
 
 use strict;
 use warnings;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use vars '@ISA'; @ISA = ('Doit::_AnyRPCImpl');
 
 use Doit::Log;
+
+our @last_exits;
+our $keep_last_exits; $keep_last_exits = 10 if !defined $keep_last_exits;
 
 sub new { bless {}, shift }
 sub functions { qw() }
@@ -34,6 +37,16 @@ sub do_connect {
     die "Unhandled options: " . join(" ", %opts) if %opts;
 
     my $self = bless { }, $class;
+
+    my $d;
+    if ($debug) {
+	$d = sub ($) {
+	    Doit::Log::info("PARENT: $_[0]");
+	};
+    } else {
+	$d = sub ($) { };
+    }
+    $self->{d} = $d;
 
     require IO::Pipe;
     my $pipe_to_fork   = IO::Pipe->new;
@@ -53,6 +66,8 @@ sub do_connect {
 	CORE::exit(0);
     }
 
+    $d->("Forked worker $worker_pid...");
+
     $pipe_to_fork->writer;
     $pipe_from_fork->reader;
     $self->{rpc} = Doit::RPC::Client->new($pipe_from_fork, $pipe_to_fork, label => "fork:", debug => $debug);
@@ -61,7 +76,26 @@ sub do_connect {
     $self;
 }
 
-sub DESTROY { }
+sub DESTROY {
+    my $self = shift;
+    # Note: if new() is called without followed by do_connect(), then no {pid} is set
+    if (defined $self->{pid}) {
+	$self->{d}->("About to destroy fork with pid $self->{pid}...");
+    }
+    delete $self->{rpc};
+    if (defined $self->{pid}) {
+	$self->{d}->(" reap child process");
+	waitpid $self->{pid}, 0;
+	my %exit_res = Doit::_analyze_dollar_questionmark();
+	$exit_res{pid} = $self->{pid};
+	push @last_exits, \%exit_res;
+	if (defined $keep_last_exits) {
+	    while (@last_exits > $keep_last_exits) {
+		shift @last_exits;
+	    }
+	}
+    }
+}
 
 {
     package Doit::RPC::PipeServer;
