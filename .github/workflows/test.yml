@@ -104,6 +104,8 @@ jobs:
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
           - image: ubuntu:noble
+          - image: centos:7
+          - image: fedora:40
 
     steps:
     # Note: checkout@v4 does not work with older debians (e.g.stretch), so do this step *outside* the container
@@ -114,7 +116,12 @@ jobs:
           set -ex
           export HARNESS_TIMER=1
           export HARNESS_OPTIONS=j8
-          which cpanm 2>/dev/null || ( apt-get update -qq && apt-get install -qy --no-install-recommends cpanminus )
+          which cpanm 2>/dev/null || if which apt-get 2>/dev/null >/dev/null
+            then
+              apt-get update -qq && apt-get install -qy --no-install-recommends cpanminus
+            else
+              yum -y install perl-App-cpanminus "perl(Test::More)"
+            fi
           cpanm --quiet --installdeps --notest . || ( cat /root/.cpanm/work/*/build.log; false )
           perl Build.PL
           ./Build
