@@ -105,6 +105,7 @@ jobs:
           #- image: debian:bookworm
           - image: ubuntu:noble
           - image: centos:7
+          - image: rockylinux:9
           - image: fedora:40
 
     steps:
