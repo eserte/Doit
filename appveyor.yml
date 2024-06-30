@@ -10,6 +10,7 @@ environment:
     - perl: activeperl
     - perl: cygwinperl
     - perl: strawberryperl
+      APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2022"
 
 #cache:
 #  - C:\strawberry
