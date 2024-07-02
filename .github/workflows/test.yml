@@ -135,6 +135,7 @@ jobs:
       matrix:
         include:
           - image: centos:7
+          - image: alpine:latest
 
     steps:
     - uses: actions/checkout@v4
