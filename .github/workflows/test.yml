@@ -104,8 +104,6 @@ jobs:
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
           - image: ubuntu:noble
-          ## XXX disable until a mirrorlist replacement is found
-          #- image: centos:7
           - image: rockylinux:9
           - image: fedora:40
 
@@ -129,6 +127,21 @@ jobs:
           ./Build
           ./Build test
         '
+
+  test_in_container_with_doit:
+    name: Test with ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: centos:7
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Preinstall, Configure, Build and Test
+      run: |
+        perl Build.PL
+        ./Build test_in_docker ${{ matrix.image }}
 
   test_freebsd:
     name: Test on FreeBSD ${{ matrix.osvers }}
