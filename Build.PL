@@ -295,7 +295,11 @@ EOF
 	    $dockerfile .= <<"EOF";
 RUN rpm -Uvh https://dl.fedoraproject.org/pub/archive/epel/6/x86_64/epel-release-6-8.noarch.rpm
 EOF
-	} elsif ($distro_spec eq 'centos:7' || $distro_spec eq 'rockylinux:8') {
+	} elsif ($distro_spec eq 'centos:7') {
+	    $dockerfile .= <<"EOF";
+RUN rpm -Uvh https://dl.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm
+EOF
+	} elsif ($distro_spec eq 'rockylinux:8') {
 	    $dockerfile .= <<"EOF";
 RUN yum -y install epel-release
 EOF
@@ -1301,10 +1305,11 @@ sub _docker_add_distro_specific_files {
     my $distro_spec = delete $opts{distro_spec} || die 'Please specify distro_spec';
     die 'Unhandled options: ' . join(' ', %opts) if %opts;
 
-    if ($distro_spec eq 'centos:6') {
+    if ($distro_spec eq 'centos:6' || $distro_spec eq 'centos:7') {
 	$doit->mkdir("$dir/.distro_support");
 	# Instructions from https://gcore.de/de/hilfe/linux/centos6-repo-nach-eol-anpassen.php
-	$doit->write_binary("$dir/.distro_support/CentOS.repo", <<'EOF');
+	if ($distro_spec eq 'centos:6') {
+	    $doit->write_binary("$dir/.distro_support/CentOS.repo", <<'EOF');
 [base]
 name=CentOS-6.10 - Base
 baseurl=http://vault.centos.org/6.10/os/$basearch/
@@ -1349,7 +1354,7 @@ gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 enabled=0
 metadata_expire=never
 EOF
-	$doit->write_binary("$dir/.distro_support/epel.repo", <<'EOF');
+	    $doit->write_binary("$dir/.distro_support/epel.repo", <<'EOF');
 [epel]
 name=Extra Packages for Enterprise Linux 6 - $basearch
 baseurl=https://archives.fedoraproject.org/pub/archive/epel/6/$basearch
@@ -1374,6 +1379,37 @@ gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
 gpgcheck=1
 metadata_expire=never
 EOF
+	} elsif ($distro_spec eq 'centos:7') {
+	    $doit->write_binary("$dir/.distro_support/CentOS.repo", <<'EOF');
+[base]
+name=CentOS-$releasever - Base
+baseurl=https://vault.centos.org/7.9.2009/os/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+[updates]
+name=CentOS-$releasever - Updates
+baseurl=https://vault.centos.org/7.9.2009/updates/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+[extras]
+name=CentOS-$releasever - Extras
+baseurl=https://vault.centos.org/7.9.2009/extras/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+EOF
+	    $doit->write_binary("$dir/.distro_support/epel.repo", <<'EOF');
+[epel]
+name=Extra Packages for Enterprise Linux 7 - $basearch
+baseurl=https://archives.fedoraproject.org/pub/archive/epel/7/$basearch
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+EOF
+	} else {
+	    error "Should never happen";
+	}
 	$doit->write_binary("$dir/.distro_support/run.sh", <<'EOF');
 #! /bin/sh
 set -ex
