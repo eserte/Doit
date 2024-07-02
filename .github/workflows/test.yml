@@ -104,7 +104,8 @@ jobs:
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
           - image: ubuntu:noble
-          - image: centos:7
+          ## XXX disable until a mirrorlist replacement is found
+          #- image: centos:7
           - image: rockylinux:9
           - image: fedora:40
 
