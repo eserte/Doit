@@ -89,7 +89,10 @@ means that an existing repository will be updated using C<git-fetch>
 and C<git-pull>.
 
 C<clone_opts> is an array ref with options which will be passed to
-C<git-clone>. For existing repositories this does nothing.
+C<git-clone>. For existing repositories this does nothing. A common
+usage might be:
+
+    clone_opts => ['--depth=1'],
 
 If C<quiet> is set to a true value, then some operations are quiet
 (currently the C<git-fetch> command).
