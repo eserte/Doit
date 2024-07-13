@@ -59,22 +59,6 @@ sub locale_enable_locale {
     }
 
     ######################################################################
-    # /etc/locale.gen (e.g. Debian and Debian-like)
-    if (-e "/etc/locale.gen") {
-	my $all_locales = '(' . join('|', map { quotemeta $_ } keys %locale) . ')';
-	my $changes = $self->change_file("/etc/locale.gen",
-					 {match  => qr{^#\s+$all_locales(\s|$)},
-					  action => sub { $_[0] =~ s{^#\s+}{}; },
-					 },
-					);
-	if (!$changes) {
-	    error "Cannot find prepared locale '$locale->[0]' in /etc/locale.gen";
-	}
-	$self->system('locale-gen');
-	return 1;
-    }
-
-    ######################################################################
     # localedef (e.g RedHat, CentOS)
     if (-x "/usr/bin/localedef" && -e "/etc/redhat-release") {
 	# It also exists on Debian-based systems, but works differently there.
@@ -84,6 +68,7 @@ sub locale_enable_locale {
 	    if (
 		   ($line =~ /^Fedora release (\d+) / && $1 >= 28) # XXX since when we should take this path?
 		|| ($line =~ /^CentOS Linux release (\d+)/ && $1 >= 8)
+		|| ($line =~ /^Rocky Linux release (\d+)/ && $1 >= 8)
 	       ) {
 		$use_glibc_langpack = 1;
 	    }
@@ -120,6 +105,24 @@ sub locale_enable_locale {
 	    }
 	    error "Can't install locale. Errors:\n" . join("\n", @errors);
 	}
+	return 1;
+    }
+
+    ######################################################################
+    # /etc/locale.gen (e.g. Debian and Debian-like)
+    # This file may also exist on RedHat-like systems (seen on rocky 9),
+    # but does not contain a list of commented out locales there.
+    if (-e "/etc/locale.gen") {
+	my $all_locales = '(' . join('|', map { quotemeta $_ } keys %locale) . ')';
+	my $changes = $self->change_file("/etc/locale.gen",
+					 {match  => qr{^#\s+$all_locales(\s|$)},
+					  action => sub { $_[0] =~ s{^#\s+}{}; },
+					 },
+					);
+	if (!$changes) {
+	    error "Cannot find prepared locale '$locale->[0]' in /etc/locale.gen";
+	}
+	$self->system('locale-gen');
 	return 1;
     }
 
