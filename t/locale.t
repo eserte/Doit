@@ -57,6 +57,12 @@ SKIP: {
     }
 
     ok !$sudo->locale_enable_locale([@try_locales]), '2nd install does nothing';
+
+    ok !eval {
+	$sudo->locale_enable_locale(['xx_XX.locale_does_not_exist', 'yy_YY.locale_does_not_exist']);
+	1;
+    }, 'fails with non-existing locales';
+    like $@, qr{Cannot find prepared locale 'xx_XX.locale_does_not_exist' in /etc/locale.gen}, 'first locale mentioned in error message';
 }
 
 __END__

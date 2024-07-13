@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2020 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2020,2024 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -15,7 +15,7 @@ package Doit::Locale;
 
 use strict;
 use warnings;
-our $VERSION = '0.024';
+our $VERSION = '0.025';
 
 use Doit::Log;
 
@@ -68,7 +68,7 @@ sub locale_enable_locale {
 					 },
 					);
 	if (!$changes) {
-	    error "Cannot find prepared locale '$locale' in /etc/locale.gen";
+	    error "Cannot find prepared locale '$locale->[0]' in /etc/locale.gen";
 	}
 	$self->system('locale-gen');
 	return 1;
