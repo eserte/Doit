@@ -15,12 +15,22 @@ package Doit::Locale;
 
 use strict;
 use warnings;
-our $VERSION = '0.025';
+our $VERSION = '0.026';
 
 use Doit::Log;
+use Doit::Util qw(get_os_release);
 
 sub new { bless {}, shift }
 sub functions { qw(locale_enable_locale) }
+
+sub add_components {
+    my @components;
+    my $osr = get_os_release;
+    if (($osr->{ID}||'') eq 'fedora' || ($osr->{ID_LIKE}||'') =~ /\bfedora\b/) {
+	push @components, 'rpm';
+    }
+    @components;
+}
 
 sub locale_enable_locale {
     my($self, $locale) = @_;
@@ -63,12 +73,12 @@ sub locale_enable_locale {
     if (-x "/usr/bin/localedef" && -e "/etc/redhat-release") {
 	# It also exists on Debian-based systems, but works differently there.
 	my $use_glibc_langpack;
-	if (open my $fh, "/etc/redhat-release") {
-	    my $line = <$fh>;
+	{
+	    my $osr = get_os_release;
 	    if (
-		   ($line =~ /^Fedora release (\d+) / && $1 >= 28) # XXX since when we should take this path?
-		|| ($line =~ /^CentOS Linux release (\d+)/ && $1 >= 8)
-		|| ($line =~ /^Rocky Linux release (\d+)/ && $1 >= 8)
+		   ($osr->{ID} eq 'fedora' && $osr->{VERSION_ID} >= 28) # XXX since when we should take this path?
+		|| ($osr->{ID} eq 'centos' && $osr->{VERSION_ID} >= 8)
+		|| ($osr->{ID} eq 'rocky'  && $osr->{VERSION_ID} >= 8)
 	       ) {
 		$use_glibc_langpack = 1;
 	    }
@@ -78,7 +88,6 @@ sub locale_enable_locale {
 	    if ($use_glibc_langpack) {
 		if ((keys(%locale))[0] =~ m{^([^_]+)}) {
 		    my $lang = $1;
-		    # XXX requires a previous add_component("rpm"); should be done automatically!
 		    my $package = 'glibc-langpack-'.$lang;
 		    eval { $self->rpm_install_packages($package) };
 		    if (!$@) {
