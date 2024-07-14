@@ -12,6 +12,8 @@ use Test::More;
 use Doit;
 use Doit::Util qw(in_directory);
 
+my @warnings; $SIG{__WARN__} = sub { push @warnings, @_ };
+
 my($ua_http_tiny, $ua_lwp);
 
 if (eval { require HTTP::Tiny; 1 }) {
@@ -70,7 +72,7 @@ for my $def (
     my($ua, $ua_name) = @$def;
     next if !$ua;
 
-    if ($ua == $ua_lwp) {
+    if ($ua == ($ua_lwp||0)) {
 	$current_ua = undef; # use default
     } else {
 	$current_ua = $ua;
@@ -93,11 +95,15 @@ for my $def (
 	    ($res, $err) = lwp_mirror_wrapper("$httpbin_url/status/500", "mirrored.txt", debug => 1);
 	    like $err, qr{ERROR.*mirroring failed: 500 }, "$ua_name: got status 500";
 
-	    ($res, $err) = lwp_mirror_wrapper("unknown_scheme://localhost/foobar", "mirrored.txt", debug => 1);
-	    if ($ua == $ua_lwp) {
-		like $err, qr{ERROR.*mirroring failed: 400 URL must be absolute}, "$ua_name: got 400 error";
-	    } else {
-		like $err, qr{ERROR.*mirroring failed: 599 Internal Exception: Unsupported URL scheme 'unknown_scheme}, "$ua_name: got internal exception with extra information";
+	    {
+		local $SIG{__WARN__}; # some HTTP::Tiny versions (e.g. 0.056_001) may emit warnings if an unknown scheme is used in the URL
+
+		($res, $err) = lwp_mirror_wrapper("unknown_scheme://localhost/foobar", "mirrored.txt", debug => 1);
+		if ($ua == ($ua_lwp||0)) {
+		    like $err, qr{ERROR.*mirroring failed: 400 URL must be absolute}, "$ua_name: got 400 error";
+		} else {
+		    like $err, qr{ERROR.*mirroring failed: 599 Internal Exception: Unsupported URL scheme 'unknown_scheme}, "$ua_name: got internal exception with extra information";
+		}
 	    }
 
 	    my $expected_md5 = '7f7652b0379b30f50d4daafb05d82c79';
@@ -115,5 +121,7 @@ for my $def (
 	}
     } $tmpdir;
 }
+
+is_deeply \@warnings, [], 'no warnings';
 
 __END__
