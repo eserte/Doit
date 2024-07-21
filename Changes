@@ -1,5 +1,21 @@
 Revision history for Doit.
 
+0.028_54 2024-07-21
+	- fixes
+	  - Doit::Brew: architecture heuristics
+	  - Doit::Fork: reap processes
+	  - Doit::Locale: fix diagnostics + change check order
+	  - Doit::Lwp: cease warnings in test script
+	- documentation
+	  - Doit::Git: add clone_opts example
+	- tests
+	  - github freebsd testing now done regularly
+	  - github actions: test perl 5.40.0
+	  - github actions:
+	    test alpine:latest, fedora:40, centos:7 and rockylinux:9
+	  - appveyor:
+	    switch to different image with preinstalled StrawberryPerl
+
 0.028_53 2024-05-21
 	- features
 	  - new command brew_get_cellar
