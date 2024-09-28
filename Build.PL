@@ -297,7 +297,7 @@ RUN rpm -Uvh https://dl.fedoraproject.org/pub/archive/epel/6/x86_64/epel-release
 EOF
 	} elsif ($distro_spec eq 'centos:7') {
 	    $dockerfile .= <<"EOF";
-RUN rpm -Uvh https://dl.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm
+RUN rpm -Uvh https://dl.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
 EOF
 	} elsif ($distro_spec eq 'rockylinux:8') {
 	    $dockerfile .= <<"EOF";
