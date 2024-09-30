@@ -32,3 +32,9 @@ runs:
       run: |
         use Doit;
         print $Doit::VERSION, "\n";
+
+## To use this action, add the uses line as below to your github workflow:
+#jobs:
+#  $jobname:
+#    steps:
+#      - uses: eserte/Doit/.github/actions/install-doit-from-github@master
