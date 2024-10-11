@@ -743,6 +743,11 @@ C<fbsdpkg_install_packages> and C<fbsdpkg_missing_packages> commands.
 Components added with C<add_component> are also synced to remote
 systems for subsequent connections.
 
+To make sure that a minimum version of a component is available use
+the module's C<VERSION> method, e.g.
+
+    $doit->add_component('DoitX::Ghrel'); DoitX::Ghrel->VERSION(0.003);
+
 The following components are available:
 
 =over
