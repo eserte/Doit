@@ -19,8 +19,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - config_name: ubuntu-20.04
-            os: ubuntu-20.04
           - config_name: ubuntu-22.04
             os: ubuntu-22.04
           - config_name: ubuntu-22.04 with optional dependencies
@@ -106,7 +104,7 @@ jobs:
           - image: perl:5.41.4-slim-bookworm
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
-          - image: ubuntu:noble
+          - image: ubuntu:focal
           - image: rockylinux:9
           - image: fedora:40
 
@@ -175,7 +173,7 @@ jobs:
 
   coverage:
     name: Test coverage
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
