@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-20.04, macos-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-22.04, macos-latest, windows-latest]
     steps:
       - uses: eserte/Doit/.github/actions/install-doit-from-github@master
       - run: |
