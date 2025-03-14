@@ -2023,7 +2023,7 @@ use warnings;
 	my $d;
 	if ($self->{debug}) {
 	    $d = sub ($) {
-		Doit::Log::info("WORKER: $_[0]");
+		Doit::Log::info("WORKER: $_[0]\r");
 	    };
 	} else {
 	    $d = sub ($) { };
@@ -2495,7 +2495,7 @@ use warnings;
 	my $d;
 	if ($debug) {
 	    $d = sub ($) {
-		Doit::Log::info("COMM: $_[0]");
+		Doit::Log::info("COMM: $_[0]\r");
 	    };
 	} else {
 	    $d = sub ($) { };
