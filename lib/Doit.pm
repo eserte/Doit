@@ -2248,6 +2248,7 @@ use warnings;
 	    exec @cmd_worker;
 	    die "Failed to run '@cmd_worker': $!";
 	}
+	$self->{worker_pid} = $worker_pid;
 
 	# Run the client --- must also run under root for socket
 	# access.
@@ -2259,11 +2260,20 @@ use warnings;
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
 	my $comm_pid = IPC::Open2::open2($out, $in, @cmd_comm);
 	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:", debug => $debug);
+	$self->{comm_pid} = $comm_pid;
 
 	$self;
     }
 
-    sub DESTROY { }
+    sub DESTROY {
+	my $self = shift;
+	if ($self->{rpc}) {
+	    $self->{rpc}->call_remote('exit');
+	    kill TERM => $self->{comm_pid};
+	    $self->{rpc}->_reap_process($self->{comm_pid});
+	    $self->{rpc}->_reap_process($self->{worker_pid});
+	}
+    }
 
 }
 
