@@ -2252,7 +2252,8 @@ use warnings;
 	# Run the client --- must also run under root for socket
 	# access.
 	my($in, $out);
-	my @cmd_comm = ('sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
+	my @cmd_comm = (($LANS_PREFIX ? () : ('sudo', @sudo_opts)),
+	                $perl, "-I".File::Basename::dirname(__FILE__), "-MDoit", "-e",
 			q{Doit::Comm->comm_to_sock("} . $LANS_PREFIX . $sock_path . q{", debug => shift)}, !!$debug);
 	Doit::Log::trace("sudo comm: @cmd_comm") if DOIT_TRACE;
 	warn "comm perl cmd: @cmd_comm\n" if $debug;
