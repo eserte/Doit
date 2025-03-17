@@ -2255,6 +2255,7 @@ use warnings;
 	my @cmd_worker =
 	    (
 	     'sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-e",
+	     ($debug ? 'BEGIN { warn qq{DEBUG: sudo worker started...\n}}' : '') .
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
