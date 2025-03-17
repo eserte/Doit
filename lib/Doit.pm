@@ -1978,7 +1978,7 @@ use warnings;
 	my($self, @args) = @_;
 	my $context = wantarray ? 'a' : 's'; # XXX more possible context (void...)?
 	$self->send_data($context, @args);
-	my($rettype, @ret) = $self->receive_data(@args);
+	my($rettype, @ret) = $self->receive_data;
 	if (defined $rettype && $rettype eq 'e') {
 	    die $ret[0];
 	} elsif (defined $rettype && $rettype eq 'r') {
