@@ -2286,7 +2286,66 @@ use warnings;
 	$self->{rpc} = Doit::RPC::Client->new($out, $in, label => "sudo:", debug => $debug);
 	$self->{comm_pid} = $comm_pid;
 
+	# set terminal again to "sane" settings, needed for sudo with use_pty configured
+	$self->{rpc}->wait_ready;
+	$self->_reset_terminal(debug => $debug);
+
 	$self;
+    }
+
+    sub _reset_terminal {
+	my(undef, %opts) = @_;
+	my $debug = delete $opts{debug};
+	die "Unhandled options: " . join(" ", %opts) if %opts;
+
+	if (Doit::Util::is_in_path('stty')) {
+	    my @cmd = qw(stty sane);
+	    if ($debug) {
+		info "Reset terminal using @cmd...";
+	    }
+	    system(@cmd);
+	    if ($? == 0) {
+		return 1;
+	    }
+	    warning "_reset_terminal: '@cmd' failed, try POSIX.pm fallback...";
+	} else {
+	    warning "_reset_terminal: stty not available, try POSIX.pm fallback...";
+	}
+
+	if (!eval {
+	    require POSIX;
+
+	    my $term = POSIX::Termios->new();
+	    my $fd = fileno(STDIN);
+	    return 1 unless -t $fd;
+
+	    if ($debug) {
+		info "Reset terminal using POSIX.pm...";
+	    }
+
+	    $term->getattr($fd);
+
+	    my $lflag = $term->getlflag();
+	    my $iflag = $term->getiflag();
+	    my $oflag = $term->getoflag();
+
+	    $lflag |= POSIX::ICANON() | POSIX::ISIG() | POSIX::ECHO();
+
+	    $iflag |= POSIX::ICRNL();  # Convert CR to NL on input (fixes Enter key behavior)
+	    $oflag |= POSIX::OPOST();  # Enable output processing (fixes line endings)
+
+	    $term->setlflag($lflag);
+	    $term->setiflag($iflag);
+	    $term->setoflag($oflag);
+	    $term->setattr($fd, POSIX::TCSANOW());
+
+	    1;
+	}) {
+	    warning "Running _reset_terminal failed: $@";
+	    0;
+	} else {
+	    1;
+	}
     }
 
     sub DESTROY {
