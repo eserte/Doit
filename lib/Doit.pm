@@ -1973,6 +1973,11 @@ use warnings;
 	      }, $class;
     }
 
+    sub _label_string {
+	my $self = shift;
+	(defined $self->{label} ? "in connection '$self->{label}' " : "");
+    }
+
     # Call for every command on client
     sub call_remote {
 	my($self, @args) = @_;
@@ -1988,7 +1993,18 @@ use warnings;
 		return $ret[0];
 	    }
 	} else {
-	    die "Unexpected return type " . (defined $self->{label} ? "in connection '$self->{label}' " : "") . (defined $rettype ? "'$rettype'" : "<undefined>") . " (should be 'e' or 'r')";
+	    Doit::Log::error("Unexpected return type " . $self->_label_string . (defined $rettype ? "'$rettype'" : "<undefined>") . " (should be 'e' or 'r')");
+	}
+    }
+
+    sub wait_ready {
+	my($self) = @_;
+	my $ret = $self->call_remote('__doit_rpc_ping');
+        if ($ret ne "pong") {
+	    Doit::Log::warning("Unexpected return value in wait_ready call " . $self->_label_string . "'$ret' (should be 'pong')");
+	    0;
+	} else {
+	    1;
 	}
     }
 }
@@ -2056,11 +2072,15 @@ use warnings;
 		$d->(" got eof");
 		$fh->close;
 		return;
-	    } elsif ($data[0] =~ m{^exit$}) {
+	    } elsif ($data[0] eq 'exit') {
 		$d->(" got exit command");
 		$self->send_data('r', 'bye-bye');
 		$fh->close;
 		return;
+	    } elsif ($data[0] eq '__doit_rpc_ping') {
+		$d->(" got __doit_rpc_ping command");
+		$self->send_data('r', 'pong');
+		next;
 	    }
 	    $d->(" calling method $data[0]");
 	    my($rettype, @ret) = $self->runner->call_wrapped_method($context, @data);
@@ -2097,8 +2117,11 @@ use warnings;
 	    my($context, @data) = $self->receive_data;
 	    if (!defined $context) {
 		return;
-	    } elsif ($data[0] =~ m{^exit$}) {
+	    } elsif ($data[0] eq 'exit') {
 		$self->send_data('r', 'bye-bye');
+		return;
+	    } elsif ($data[0] eq '__doit_rpc_ping') {
+		$self->send_data('r', 'pong');
 		return;
 	    }
 	    open my $oldout, ">&STDOUT" or die $!;
