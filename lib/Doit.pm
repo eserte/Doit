@@ -1985,7 +1985,7 @@ use warnings;
     sub call_remote {
 	my($self, @args) = @_;
 	my $do_exit = @args == 1 && $args[0] eq 'exit';
-	return if !$self->{outfh}; # already exited
+	return if $do_exit && !$self->{outfh}; # already exited
 	my $context = wantarray ? 'a' : 's'; # XXX more possible context (void...)?
 	$self->send_data($context, @args);
 	my($rettype, @ret) = $self->receive_data;

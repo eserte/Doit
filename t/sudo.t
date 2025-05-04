@@ -104,12 +104,17 @@ for my $def (
 	{
 	    my $sudo2 = $d->do_sudo(@do_sudo_opts, debug => $debug);
 	    isa_ok $sudo2, 'Doit::Sudo';
+
 	    # try explicit exit
 	    $sudo->exit;
 	    pass 'exited once';
 	    # another exit is a no-op
 	    $sudo->exit;
 	    pass 'exited twice';
+
+	    eval { $sudo->system($^X, '-e', 'exit 0') };
+	    isnt $@, '', 'calling on sudo after exit';
+
 	    # and the DESTROY after should not error, too
 	}
 
