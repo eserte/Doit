@@ -1,5 +1,16 @@
 Revision history for Doit.
 
+0.028_55 2025-05-04
+	- fixes
+	  - sudo: terminal needs to be reset after start of sudo worker
+	    and other improvements
+	  - Doit::Locale: there's no support for adding locales on Mac OS X
+	- documentation
+	  - add_component with version check
+	- tests
+	  - github actions: test bleadperl
+	  - github actions: updated many configurations
+
 0.028_54 2024-07-21
 	- fixes
 	  - Doit::Brew: architecture heuristics

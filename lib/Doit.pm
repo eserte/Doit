@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2020,2022,2023,2024 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020,2022,2023,2024,2025 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -17,7 +17,7 @@ use warnings;
 
 {
     package Doit;
-    our $VERSION = '0.028_54';
+    our $VERSION = '0.028_55';
     $VERSION =~ s{_}{};
 
     use constant IS_WIN => $^O eq 'MSWin32';
