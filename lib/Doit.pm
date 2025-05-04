@@ -2234,7 +2234,10 @@ use warnings;
 	# old outdated sockets easily by including a
 	# timestamp. Also need to maintain a $socket_count,
 	# if the same script opens multiple sockets quickly.
-	my $sock_path = "/tmp/." . join(".", "doit", "sudo", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, (++$socket_count)) . ".sock";
+	#
+	# Should not exceed 107 bytes on Linux, limit might
+	# be somewhat lower on other systems.
+	my $sock_path = "/tmp/." . join(".", "doit", "sudo", POSIX::strftime("%Y%m%d_%H%M%S", gmtime), $<, $$, int(rand(99999999)), (++$socket_count)) . ".sock";
 
 	# Make sure password has to be entered only once (if at all)
 	# Using 'sudo --validate' would be more correct, however,
