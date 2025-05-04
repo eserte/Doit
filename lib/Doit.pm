@@ -2643,6 +2643,7 @@ use warnings;
 	if (!$sock) {
 	    die "COMM: Can't connect to socket (after $tries retries) $sock_err";
 	}
+	$sock->autoflush(1);
 	$d->("socket to worker was created");
 
 	my $get_and_send = sub ($$$$) {
