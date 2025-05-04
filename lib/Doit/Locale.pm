@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2020,2024 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2020,2024,2025 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -15,7 +15,7 @@ package Doit::Locale;
 
 use strict;
 use warnings;
-our $VERSION = '0.026';
+our $VERSION = '0.027';
 
 use Doit::Log;
 use Doit::Util qw(get_os_release);
@@ -133,6 +133,10 @@ sub locale_enable_locale {
 	}
 	$self->system('locale-gen');
 	return 1;
+    }
+
+    if ($^O eq 'darwin') {
+	error "No support for adding new locale '$locale->[0]' on Mac OS X";
     }
 
     ######################################################################

@@ -51,7 +51,11 @@ SKIP: {
 	$sudo->locale_enable_locale(['xx_XX.locale_does_not_exist', 'yy_YY.locale_does_not_exist']);
 	1;
     }, 'fails with non-existing locales';
-    like $@, qr{Cannot find prepared locale 'xx_XX.locale_does_not_exist' in /etc/locale.gen}, 'first locale mentioned in error message';
+    if ($^O eq 'darwin') {
+	like $@, qr{\QNo support for adding new locale 'xx_XX.locale_does_not_exist' on Mac OS X}, 'no local install on Mac OS X';
+    } else {
+	like $@, qr{Cannot find prepared locale 'xx_XX.locale_does_not_exist' in /etc/locale.gen}, 'first locale mentioned in error message';
+    }
 }
 
 is_deeply \@warnings, [], 'no warnings';
