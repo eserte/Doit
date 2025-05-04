@@ -2523,7 +2523,7 @@ use warnings;
 	    (
 	     # @cmd not used here (no sudo)
 	     $perl, "-I.doit\\lib", "-e",
-	     Doit::_ScriptTools::self_require(".doit\\$FindBin::RealScript") .
+	     Doit::_ScriptTools::self_require($0 eq '-e' ? '-e' : ".doit\\$FindBin::RealScript") .
 	     q{use Doit::WinRPC; } .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
@@ -2537,7 +2537,7 @@ use warnings;
 	    (
 	     @cmd, $perl, "-I.doit/lib", "-e",
 	     (defined $umask ? qq{umask $umask; } : q{}) .
-	     Doit::_ScriptTools::self_require(".doit/$FindBin::RealScript") .
+	     Doit::_ScriptTools::self_require($0 eq '-e' ? '-e' : ".doit/$FindBin::RealScript") .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .
 	     q<sub _server_cleanup { unlink "> . $sock_path . q<" }> .

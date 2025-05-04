@@ -135,6 +135,11 @@ for my $def (
 		is $envinfo->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env var set';
 	    }
 	}
+
+	{
+	    chomp(my $hello_world = $d->info_qx($^X, '-MDoit', '-e', 'Doit->init->do_sudo(sudo_opts => [q(-u), $ARGV[0]])->system(qw(echo Hello world))', '--', $username));
+	    is $hello_world, 'Hello world', 'Running do_sudo in a perl oneliner works';
+	}
     }
 
     {

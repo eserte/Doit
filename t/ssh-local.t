@@ -102,6 +102,11 @@ EOF
 	    my $ret = $doit->info_qx($^X, "$dir/test-symlink.pl");
 	    is $ret, "yes\n";
 	}
+
+	if ($test_type eq 'args') {
+	    chomp(my $hello_world = $doit->info_qx($^X, '-MDoit', '-e', q[Doit->init->do_ssh_connect((defined $ENV{USER} ? $ENV{USER}.'@' : '') . 'localhost')->system(qw(echo Hello world))]));
+	    is $hello_world, 'Hello world', 'Running do_ssh_connect in a perl oneliner works';
+	}
     }
 }
 
