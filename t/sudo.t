@@ -136,6 +136,18 @@ for my $def (
 	    }
 	}
     }
+
+    {
+	# check if the terminal is still or again sane
+	require POSIX;
+	my $file_num = fileno(\*STDIN);
+	if (POSIX::isatty($file_num)) {
+	    my $termios = POSIX::Termios->new;
+	    $termios->getattr($file_num);
+	    ok $termios->getiflag & POSIX::BRKINT(), 'brkint is still/again set';
+	    ok $termios->getiflag & POSIX::ICRNL(), 'icrnl is still/again set';
+	}
+    }
 }
 
 __END__
