@@ -2306,6 +2306,13 @@ use warnings;
 	my $debug = delete $opts{debug};
 	die "Unhandled options: " . join(" ", %opts) if %opts;
 
+	if (!-t STDIN) {
+	    if ($debug) {
+		info "Not a terminal, no reset needed";
+	    }
+	    return;
+	}
+
 	if (Doit::Util::is_in_path('stty')) {
 	    my @cmd = qw(stty sane);
 	    if ($debug) {
