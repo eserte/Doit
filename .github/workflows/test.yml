@@ -101,12 +101,12 @@ jobs:
           - image: perl:5.36.0-slim-bullseye
           - image: perl:5.38.0-slim-bookworm
           - image: perl:5.40.0-slim-bookworm
-          - image: perl:5.41.4-slim-bookworm
+          - image: perl:5.41.10-slim-bookworm
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
           - image: ubuntu:focal
           - image: rockylinux:9
-          - image: fedora:40
+          - image: fedora:41
 
     steps:
     # Note: checkout@v4 does not work with older debians (e.g.stretch), so do this step *outside* the container
@@ -147,7 +147,7 @@ jobs:
 
   test_freebsd:
     name: Test on FreeBSD ${{ matrix.osvers }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include:
@@ -158,7 +158,7 @@ jobs:
       with:
         clean: false
         show-progress: false
-    - uses: cross-platform-actions/action@v0.26.0
+    - uses: cross-platform-actions/action@v0.27.0
       with:
         operating_system: freebsd
         version: '${{ matrix.osvers }}'
