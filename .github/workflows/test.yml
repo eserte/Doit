@@ -59,8 +59,10 @@ jobs:
 
     - name: Build and test
       run: |
+        echo "::group::Build.PL and Build"
         perl Build.PL
         ./Build
+        echo "::endgroup::"
         if [ "$(uname)" = "Linux" ]; then echo "INFO: setting coredumpsize for SIGABRT tests"; ulimit -c 4; fi
         ./Build test
         sudo ./Build test_xt
@@ -114,6 +116,7 @@ jobs:
     - name: Preinstall, Configure, Build and Test
       run: |
         docker run --quiet -v $(pwd):$(pwd) ${{ matrix.image }} sh -c "cd $(pwd); "'
+          echo "::group::apt/yum install, Build.PL and Build"
           set -ex
           export HARNESS_TIMER=1
           export HARNESS_OPTIONS=j8
@@ -127,6 +130,7 @@ jobs:
           cpanm --quiet --installdeps --notest . || ( cat /root/.cpanm/work/*/build.log; false )
           perl Build.PL
           ./Build
+          echo "::endgroup::"
           ./Build test
         '
 
@@ -166,11 +170,14 @@ jobs:
         operating_system: freebsd
         version: '${{ matrix.osvers }}'
         run: |
+          echo "::group::pkg install, Build.PL and Build"
           sudo pkg update
           sudo pkg install -y perl5
           perl Build.PL
           ./Build
+          echo "::endgroup::"
           ./Build test
+          echo "::group::test with more dependencies"
           sudo pkg install -y git p5-Config-IniFiles p5-Capture-Tiny p5-libwww p5-IPC-Run p5-Net-OpenSSH p5-Devel-Hide
           ./Build test
 
