@@ -2053,7 +2053,7 @@ use warnings;
 	    $d = sub ($) { };
 	}
 
-	$d->("Start worker ($$)...");
+	$d->("Start worker (pid $$)...");
 	my $sockpath = $self->{sockpath};
 	if (!$self->{excl} && -e $sockpath) {
 	    $d->("unlink socket $sockpath");
@@ -2266,7 +2266,7 @@ use warnings;
 	my @cmd_worker =
 	    (
 	     'sudo', @sudo_opts, $perl, "-I".File::Basename::dirname(__FILE__), "-e",
-	     ($debug ? 'BEGIN { warn qq{DEBUG: sudo worker started...\n}}' : '') .
+	     ($debug ? 'BEGIN { warn qq{DEBUG: sudo worker started (pid $$)...\n}}' : '') .
 	     Doit::_ScriptTools::self_require() .
 	     q{my $d = Doit->init; } .
 	     Doit::_ScriptTools::add_components(@components) .

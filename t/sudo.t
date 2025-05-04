@@ -47,7 +47,7 @@ require FindBin;
 require TestUtil;
 
 my $other_user;
-my $debug;
+my $debug = $ENV{DOIT_TRACE}; # XXX maybe use just DOIT_TRACE?
 GetOptions(
 	   "other-user=s" => \$other_user,
 	   "debug" => \$debug,
@@ -137,7 +137,7 @@ for my $def (
 	}
 
 	{
-	    chomp(my $hello_world = $d->info_qx($^X, '-MDoit', '-e', 'Doit->init->do_sudo(sudo_opts => [q(-u), $ARGV[0]])->system(qw(echo Hello world))', '--', $username));
+	    chomp(my $hello_world = $d->info_qx($^X, '-MDoit', '-e', 'Doit->init->do_sudo(sudo_opts => [q(-u), $ARGV[0]], debug => $ARGV[1])->system(qw(echo Hello world))', '--', $username, !!$debug));
 	    is $hello_world, 'Hello world', 'Running do_sudo in a perl oneliner works';
 	}
     }
