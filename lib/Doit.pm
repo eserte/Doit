@@ -1886,6 +1886,9 @@ use warnings;
     sub send_data {
 	my($self, @cmd) = @_;
 	my $fh = $self->{outfh};
+	if (!defined $fh) {
+	    warning "Doit::RPC::send_data: output filehandle does not exist (anymore)";
+	}
 	my $data = Storable::nfreeze(\@cmd);
 	print $fh pack("N", length($data)) . $data;
     }
@@ -1981,12 +1984,17 @@ use warnings;
     # Call for every command on client
     sub call_remote {
 	my($self, @args) = @_;
+	my $do_exit = @args == 1 && $args[0] eq 'exit';
+	return if !$self->{outfh}; # already exited
 	my $context = wantarray ? 'a' : 's'; # XXX more possible context (void...)?
 	$self->send_data($context, @args);
 	my($rettype, @ret) = $self->receive_data;
 	if (defined $rettype && $rettype eq 'e') {
 	    die $ret[0];
 	} elsif (defined $rettype && $rettype eq 'r') {
+	    if ($ret[0] eq 'bye-bye' && $do_exit) {
+		$self->{outfh} = undef; # remember that we called exit for next time and DESTROY
+	    }
 	    if ($context eq 'a') {
 		return @ret;
 	    } else {
@@ -2351,7 +2359,9 @@ use warnings;
     sub DESTROY {
 	my $self = shift;
 	if ($self->{rpc}) {
-	    $self->{rpc}->call_remote('exit');
+	    if ($self->{rpc}->{outfh}) {
+		$self->{rpc}->call_remote('exit');
+	    }
 	    kill TERM => $self->{comm_pid};
 	    $self->{rpc}->_reap_process($self->{comm_pid});
 	    $self->{rpc}->_reap_process($self->{worker_pid});

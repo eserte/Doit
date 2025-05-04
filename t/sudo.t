@@ -12,7 +12,6 @@ use Test::More;
 use Doit;
 
 sub get_id {
-    my $d = shift;
     chomp(my $res = `id -u`);
     $res;
 }
@@ -31,6 +30,14 @@ sub stdout_test {
 sub stderr_test {
     print STDERR "This goes to STDERR\n";
     314;
+}
+
+sub expected_home_env ($$) {
+    my($got_home, $sudo_username) = @_;
+    # depending on sudoers HOME is kept or set to the sudo user's HOME, so accept both
+    my $sudo_homedir = (getpwnam($sudo_username))[7];
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    like $got_home, qr{^(\Q$ENV{HOME}\E|\Q$sudo_homedir\E)$}, 'expected homedir';
 }
 
 return 1 if caller;
@@ -53,57 +60,77 @@ if (!$d->which('sudo')) {
     plan skip_all => 'sudo not in PATH';
 }
 
-my %info;
-my $sudo = TestUtil::get_sudo($d, info => \%info);
-if (!$sudo) {
-    plan skip_all => $info{error};
-}
-
 plan 'no_plan';
 
-isa_ok $sudo, 'Doit::Sudo';
+my $my_username = ($d->call('pwinfo'))[0];
+for my $def (
+    (defined $my_username && $my_username ne '' ? [$my_username, $<] : ()),
+    ['root', 0],
+) {
+    my($username, $userid) = @$def;
+ SKIP: {
+	my @do_sudo_opts = ($username ne 'root' ? (sudo_opts => ['-u', $username]) : ());
+ 
+	my %info;
+	my $sudo = TestUtil::get_sudo(
+	    $d,
+	    info => \%info,
+	    debug => $debug,
+	    @do_sudo_opts,
+	);
+	skip "Cannot test sudo with user $username: $info{error}" if !$sudo;
 
-my $res = $sudo->call('get_id');
-is $res, 0, 'switched to uid=0';
+	is ref $sudo, 'Doit::Sudo', "got Doit::Sudo object for username $username";
 
-{
-    my(@pwinfo) = $sudo->call('pwinfo');
-    is $pwinfo[0], 'root';
-    my $envinfo = $sudo->call('envinfo');
-    is $envinfo->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env var set';
-}
+	my $res = $sudo->call('get_id');
+	is $res, $userid, "switched to uid=$userid";
 
-is $sudo->call('stdout_test'), 4711;
-is $sudo->call('stderr_test'), 314;
+	{
+	    my(@pwinfo) = $sudo->call('pwinfo');
+	    is $pwinfo[0], $username, 'expected username from getpwuid call';
+	    my $envinfo = $sudo->call('envinfo');
+	    expected_home_env($envinfo->{HOME}, $username);
+	    is $envinfo->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env var set';
+	}
 
-{
-    my $res = $sudo->qx({quiet=>1}, 'perl', '-e', 'print "STDOUT without newline"');
-    is $res, 'STDOUT without newline';
-}
+	is $sudo->call('stdout_test'), 4711, 'expected stdout output';
+	is $sudo->call('stderr_test'), 314,  'expected stderr output';
 
-# not needed anymore, but try it anyway
-$sudo->exit;
+	{
+	    my $res = $sudo->qx({quiet=>1}, 'perl', '-e', 'print "STDOUT without newline"');
+	    is $res, 'STDOUT without newline', 'stdout without newline';
+	}
 
-{
-    my $sudo2 = $d->do_sudo(sudo_opts => ['-n'], debug => $debug);
-    isa_ok $sudo2, 'Doit::Sudo';
-    # hopefully no warnings on destroy
-}
+	{
+	    my $sudo2 = $d->do_sudo(@do_sudo_opts, debug => $debug);
+	    isa_ok $sudo2, 'Doit::Sudo';
+	    # try explicit exit
+	    $sudo->exit;
+	    pass 'exited once';
+	    # another exit is a no-op
+	    $sudo->exit;
+	    pass 'exited twice';
+	    # and the DESTROY after should not error, too
+	}
 
-SKIP: {
-    skip "--other-user option not set", 1
-	if !defined $other_user;
-    # -H (--set-home) may or may not be necessary
-    my $sudo = $d->do_sudo(sudo_opts => ['-n', '-u', $other_user, '-H'], debug => $debug);
-    my $res = eval { $sudo->call('get_id') };
-    skip "Cannot run sudo -u password-less",1
-	if $@;
+	if ($username eq 'root') {
+	SKIP: {
+		skip "--other-user option not set", 1
+		    if !defined $other_user;
+		# -H (--set-home) may or may not be necessary
+		my $sudo = $d->do_sudo(sudo_opts => ['-n', '-u', $other_user, '-H'], debug => $debug);
+		my $res = eval { $sudo->call('get_id') };
+		skip "Cannot run sudo -u password-less",1
+		    if $@;
 
-    my(@pwinfo) = $sudo->call('pwinfo');
-    is $pwinfo[0], $other_user;
-    my $envinfo = $sudo->call('envinfo');
-    is $envinfo->{HOME}, (getpwnam($other_user))[7], 'home directory of other user set to HOME env var';
-    is $envinfo->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env var set';
+		my(@pwinfo) = $sudo->call('pwinfo');
+		is $pwinfo[0], $other_user;
+		my $envinfo = $sudo->call('envinfo');
+		expected_home_env($envinfo->{HOME}, $other_user);
+		is $envinfo->{DOIT_IN_REMOTE}, 1, 'DOIT_IN_REMOTE env var set';
+	    }
+	}
+    }
 }
 
 __END__

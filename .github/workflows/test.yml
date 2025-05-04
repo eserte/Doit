@@ -25,7 +25,7 @@ jobs:
             os: ubuntu-22.04
             install_optional_dependencies: true
             dist_install_and_test: true
-            test_with_sudo: true
+            test_without_sudo: true
           - config_name: ubuntu-24.04
             os: ubuntu-24.04
           - config_name: macos-13
@@ -55,7 +55,7 @@ jobs:
     - name: Configure test with sudo
       run: |
         echo "DOIT_TEST_WITH_SUDO=1" >> $GITHUB_ENV
-      if: ${{ matrix.test_with_sudo }}
+      if: ${{ !matrix.test_without_sudo }}
 
     - name: Build and test
       run: |
@@ -117,6 +117,7 @@ jobs:
           set -ex
           export HARNESS_TIMER=1
           export HARNESS_OPTIONS=j8
+          export DOIT_TEST_WITH_SUDO=1
           which cpanm 2>/dev/null || if which apt-get 2>/dev/null >/dev/null
             then
               apt-get update -qq && apt-get install -qy --no-install-recommends cpanminus
@@ -159,6 +160,8 @@ jobs:
         clean: false
         show-progress: false
     - uses: cross-platform-actions/action@v0.27.0
+      env:
+        DOIT_TEST_WITH_SUDO: 1
       with:
         operating_system: freebsd
         version: '${{ matrix.osvers }}'
