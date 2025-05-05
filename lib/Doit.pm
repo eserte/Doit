@@ -1992,7 +1992,7 @@ use warnings;
 	if (defined $rettype && $rettype eq 'e') {
 	    die $ret[0];
 	} elsif (defined $rettype && $rettype eq 'r') {
-	    if ($ret[0] eq 'bye-bye' && $do_exit) {
+	    if (defined $ret[0] && $ret[0] eq 'bye-bye' && $do_exit) {
 		$self->{outfh} = undef; # remember that we called exit for next time and DESTROY
 	    }
 	    if ($context eq 'a') {
