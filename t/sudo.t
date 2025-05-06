@@ -137,7 +137,17 @@ for my $def (
 	}
 
 	{
-	    chomp(my $hello_world = $d->info_qx($^X, '-MDoit', '-e', 'Doit->init->do_sudo(sudo_opts => [q(-u), $ARGV[0]], debug => $ARGV[1])->system(qw(echo Hello world))', '--', $username, !!$debug));
+	    local $SIG{ALRM} = sub { die "Timeout" };
+	    local $TODO;
+	    $TODO = "Known to possible hang on darwin" if $^O eq 'darwin';
+	    my $hello_world;
+	    alarm(20);
+	    eval {
+		chomp($hello_world = $d->info_qx($^X, '-MDoit', '-e', 'Doit->init->do_sudo(sudo_opts => [q(-u), $ARGV[0]], debug => $ARGV[1])->system(qw(echo Hello world))', '--', $username, !!$debug));
+	    };
+	    my $err = $@;
+	    alarm(0);
+	    is $err, '', 'No timeout';
 	    is $hello_world, 'Hello world', 'Running do_sudo in a perl oneliner works';
 	}
     }
