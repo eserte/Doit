@@ -2513,10 +2513,6 @@ use warnings;
 	    }
 	} # XXX add ssh option -t? for password input?
 
-	# On linux use Linux Abstract Namespace Sockets ---
-	# invisible and automatically cleaned up. See man 7 unix.
-	my $LANS_PREFIX = $class->_can_LANS ? '\0' : '';
-
 	my @cmd_worker;
 	if ($dest_os eq 'MSWin32') {
 	    @cmd_worker =
@@ -2543,7 +2539,7 @@ use warnings;
 	     q<sub _server_cleanup { unlink "> . $sock_path . q<" }> .
 	     q<$SIG{PIPE} = \&_server_cleanup; > .
 	     q<END { _server_cleanup() } > .
-	     q{Doit::RPC::Server->new($d, "} . $LANS_PREFIX . $sock_path . q{", excl => 1, debug => } . ($debug?1:0).q{)->run();},
+	     q{Doit::RPC::Server->new($d, "} . $sock_path . q{", excl => 1, debug => } . ($debug?1:0).q{)->run();},
 	     "--", ($dry_run? "--dry-run" : ())
 	    );
 	}
@@ -2564,7 +2560,7 @@ use warnings;
 	    @cmd_comm =
 	    (
 	     @cmd, $perl, "-I.doit/lib", "-MDoit", "-e",
-	     q{Doit::Comm->comm_to_sock("} . $LANS_PREFIX . $sock_path . q{", debug => shift);},
+	     q{Doit::Comm->comm_to_sock("} . $sock_path . q{", debug => shift);},
 	     !!$debug,
 	    );
 	}
