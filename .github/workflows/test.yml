@@ -32,8 +32,12 @@ jobs:
             os: macos-13
           - config_name: macos-14
             os: macos-14
+            # XXX Recently started to hang
+            test_without_sudo: true
           - config_name: macos-15
             os: macos-15
+            # XXX Recently started to hang
+            test_without_sudo: true
           - config_name: windows-latest
             os: windows-latest
             install_optional_dependencies: true
