@@ -4,12 +4,11 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2020,2021,2022,2023,2024 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020,2021,2022,2023,2024,2025 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
-# Mail: slaven@rezic.de
-# WWW:  http://www.rezic.de/eserte/
+# WWW:  https://github.com/eserte/Doit
 #
 
 use strict;
@@ -1258,11 +1257,12 @@ EOF
 # apt_get_update_opts).
 sub _fix_Dockerfile_for_dist {
     my($distro_spec, $add_opts_ref) = @_;
-    if ($distro_spec =~ m{^debian:(wheezy|jessie|stretch|7|8|9)$}) {
+    if ($distro_spec =~ m{^debian:(wheezy|jessie|stretch|buster|7|8|9|10)$}) {
 	my $codename = $1;
 	if    ($codename eq '7') { $codename = 'wheezy' }
 	elsif ($codename eq '8') { $codename = 'jessie' }
 	elsif ($codename eq '9') { $codename = 'stretch' }
+	elsif ($codename eq '10') { $codename = 'buster' }
 	# https://unix.stackexchange.com/questions/508724/failed-to-fetch-jessie-backports-repository
 	$add_opts_ref->{apt_get_update_opts}  = ' -o Acquire::Check-Valid-Until=false';
 	# https://askubuntu.com/questions/74345/how-do-i-bypass-ignore-the-gpg-signature-checks-of-apt
