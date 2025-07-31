@@ -639,6 +639,8 @@ use warnings;
 	    # e.g. fails with destination=/), but results are not very useful,
 	    # so fail here.
 	    error qq{"$newfile" already exists as a directory};
+	} elsif (-e $newfile) {
+	    warning qq{"$newfile" already exists, but is not a symlink --- possibly oldfile and newfile arguments are swapped?};
 	} else {
 	    # probably a file, keep $doit=1
 	}
