@@ -3,25 +3,24 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2020 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2020,2025 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
-# Mail: slaven@rezic.de
-# WWW:  http://www.rezic.de/eserte/
+# WWW:  https://github.com/eserte/Doit
 #
 
 package Doit::Deb; # Convention: all commands here should be prefixed with 'deb_'
 
 use strict;
 use warnings;
-our $VERSION = '0.024';
+our $VERSION = '0.030';
 
 use Doit::Log;
-use Doit::Util 'get_sudo_cmd';
+use Doit::Util 'get_sudo_cmd', 'get_os_release';
 
 sub new { bless {}, shift }
-sub functions { qw(deb_install_packages deb_missing_packages deb_install_key) }
+sub functions { qw(deb_install_packages deb_missing_packages deb_install_key deb_add_repository) }
 
 sub deb_install_packages {
     my($self, @packages) = @_;
@@ -171,6 +170,72 @@ sub deb_install_key {
     $changed;
 }
 
+sub deb_add_repository {
+    my($self, $name, $contents) = @_;
+
+    my $os_release   = get_os_release();
+    my $debian_ver   = $os_release->{ID} eq 'debian' ? $os_release->{VERSION_ID} : undef;
+    my $ubuntu_ver   = $os_release->{ID} eq 'ubuntu' ? $os_release->{VERSION_ID} : undef;
+
+    my $sources_file = "/etc/apt/sources.list.d/$name.sources";
+    my $list_file    = "/etc/apt/sources.list.d/$name.list";
+
+    my ($target_file, $final_contents);
+
+    if (($debian_ver && $debian_ver >= 13) ||
+        ($ubuntu_ver && $ubuntu_ver >= 24.04)) {
+        # Use new deb822 format directly
+        $target_file    = $sources_file;
+        $final_contents = $contents;
+
+        # If a legacy .list file exists, remove it
+        if (-e $list_file) {
+            $self->unlink($list_file);
+        }
+    } else {
+        # Convert to old-style .list format
+        $target_file    = $list_file;
+        $final_contents = _convert_sources_to_list($contents);
+
+        # If a .sources file exists, remove it
+        if (-e $sources_file) {
+            $self->unlink($sources_file);
+        }
+    }
+
+    $self->write_binary($target_file, $final_contents);
+}
+
+sub _convert_sources_to_list {
+    my($contents) = @_;
+
+    my %stanza;
+    for my $line (split /\n/, $contents) {
+        next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
+        my ($k, $v) = $line =~ /^(\S+):\s*(.*)$/;
+        push @{ $stanza{$k} }, split /\s+/, $v if $k && $v;
+    }
+
+    my @lines;
+    for my $type (@{ $stanza{Types} || ['deb'] }) {
+        for my $uri (@{ $stanza{URIs} }) {
+            for my $suite (@{ $stanza{Suites} }) {
+                my $components = join " ", @{ $stanza{Components} || [] };
+                my $options = "";
+                if ($stanza{Architectures}) {
+                    $options .= "arch=" . join(",", @{ $stanza{Architectures} }) . " ";
+                }
+                if ($stanza{'Signed-By'}) {
+                    $options .= join(" ", map { "signed-by=$_"} @{ $stanza{'Signed-By'} });
+                }
+                $options = " [$options]" if $options =~ /\S/;
+                push @lines, "$type$options $uri $suite $components";
+            }
+        }
+    }
+
+    return join("\n", @lines) . "\n";
+}
 
 1;
 
