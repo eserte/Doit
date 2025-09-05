@@ -216,26 +216,36 @@ sub _convert_sources_to_list {
     my($contents) = @_;
 
     my %stanza;
+    my $current_key;
+
     for my $line (split /\n/, $contents) {
         next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
-        my ($k, $v) = $line =~ /^(\S+):\s*(.*)$/;
-        push @{ $stanza{$k} }, split /\s+/, $v if $k && $v;
+
+        if ($line =~ /^(\S+):\s*(.*)$/) {
+            $current_key = lc $1;
+            push @{ $stanza{$current_key} }, split /\s+/, $2 if $2 ne '';
+        }
+        elsif ($line =~ /^\s+(\S.*)$/ && $current_key) {
+            push @{ $stanza{$current_key} }, split /\s+/, $1;
+        }
     }
 
     my @lines;
-    for my $type (@{ $stanza{Types} || ['deb'] }) {
-        for my $uri (@{ $stanza{URIs} }) {
-            for my $suite (@{ $stanza{Suites} }) {
-                my $components = join " ", @{ $stanza{Components} || [] };
-                my $options = "";
-                if ($stanza{Architectures}) {
-                    $options .= "arch=" . join(",", @{ $stanza{Architectures} }) . " ";
+    for my $type (@{ $stanza{types} || ['deb'] }) {
+        for my $uri (@{ $stanza{uris} || [] }) {
+            for my $suite (@{ $stanza{suites} || [] }) {
+                my $components = join " ", @{ $stanza{components} || [] };
+                my @opts;
+
+                if ($stanza{architectures}) {
+                    push @opts, "arch=" . join(",", @{ $stanza{architectures} });
                 }
-                if ($stanza{'Signed-By'}) {
-                    $options .= join(" ", map { "signed-by=$_"} @{ $stanza{'Signed-By'} });
+                if ($stanza{'signed-by'}) {
+                    push @opts, map { "signed-by=$_"} @{ $stanza{'signed-by'} };
                 }
-                $options = " [$options]" if $options =~ /\S/;
-                push @lines, "$type$options $uri $suite $components";
+
+                my $options = @opts ? "[" . join(" ", @opts) . "] " : "";
+                push @lines, "$type ${options}$uri $suite $components";
             }
         }
     }
