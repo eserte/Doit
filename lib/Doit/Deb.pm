@@ -171,7 +171,9 @@ sub deb_install_key {
 }
 
 sub deb_add_repository {
-    my($self, $name, $contents) = @_;
+    my($self, $name, $contents, %opts) = @_;
+    my $update = delete $opts{update};
+    error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my $os_release   = get_os_release();
     my $debian_ver   = $os_release->{ID} eq 'debian' ? $os_release->{VERSION_ID} : undef;
@@ -203,7 +205,11 @@ sub deb_add_repository {
         }
     }
 
-    $self->write_binary($target_file, $final_contents);
+    my $changed = $self->write_binary($target_file, $final_contents);
+    if ($changed && $update) {
+	$self->system('apt-get', 'update', '-qq');
+    }
+    $changed;
 }
 
 sub _convert_sources_to_list {
