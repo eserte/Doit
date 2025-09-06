@@ -48,18 +48,33 @@ This is an "informational" command and runs even in dry-run mode.
 =head3 deb_install_key
 
     $doit->deb_install_key(
-        url => $url,
+        file => "/etc/apt/keyrings/$name.gpg",
+        url  => $url,
+        key  => $key,
     );
     $doit->deb_install_key(
         keyserver => $keyserver,
         key       => $key,
+        file      => "/etc/apt/keyrings/$name.gpg",
     );
 
-Make sure that the given key is installed in the apt keyring. The key
-can be expressed either using an I<$url> (in which case L<curl(1)> is
-used to download the key), or using a I<$keyserver> and I<$key>
-speciication (in which case L<apt-key(8)> is used to download and
-install the key).
+Make sure that the given key is installed in the specified C<file>
+(newer Debian/Ubuntu) or in the default apt keyring (older
+Debian/Ubuntu). The key is downloaded from the given I<$url>
+(L<curl(1)> or L<wget(1)> are needed to download the key) and
+installed with the help of L<gpg(1)>. The caller is responsible to
+make sure that the needed packages are already installed, e.g. by
+calling
+
+    $doit->deb_install_packages(qw(curl gnupg));
+
+before. The I<$key> parameter with the fingerprint of the key is
+optional but recommended; if specified then Doit can detect if the key
+is already installed and avoid downloads.
+
+On older Debians I<$keyserver> and I<$key> may be specified instead of
+I<$url> (in which case L<apt-key(8)> is used to download and install
+the key).
 
 Return 1 if the key was actually installed, otherwise 0.
 
@@ -82,7 +97,7 @@ Slaven Rezic <srezic@cpan.org>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2017 Slaven Rezic. All rights reserved.
+Copyright (c) 2017,2018,2020,2025 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
