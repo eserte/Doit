@@ -110,6 +110,7 @@ jobs:
           - image: perl:5.42.0-slim-bookworm
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
+          - image: debian:trixie
           - image: ubuntu:focal
           - image: rockylinux:9
           - image: fedora:41
