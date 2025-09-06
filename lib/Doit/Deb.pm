@@ -84,6 +84,7 @@ sub deb_install_key {
     my $url       = delete $opts{url};
     my $keyserver = delete $opts{keyserver};
     my $key       = delete $opts{key};
+    my $file      = delete $opts{file};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     if (!$url) {
@@ -96,6 +97,14 @@ sub deb_install_key {
     } else {
 	if ($keyserver) {
 	    error "Don't define both url and keyserver";
+	}
+    }
+
+    my $is_modern = _missing_apt_key();
+
+    if ($is_modern) {
+	if (!defined $file) {
+	    error "For Debian >= 13 and Ubuntu >= 24.04 the 'file' option must be set (to something like /etc/apt/keyrings/...gpg)";
 	}
     }
 
@@ -115,8 +124,14 @@ sub deb_install_key {
 	# Older Debian (jessie and older?) have only /etc/apt/trusted.gpg,
 	# newer ones (stretch and newer?) have /etc/apt/trusted.gpg.d/*.gpg
     SEARCH_FOR_KEY: {
-	    require File::Glob;
-	    for my $keyfile ('/etc/apt/trusted.gpg', File::Glob::bsd_glob('/etc/apt/trusted.gpg.d/*.gpg')) {
+	    my @gpg_files;
+	    if (defined $file) {
+		@gpg_files = $file;
+	    } else {
+		require File::Glob;
+		@gpg_files = ('/etc/apt/trusted.gpg', File::Glob::bsd_glob('/etc/apt/trusted.gpg.d/*.gpg'));
+	    }
+	    for my $keyfile (@gpg_files) {
 		if (-r $keyfile) {
 		    my @cmd = ('gpg', '--keyring', $keyfile, '--list-keys', '--fingerprint', '--with-colons');
 		    open my $fh, '-|', @cmd
@@ -135,6 +150,7 @@ sub deb_install_key {
     }
 
     my $changed = 0;
+
     if (!$found_key) {
 	if ($keyserver) {
 	    $self->system(get_sudo_cmd(), 'apt-key', 'adv', '--keyserver', $keyserver, '--recv-keys', $key);
@@ -145,7 +161,12 @@ sub deb_install_key {
 	    } else {
 		@fetch_cmd = ('wget', '-O-', $url); # other alternative would be lwp-request
 	    }
-	    my @add_cmd   = (get_sudo_cmd(), 'apt-key', 'add', '-');
+	    my @add_cmd;
+	    if ($is_modern) {
+		@add_cmd = (get_sudo_cmd(), 'gpg', '--dearmor', '-o', $file);
+	    } else {
+		@add_cmd = (get_sudo_cmd(), 'apt-key', 'add', '-');
+	    }
 	    if ($self->is_dry_run) {
 		info "Fetch key using '@fetch_cmd' and add using '@add_cmd' (dry-run)";
 	    } else {
@@ -168,6 +189,16 @@ sub deb_install_key {
 	$changed = 1;
     }
     $changed;
+}
+
+sub _missing_apt_key {
+    my $os_release = get_os_release();
+    if (($os_release->{ID} eq 'debian' && (($os_release->{VERSION_ID}||0) >= 13 || $os_release->{VERSION_CODENAME} =~ m{^(trixie|sid)$})) ||
+        ($os_release->{ID} eq 'ubuntu' && $os_release->{VERSION_ID} >= 24.04)) {
+        return 1;
+    } else {
+	return 0;
+    }
 }
 
 sub deb_add_repository {
