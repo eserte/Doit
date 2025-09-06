@@ -78,6 +78,34 @@ the key).
 
 Return 1 if the key was actually installed, otherwise 0.
 
+=head3 deb_add_repository
+
+    $doit->deb_add_repository($name, $sources_contents, update => $bool);
+
+Add a repository by creating a file F<<
+/etc/apt/sources.list.d/I<$name>.sources >> (newer Debians/Ubuntus) or
+F<</etc/apt/sources.list.d/I<$name>.list >> (older Debians/Ubuntus).
+The contents of C<$sources_contents> must be written in the new
+Deb822-based C<.sources> format. For example:
+
+     Types: deb deb-src
+     URIs: http://deb.debian.org/debian
+     Suites: stable
+     Components: main
+     Architectures: amd64 arm64
+     Signed-By: /etc/apt/keyrings/foo.gpg
+
+On older releases this content is converted automatically into the
+legacy C<.list> format. The above example would be rendered as:
+
+   deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/foo.gpg] http://deb.debian.org/debian stable main
+   deb-src [arch=amd64,arm64 signed-by=/etc/apt/keyrings/foo.gpg] http://deb.debian.org/debian stable main
+
+If C<update =E<gt> 1> is given, then C<apt-get update> will be run,
+but only if the repository file was created or modified.
+
+Return 1 if a change to the repository file occurred, otherwise 0.
+
 =head2 NOTES
 
 =head3 Add to sources.list
