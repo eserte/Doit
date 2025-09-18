@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2022,2024 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2022,2024,2025 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -15,7 +15,7 @@ package Doit::Brew; # Convention: all commands here should be prefixed with 'bre
 
 use strict;
 use warnings;
-our $VERSION = '0.013';
+our $VERSION = '0.014';
 
 use Doit::Log;
 
@@ -46,7 +46,8 @@ sub brew_install_packages {
 
 	my @missing_packages;
 	for my $package (@packages) {
-	    if (!defined $cached_cellar || !-d "$cached_cellar/$package") {
+	    my $formula_name = $package =~ m{.*/(.+)$} ? $1 : $package;
+	    if (!defined $cached_cellar || !-d "$cached_cellar/$formula_name") {
 		push @missing_packages, $package;
 	    }
 	}

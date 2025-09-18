@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2024 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2024,2025 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -17,8 +17,6 @@ use File::Glob qw(bsd_glob);
 use Test::More;
 
 use Doit;
-
-plan skip_all => "Not on Mac OS X" if $^O ne 'darwin';
 
 my $d = Doit->init;
 $d->add_component('brew');
@@ -60,6 +58,8 @@ if ($ENV{GITHUB_ACTIONS}) {
     my @missing_packages = $d->brew_missing_packages($test_package);
     is_deeply(\@missing_packages, []);
     ok !$d->brew_install_packages($test_package), 'no packages to be installed';
+    my $fully_qualified_name = "homebrew/core/$test_package";
+    ok !$d->brew_install_packages($fully_qualified_name), "no packages to be installed, using fully qualified name ($fully_qualified_name)";
 }
 
 __END__
