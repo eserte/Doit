@@ -28,8 +28,6 @@ jobs:
             test_without_sudo: true
           - config_name: ubuntu-24.04
             os: ubuntu-24.04
-          - config_name: macos-13
-            os: macos-13
           - config_name: macos-14
             os: macos-14
             # XXX Recently started to hang
