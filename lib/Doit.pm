@@ -2136,7 +2136,11 @@ use warnings;
 	    }
 	    open my $oldout, ">&STDOUT" or die $!;
 	    if (Doit::IS_WIN) {
-		open STDOUT, '>', 'CON:' or die $!; # XXX????
+		open STDOUT, '>&', STDERR
+		    or do {
+			warn "Can't dup STDOUT to STDERR: $!, try CON: fallback...\n";
+			open STDOUT, '>', 'CON:' or die $!; # XXX????
+		    };
 	    } else {
 		open STDOUT, '>', "/dev/stderr" or die $!; # XXX????
 	    }
