@@ -899,23 +899,44 @@ use warnings;
 	    close $chld_in;
 	}
 
+	if (!Doit::IS_WIN) {
+		require Fcntl;
+		require POSIX;
+		for my $fh ($chld_out, $chld_err) {
+			my $flags = fcntl($fh, Fcntl::F_GETFL, 0) or die "fcntl F_GETFL: $!";
+			fcntl($fh, Fcntl::F_SETFL, $flags | Fcntl::O_NONBLOCK) or die "fcntl F_SETFL O_NONBLOCK: $!";
+		}
+	}
+
 	my $sel = IO::Select->new;
 	$sel->add($chld_out);
 	$sel->add($chld_err);
 
 	my %buf = ($chld_out => '', $chld_err => '');
-	while(my @ready_fhs = $sel->can_read()) {
-	    for my $ready_fh (@ready_fhs) {
-		my $buf = '';
-		while (sysread $ready_fh, $buf, 1024, length $buf) { }
-		if ($buf eq '') { # eof
-		    $sel->remove($ready_fh);
-		    $ready_fh->close;
-		    last if $sel->count == 0;
-		} else {
-		    $buf{$ready_fh} .= $buf;
+	while($sel->count > 0) {
+		for my $fh ($sel->can_read) {
+			my $is_eof = 0;
+			while(1) {
+				my $data;
+				my $ret = sysread $fh, $data, 16384;
+				if (defined $ret) {
+					if ($ret > 0) {
+						$buf{$fh} .= $data;
+					} else { # EOF
+						$is_eof = 1;
+						last;
+					}
+				} elsif (!Doit::IS_WIN && $! == POSIX::EAGAIN()) {
+					last; # Not an error, just no more data for now
+				} else {
+					die "sysread: $!";
+				}
+			}
+			if ($is_eof) {
+				$sel->remove($fh);
+				$fh->close;
+			}
 		}
-	    }
 	}
 
 	waitpid $pid, 0;

@@ -88,6 +88,16 @@ TODO: {
 
     ok !eval { $r->info_open3($^X, '-e', 'exit 1'); 1 };
     like $@, qr{open3 command '.* -e exit 1' failed: Command exited with exit code 1 at .* line \d+}, 'verbose error message with failed info_open3 command';
+
+    {
+	my $large_string = "x" x 100000;
+	my $stderr;
+	my $stdout = $r->open3({errref => \$stderr, instr => $large_string}, $^X, '-e',
+		'my $in = do { local $/; <STDIN> }; print STDOUT $in; print STDERR $in;'
+	);
+	is(length($stdout), length($large_string), 'large stdout read completely');
+	is(length($stderr), length($large_string), 'large stderr read completely');
+    }
 }
 
 {
