@@ -903,8 +903,8 @@ use warnings;
 		require Fcntl;
 		require POSIX;
 		for my $fh ($chld_out, $chld_err) {
-			my $flags = fcntl($fh, Fcntl::F_GETFL, 0) or die "fcntl F_GETFL: $!";
-			fcntl($fh, Fcntl::F_SETFL, $flags | Fcntl::O_NONBLOCK) or die "fcntl F_SETFL O_NONBLOCK: $!";
+			my $flags = fcntl($fh, Fcntl::F_GETFL(), 0) or die "fcntl F_GETFL: $!";
+			fcntl($fh, Fcntl::F_SETFL(), $flags | Fcntl::O_NONBLOCK()) or die "fcntl F_SETFL O_NONBLOCK: $!";
 		}
 	}
 
