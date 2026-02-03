@@ -56,4 +56,14 @@ SKIP: {
     }
 }
 
+{
+    my @upgradeable = $d->deb_upgradeable_packages();
+    # We can't predict if there are upgrades, so just check it doesn't error
+    if (@upgradeable) {
+        like $upgradeable[0], qr/^[a-z0-9][a-z0-9+.-]*$/i, 'package name looks valid';
+    } else {
+	pass('no upgradeable packages');
+    }
+}
+
 __END__

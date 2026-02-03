@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2020,2025 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2020,2025,2026 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -14,13 +14,13 @@ package Doit::Deb; # Convention: all commands here should be prefixed with 'deb_
 
 use strict;
 use warnings;
-our $VERSION = '0.030';
+our $VERSION = '0.031';
 
 use Doit::Log;
 use Doit::Util 'get_sudo_cmd', 'get_os_release';
 
 sub new { bless {}, shift }
-sub functions { qw(deb_install_packages deb_missing_packages deb_install_key deb_add_repository) }
+sub functions { qw(deb_install_packages deb_missing_packages deb_install_key deb_add_repository deb_upgradeable_packages) }
 
 sub deb_install_packages {
     my($self, @packages) = @_;
@@ -77,6 +77,35 @@ sub deb_missing_packages {
 	}
     }
     @missing_packages;
+}
+
+sub deb_upgradeable_packages {
+    my($self) = @_;
+
+    my @upgradeable_packages;
+
+    require IPC::Open3;
+    require Symbol;
+
+    my @cmd = ('apt-get', '-s', 'upgrade');
+    my $err = Symbol::gensym();
+    my $fh;
+    my $pid = IPC::Open3::open3(undef, $fh, $err, @cmd)
+        or error "Error running '@cmd': $!";
+    while(<$fh>) {
+        chomp;
+        # Parse lines like: Inst package_name [old_version] (new_version ...)
+        if (m{^Inst\s+(\S+)}) {
+            push @upgradeable_packages, $1;
+        }
+    }
+    waitpid $pid, 0;
+    my $exit_code = $? >> 8;
+    if ($exit_code != 0) {
+        error "Command '@cmd' failed with exit code $exit_code";
+    }
+
+    @upgradeable_packages;
 }
 
 sub deb_install_key {

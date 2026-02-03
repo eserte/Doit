@@ -12,6 +12,8 @@ Doit::Deb - commands for dealing with the Debian package system
 
     my @missing_packages = $doit->deb_missing_packages(qw(zsh wget aptitude));
 
+    my @upgradeable_packages = $doit->deb_upgradeable_packages();
+
     $doit->deb_install_key(
         url => 'http://deb.example.org/key/deb.example.org.key',
         key => '0123456789ABCDEF0123456789ABCDEF01234567',
@@ -44,6 +46,21 @@ of packages in scalar context).
 
 Return the packages out of I<@packages> which are not yet installed.
 This is an "informational" command and runs even in dry-run mode.
+
+=head3 deb_upgradeable_packages
+
+    my @upgradeable_packages = $doit->deb_upgradeable_packages();
+
+Return a list of packages which have upgrades available. Uses C<apt-get
+-s upgrade> to determine which packages can be upgraded. This is an
+"informational" command and runs even in dry-run mode.
+
+This function is useful for making decisions about whether to run an
+upgrade:
+
+    if ($doit->deb_upgradeable_packages) {
+        $doit->system(qw(apt-get upgrade));
+    }
 
 =head3 deb_install_key
 
