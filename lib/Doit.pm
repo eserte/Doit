@@ -4,7 +4,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2019,2020,2022,2023,2024,2025 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2019,2020,2022,2023,2024,2025,2026 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -17,7 +17,7 @@ use warnings;
 
 {
     package Doit;
-    our $VERSION = '0.028_55';
+    our $VERSION = '0.028_56';
     $VERSION =~ s{_}{};
 
     use constant IS_WIN => $^O eq 'MSWin32';
@@ -741,13 +741,7 @@ use warnings;
 	}
 	my($from, $to) = @args;
 
-	my $real_to;
-	if (-d $to) {
-	    require File::Basename;
-	    $real_to = "$to/" . File::Basename::basename($from);
-	} else {
-	    $real_to = $to;
-	}
+	my $real_to = _expand_file_dest($from, $to);
 	if (!-e $real_to || do { require File::Compare; File::Compare::compare($from, $real_to) != 0 }) {
 	    my @commands =  {
 			     code => sub {
@@ -775,14 +769,33 @@ use warnings;
     }
 
     sub cmd_move {
-	my($self, $from, $to) = @_;
+	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $show_diff = delete $options{show_diff};
+	error "Unhandled options: " . join(" ", %options) if %options;
+	if (@args != 2) {
+	    error "Expecting two arguments: from and to filenames";
+	}
+	my($from, $to) = @args;
+
 	my @commands = {
 			code => sub {
 			    require File::Copy;
 			    File::Copy::move($from, $to)
 				    or error "Move failed: $!";
 			},
-			msg => "move $from $to",
+			msg => do {
+			    if ($show_diff) {
+				my $real_to = _expand_file_dest($from, $to);
+				if (!-e $real_to){
+				    "move $from $real_to (destination does not exist)";
+				} else {
+				    "move $from $real_to\ndiff:\n" . _diff_files($real_to, $from);
+				}
+			    } else {
+				"move $from $to",
+			    }
+			},
 			rv  => 1,
 		       };
 	Doit::Commands->new(@commands);
@@ -1610,6 +1623,20 @@ use warnings;
 	    }
 	}
 	"$diff$diff_stderr";
+    }
+
+    # for copy/move-like functionality, which accept both a directory or file destination:
+    # expand destination to always be the final file
+    sub _expand_file_dest {
+	my($file, $dest) = @_;
+	my $real_dest;
+	if (-d $dest) {
+	    require File::Basename;
+	    $real_dest = "$dest/" . File::Basename::basename($file); # XXX hardcode / or use File::Spec?
+	} else {
+	    $real_dest = $dest;
+	}
+	$real_dest;
     }
 
     sub _ln_nsf_system {

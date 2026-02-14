@@ -193,11 +193,15 @@ directories.
 =head3 move
 
     $doit->move($from, $to);
+    $doit->move({show_diff=>1}, $from, $to);
 
 Move file I<$from> to I<$to>. This command probably cannot be used in
 converging scripts without an accompanying condition. See
 L<File::Copy::move|File::Copy/move> for details. For an alternative
 command see L</rename>.
+
+If the option C<< show_diff=>1 >> is specified, then a diff output is
+shown in the case the destination file already exists.
 
 Always returns C<1> (unless there's an exception).
 
@@ -847,7 +851,7 @@ Slaven Rezic <srezic@cpan.org>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2017,2018,2019,2020,2022,2023,2024 Slaven Rezic. All rights reserved.
+Copyright (c) 2017,2018,2019,2020,2022,2023,2024,2025,2026 Slaven Rezic. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
