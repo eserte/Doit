@@ -217,11 +217,16 @@ L<File::Path::remove_tree|File::Path/remove_tree> for details.
 =head3 rename
 
     $doit->rename($from, $to);
+    $doit->rename({show_diff=>1}, $from, $to);
 
 Rename I<$from> to I<$to>. This command probably cannot be used in
 converging scripts without an accompanying condition. See
 L<perlfunc/rename> for details. See L</move> for a command which can
-move a file between different filesystems.
+move a file between different filesystems. If in doubt, prefer to use
+C<move>.
+
+If the option C<< show_diff=>1 >> is specified, then a diff output is
+shown in the case the destination file already exists.
 
 Always returns C<1> (unless there's an exception).
 

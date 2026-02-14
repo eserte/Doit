@@ -721,13 +721,31 @@ use warnings;
     }
 
     sub cmd_rename {
-	my($self, $from, $to) = @_;
-	my @commands;
-	push @commands, {
-			 code => sub { rename $from, $to or error "$!" },
-			 msg  => "rename $from, $to",
-			 rv   => 1,
-			};
+	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $show_diff = delete $options{show_diff};
+	error "Unhandled options: " . join(" ", %options) if %options;
+	if (@args != 2) {
+	    error "Expecting two arguments: from and to filenames";
+	}
+	my($from, $to) = @args;
+
+	my @commands = {
+			code => sub { rename $from, $to or error "$!" },
+			msg => do {
+			    if ($show_diff) {
+				my $real_to = _expand_file_dest($from, $to);
+				if (!-e $real_to){
+				    "rename $from, $real_to (destination does not exist)";
+				} else {
+				    "rename $from, $real_to\ndiff:\n" . _diff_files($real_to, $from);
+				}
+			    } else {
+				"rename $from, $to",
+			    }
+			},
+			rv   => 1,
+		       };
 	Doit::Commands->new(@commands);
     }
 

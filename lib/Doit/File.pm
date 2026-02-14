@@ -3,7 +3,7 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2021,2023 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2021,2023,2026 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
@@ -15,7 +15,7 @@ package Doit::File;
 
 use strict;
 use warnings;
-our $VERSION = '0.025';
+our $VERSION = '0.026';
 
 use Doit::Log;
 use Doit::Util qw(copy_stat new_scope_cleanup);
@@ -55,6 +55,7 @@ sub file_atomic_write {
     }
     my $mode         = delete $opts{mode};
     my $check_change = delete $opts{check_change};
+    my $show_diff    = delete $opts{show_diff};
     error "Unhandled options: " . join(" ", %opts) if %opts;
 
     my($tmp_fh,$tmp_file);
@@ -128,7 +129,7 @@ sub file_atomic_write {
 
     if ($same_fs) {
 	_make_writeable($doit, $file, 'rename');
-	$doit->rename($tmp_file, $file);
+	$doit->rename({show_diff=>$show_diff}, $tmp_file, $file);
     } else {
 	my @dest_stat;
 	if (-e $file) {
@@ -136,7 +137,7 @@ sub file_atomic_write {
 		or warning "Cannot stat $file: $! (cannot preserve permissions)"; # XXX should this be an error?
 	    _make_writeable($doit, $file, 'File::Copy::move');
 	}
-	$doit->move($tmp_file, $file);
+	$doit->move({show_diff=>$show_diff}, $tmp_file, $file);
 	if (@dest_stat) { # In dry-run mode effectively a noop
 	    $dest_stat[2] = $mode if defined $mode;
 	    copy_stat [@dest_stat], $file, ownership => 1, mode => 1;

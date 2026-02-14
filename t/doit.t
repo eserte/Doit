@@ -202,6 +202,15 @@ ok !-e "non-existent-directory/does-not-work", 'last rename really failed';
 ok  -e "doit-test", 'file is not renamed';
 
 ######################################################################
+# rename with diff
+$r->write_binary("doit-rename-diff-test", "line one\nline two\n");
+$r->rename({show_diff=>1}, "doit-rename-diff-test", "doit-rename-diff-dest-test"); # renames to non-existing file
+$r->write_binary("doit-rename-diff-test", "line one\nline two\n");
+$r->rename({show_diff=>1}, "doit-rename-diff-test", "doit-rename-diff-dest-test"); # renames to existing file without diffs
+$r->write_binary("doit-rename-diff-test", "line one\nline 1.5\nline two\n");
+$r->rename({show_diff=>1}, "doit-rename-diff-test", "doit-rename-diff-dest-test"); # renames to existing file with diffs
+
+######################################################################
 # move with diff
 $r->write_binary("doit-move-diff-test", "line one\nline two\n");
 $r->move({show_diff=>1}, "doit-move-diff-test", "doit-move-diff-dest-test"); # moves to non-existing file

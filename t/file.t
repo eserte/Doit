@@ -221,6 +221,28 @@ for my $opt_def (
     no_leftover_tmp $tempdir;
 }
 
+{ # show_diff
+    ok $doit->file_atomic_write("$tempdir/show-diff-test",
+				sub {
+				    my $fh = shift;
+				    print $fh "initial\n";
+				}, show_diff => 1), "show-diff with non-existing file before";
+
+    ok $doit->file_atomic_write("$tempdir/show-diff-test",
+				sub {
+				    my $fh = shift;
+				    print $fh "initial\n";
+				}, show_diff => 1), 'show-diff with no changes';
+
+    ok $doit->file_atomic_write("$tempdir/show-diff-test",
+				sub {
+				    my $fh = shift;
+				    print $fh "initial\nand a new line\n";
+				}, show_diff => 1), 'show-diff with changes';
+
+    no_leftover_tmp $tempdir;
+}
+
 { # dry-run check
     my $old_content = slurp("$tempdir/1st");
     is $doit_dryrun->file_atomic_write("$tempdir/1st", sub {
