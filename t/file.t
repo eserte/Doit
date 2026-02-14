@@ -274,6 +274,17 @@ for my $opt_def (
     no_leftover_tmp $tempdir;
 }
 
+{ # in dry-run mode, one can do real changes (e.g. using info_system()
+  # or the CORE system() function) which would then show up in the diff
+    $doit->write_binary("$tempdir/info-system-test", "initial content\n");
+    $doit_dryrun->file_atomic_write("$tempdir/info-system-test", sub {
+				        my(undef, $filename) = @_;
+					$doit_dryrun->info_system($^X, '-e', 'open my $ofh, ">", shift or die $!; print $ofh "external program writing the contents\n"; close $ofh or die $!', $filename);
+				}, show_diff => 1), 1;
+    is slurp("$tempdir/info-system-test"), "initial content\n", 'no change in dry-run mode'; # XXX it would be good to test the diffs!
+    no_leftover_tmp $tempdir;
+}
+
 SKIP: {
     skip "No BSD::Resource available", 1
 	if !eval { require BSD::Resource; 1 };
