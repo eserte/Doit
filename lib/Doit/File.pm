@@ -15,7 +15,7 @@ package Doit::File;
 
 use strict;
 use warnings;
-our $VERSION = '0.026';
+our $VERSION = '0.027';
 
 use Doit::Log;
 use Doit::Util qw(copy_stat new_scope_cleanup);
@@ -112,11 +112,13 @@ sub file_atomic_write {
 	error $@;
     }
 
-    if ($] < 5.010001) { $! = 0 }
-    $tmp_fh->close
-	or error "Error while closing temporary file $tmp_file: $!";
-    if ($] < 5.010001 && $! != 0) { # at least perl 5.8.8 and 5.8.9 are buggy and do not detect errors at close time --- 5.10.1 is correct
-	error "Error while closing temporary file $tmp_file: $!";
+    if (defined fileno($tmp_fh)) { # it's undef if the filehandle was already closed in the callback
+	if ($] < 5.010001) { $! = 0 }
+	$tmp_fh->close
+	    or error "Error while closing temporary file $tmp_file: $!";
+	if ($] < 5.010001 && $! != 0) { # at least perl 5.8.8 and 5.8.9 are buggy and do not detect errors at close time --- 5.10.1 is correct
+	    error "Error while closing temporary file $tmp_file: $!";
+	}
     }
 
     if ($check_change) {

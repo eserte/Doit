@@ -264,6 +264,16 @@ for my $opt_def (
     }
 }
 
+{ # closing filehandle in callback should be harmless
+    is $doit->file_atomic_write("$tempdir/close-in-callback", sub {
+				    my $fh = shift;
+				    print $fh "some content\n";
+				    close $fh or die $!;
+				}), 1;
+    is slurp("$tempdir/close-in-callback"), "some content\n", 'calling close() in callback is no error';
+    no_leftover_tmp $tempdir;
+}
+
 SKIP: {
     skip "No BSD::Resource available", 1
 	if !eval { require BSD::Resource; 1 };
