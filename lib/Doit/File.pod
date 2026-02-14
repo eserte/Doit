@@ -140,6 +140,18 @@ L<errno(2)>) case.
 Special handling is implemented for older perls (5.8.x), as a failing
 L<close|perlfunc/close> is not correctly detected here.
 
+=head4 Notes on dry-run behavior
+
+In dry-run mode the callback is executed normally and may write to the
+provided filehandle or temporary filename. Since the final rename to
+the destination file is not performed, the destination remains
+untouched.
+
+This is especially useful together with the C<show_diff> option. Normal
+write operations (such as C<print>) are therefore safe. When using
+C<Doit> commands, prefer informational variants such as
+C<info_system()> if writing to the temporary filename.
+
 =head3 file_digest_matches (informational command)
 
     my $bool = $doit->file_digest_matches($file, $digest[, $digest_algorithm[, got_digest => \$got_digest]]);
