@@ -42,10 +42,7 @@ jobs:
             dist_install_and_test: true
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        clean: false
-        show-progress: false
+    - uses: taiki-e/checkout-action@v1
     - run: |
         sudo apt-get update -qq
         sudo apt-get install -y libipc-run-perl libnet-openssh-perl libbsd-resource-perl libdevel-hide-perl libconfig-inifiles-perl locales
@@ -115,7 +112,7 @@ jobs:
 
     steps:
     # Note: checkout@v4 does not work with older debians (e.g.stretch), so do this step *outside* the container
-    - uses: actions/checkout@v4
+    - uses: taiki-e/checkout-action@v1
     - name: Preinstall, Configure, Build and Test
       run: |
         docker run --quiet -v $(pwd):$(pwd) ${{ matrix.image }} sh -c "cd $(pwd); "'
@@ -147,7 +144,7 @@ jobs:
           - image: alpine:latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: taiki-e/checkout-action@v1
     - name: Preinstall, Configure, Build and Test
       run: |
         perl Build.PL
@@ -162,10 +159,7 @@ jobs:
           - osvers: '13.5'
           - osvers: '14.3'
     steps:
-    - uses: actions/checkout@v4
-      with:
-        clean: false
-        show-progress: false
+    - uses: taiki-e/checkout-action@v1
     - uses: cross-platform-actions/action@v0.29.0
       env:
         DOIT_TEST_WITH_SUDO: 1
@@ -188,10 +182,7 @@ jobs:
     name: Test coverage
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-      with:
-        clean: false
-        show-progress: false
+    - uses: taiki-e/checkout-action@v1
     - name: install Devel::Cover::Report::Coveralls and optional Doit deps
       run: |
         sudo apt-get update -qq
