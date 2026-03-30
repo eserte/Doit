@@ -1059,6 +1059,11 @@ use warnings;
 
     sub cmd_run {
 	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	my $quiet = delete $options{quiet};
+	my $info = delete $options{info};
+	error "Unhandled options: " . join(" ", %options) if %options;
+
 	my @commands;
 	push @commands, {
 			 code => sub {
@@ -1068,7 +1073,7 @@ use warnings;
 				 _handle_dollar_questionmark;
 			     }
 			 },
-			 msg  => do {
+			 ($quiet ? () : (msg  => do {
 			     my @print_cmd;
 			     for my $arg (@args) {
 				 if (ref $arg eq 'ARRAY') {
@@ -1078,10 +1083,18 @@ use warnings;
 				 }
 			     }
 			     join " ", @print_cmd;
-			 },
+			 })),
 			 rv  => 1,
+			 ($info ? (run_always => 1) : ()),
 			};
 	Doit::Commands->new(@commands);
+    }
+
+    sub cmd_info_run {
+	my($self, @args) = @_;
+	my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+	$options{info} = 1;
+	$self->cmd_run(\%options, @args);
     }
 
     sub cmd_setenv {
@@ -1831,7 +1844,7 @@ use warnings;
 		 qw(chmod chown mkdir rename rmdir symlink unlink utime),
 		 qw(make_path remove_tree), # File::Path
 		 qw(copy move), # File::Copy
-		 qw(run), # IPC::Run
+		 qw(run info_run), # IPC::Run
 		 qw(qx info_qx), # qx// and variant which even runs in dry-run mode, both using list syntax
 		 qw(open2 info_open2), # IPC::Open2
 		 qw(open3 info_open3), # IPC::Open3

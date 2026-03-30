@@ -501,11 +501,16 @@ Opens>.
 =head3 run
 
     $doit->run(...);
+    $doit->run({quiet => $bool, info => $bool}, ...);
 
 Execute a command using L<IPC::Run>. The command specification may
 contain pipes, redirects and everything C<IPC::Run> supports. Example:
 
     $doit->run([qw(grep pattern file)], '|', ['sort'], '|', [qw(uniq -c)], '>', 'outfile');
+
+If C<quiet> is set to a true value, then no logging is done. If
+C<info> is set to a true value, then command execution happens even in
+dry-run mode.
 
 Always returns C<1> (unless there's an exception).
 
@@ -532,6 +537,13 @@ B<Note>: currently the C<info_*> commands fail on non-zero exit code.
 This behavior is probably not very useful (just think of running a non-matching
 grep) and may change in future. Currently these invocations have to be
 wrapped in an C<< eval { ... } >> if non-zero exit may happen.
+
+=head3 info_run
+
+    $doit->info_run(...);
+    $doit->info_run({quiet => $bool}, ...);
+
+Like L</run>, but with the option C<< info=>1 >> set.
 
 =head3 info_open2
 

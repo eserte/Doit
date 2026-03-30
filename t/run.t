@@ -64,4 +64,32 @@ SKIP: {
     is $@->{coredump}, 'with', 'expected coredump value ("with")';
 }
 
+{
+    require File::Temp;
+    my $tempdir = File::Temp::tempdir('doit_XXXXXXXX', TMPDIR => 1, CLEANUP => 1);
+
+    local @ARGV = ('--dry-run');
+    my $dry_run = Doit->init;
+
+    {
+	my $no_create_file = "$tempdir/should_never_happen";
+	is $dry_run->run([$^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $no_create_file]), 1, 'returns 1 in dry-run mode';
+	ok ! -e $no_create_file, 'dry-run mode, no file was created';
+    }
+
+    {
+	my $create_file = "$tempdir/should_happen";
+	is $dry_run->info_run([$^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $create_file]), 1, 'returns 1 as info_run call';
+	ok -e $create_file, 'info_run runs even in dry-run mode';
+	$r->unlink($create_file);
+    }
+
+    {
+	my $create_file = "$tempdir/should_happen";
+	is $dry_run->run({info=>1}, [$^X, '-e', 'open my $fh, ">", $ARGV[0] or die $!', $create_file]), 1, 'returns 1 as run call with info=>1 option';
+	ok -e $create_file, 'run with info=>1 option runs even in dry-run mode';
+	$r->unlink($create_file);
+    }
+}
+
 __END__
