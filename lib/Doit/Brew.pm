@@ -14,7 +14,7 @@ package Doit::Brew; # Convention: all commands here should be prefixed with 'bre
 
 use strict;
 use warnings;
-our $VERSION = '0.015';
+our $VERSION = '0.016';
 
 use Doit::Log;
 
@@ -82,7 +82,15 @@ sub brew_get_cellar {
 }
 
 sub brew_without {
-    my($self, $code) = @_;
+    my($self, @args) = @_;
+
+    my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+    my $quiet = delete $options{quiet};
+    error "Unhandled options: " . join(" ", %options) if %options;
+
+    my $code = shift @args;
+
+    error "Too many arguments to brew_without() call" if @args;
 
     my @brew_prefixes = grep { defined && length }
         $ENV{HOMEBREW_PREFIX},
@@ -101,12 +109,17 @@ sub brew_without {
         split /:/, ($ENV{PATH} || '');
 
     local %ENV = %ENV;
-    $self->setenv(PATH => $new_path);
-    $self->unsetenv($_) for qw(
-        HOMEBREW_PREFIX
-        HOMEBREW_CELLAR
-        HOMEBREW_REPOSITORY
-    );
+
+    {
+	# XXX hack: setenv+unsetenv do not have a quiet options, so make info() temporarily silent
+	local *Doit::Log::info = $quiet ? sub {} : \&Doit::Log::info;
+	$self->setenv(PATH => $new_path);
+	$self->unsetenv($_) for qw(
+	    HOMEBREW_PREFIX
+	    HOMEBREW_CELLAR
+	    HOMEBREW_REPOSITORY
+	);
+    }
 
     $code->();
 }

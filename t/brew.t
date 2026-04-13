@@ -16,6 +16,7 @@ use File::Glob qw(bsd_glob);
 use Test::More;
 
 use Doit;
+use Doit::Log;
 
 my $d = Doit->init;
 $d->add_component('brew');
@@ -65,6 +66,14 @@ $d->brew_without(sub {
 		     ok !$d->which('brew'), 'brew command not found within brew_without'
 			 or diag "path is $ENV{PATH}";
 		     ok !defined $ENV{HOMEBREW_CELLAR}, 'a homebrew-specific environment variable is unset';
-});
+		 });
+
+$d->brew_without({quiet=>1},
+		 sub {
+		     ok !$d->which('brew'), 'brew command not found within brew_without (quiet)'
+			 or diag "path is $ENV{PATH}";
+		     ok !defined $ENV{HOMEBREW_CELLAR}, 'a homebrew-specific environment variable is unset (quiet)';
+		     info "This info should appear!";
+		 });
 
 __END__
