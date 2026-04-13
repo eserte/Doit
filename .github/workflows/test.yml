@@ -108,7 +108,8 @@ jobs:
           - image: debian:trixie
           - image: ubuntu:focal
           - image: rockylinux:9
-          - image: fedora:41
+          - image: fedora:38
+          - image: fedora:43
 
     steps:
     # Note: checkout@v4 does not work with older debians (e.g.stretch), so do this step *outside* the container
