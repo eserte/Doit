@@ -4,12 +4,11 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2024,2025 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2024,2025,2026 Slaven Rezic. All rights reserved.
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
-# Mail: slaven@rezic.de
-# WWW:  http://www.rezic.de/eserte/
+# WWW:  https://github.com/eserte/Doit
 #
 
 use File::Basename qw(basename);
@@ -61,5 +60,11 @@ if ($ENV{GITHUB_ACTIONS}) {
     my $fully_qualified_name = "homebrew/core/$test_package";
     ok !$d->brew_install_packages($fully_qualified_name), "no packages to be installed, using fully qualified name ($fully_qualified_name)";
 }
+
+$d->brew_without(sub {
+		     ok !$d->which('brew'), 'brew command not found within brew_without'
+			 or diag "path is $ENV{PATH}";
+		     ok !defined $ENV{HOMEBREW_CELLAR}, 'a homebrew-specific environment variable is unset';
+});
 
 __END__

@@ -3,24 +3,23 @@
 #
 # Author: Slaven Rezic
 #
-# Copyright (C) 2017,2018,2022,2024,2025 Slaven Rezic. All rights reserved.
+# Copyright (C) 2017,2018,2022,2024,2025,2026 Slaven Rezic. All rights reserved.
 # This package is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
-# Mail: slaven@rezic.de
-# WWW:  http://www.rezic.de/eserte/
+# WWW:  https://github.com/eserte/Doit
 #
 
 package Doit::Brew; # Convention: all commands here should be prefixed with 'brew_'
 
 use strict;
 use warnings;
-our $VERSION = '0.014';
+our $VERSION = '0.015';
 
 use Doit::Log;
 
 sub new { bless {}, shift }
-sub functions { qw(brew_install_packages brew_missing_packages can_brew brew_get_cellar) }
+sub functions { qw(brew_install_packages brew_missing_packages can_brew brew_get_cellar brew_without) }
 
 sub can_brew {
     my($self) = @_;
@@ -80,6 +79,36 @@ sub brew_get_cellar {
 
     warning "Can't find homebrew cellar, expect homebrew-related things to fail.";
     return undef;
+}
+
+sub brew_without {
+    my($self, $code) = @_;
+
+    my @brew_prefixes = grep { defined && length }
+        $ENV{HOMEBREW_PREFIX},
+        '/home/linuxbrew/.linuxbrew',  # Linux
+        '/opt/homebrew',               # macOS Apple Silicon
+	## not activated --- /usr/local may be used for non-brew stuff
+        # '/usr/local',                  # macOS Intel
+	;
+    @brew_prefixes = do { my %seen; grep { !$seen{$_}++ } @brew_prefixes }; # dedup
+
+    my $new_path = join ':',
+        grep {
+            my $p = $_;
+            !grep { $p =~ m{^\Q$_\E(?:/|$)} } @brew_prefixes
+        }
+        split /:/, ($ENV{PATH} || '');
+
+    local %ENV = %ENV;
+    $self->setenv(PATH => $new_path);
+    $self->unsetenv($_) for qw(
+        HOMEBREW_PREFIX
+        HOMEBREW_CELLAR
+        HOMEBREW_REPOSITORY
+    );
+
+    $code->();
 }
 
 1;
