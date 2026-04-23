@@ -62,12 +62,28 @@ if (!$d->which('sudo')) {
 
 plan 'no_plan';
 
+sub get_termios_iflags {
+    my %termios_iflags;
+    require POSIX;
+    my $file_num = fileno(\*STDIN);
+    if (POSIX::isatty($file_num)) {
+	my $termios = POSIX::Termios->new;
+	$termios->getattr($file_num);
+	$termios_iflags{'BRKINT'} = !!($termios->getiflag & POSIX::BRKINT());
+	$termios_iflags{'ICRNL'}  = !!($termios->getiflag & POSIX::ICRNL());
+    }
+    %termios_iflags;
+}
+
 my $my_username = ($d->call('pwinfo'))[0];
 for my $def (
     (defined $my_username && $my_username ne '' ? [$my_username, $<] : ()),
     ['root', 0],
 ) {
     my($username, $userid) = @$def;
+
+    my %prev_termios_iflags = get_termios_iflags;
+
  SKIP: {
 	my @do_sudo_opts = ($username ne 'root' ? (sudo_opts => ['-u', $username]) : ());
  
@@ -152,16 +168,11 @@ for my $def (
 	}
     }
 
-    {
-	# check if the terminal is still or again sane
-	require POSIX;
-	my $file_num = fileno(\*STDIN);
-	if (POSIX::isatty($file_num)) {
-	    my $termios = POSIX::Termios->new;
-	    $termios->getattr($file_num);
-	    ok $termios->getiflag & POSIX::BRKINT(), 'brkint is still/again set';
-	    ok $termios->getiflag & POSIX::ICRNL(), 'icrnl is still/again set';
-	}
+    my %after_termios_iflags = get_termios_iflags();
+    while(my($flag, $old_value) = each %prev_termios_iflags) {
+	my $new_value = $after_termios_iflags{$flag};
+	is $new_value, $old_value, "$flag was properly restored to value '$old_value'"
+	    or diag "$flag is different: '$old_value' != '$new_value' (for iteration username=$username)";
     }
 }
 
