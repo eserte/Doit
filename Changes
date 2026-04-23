@@ -1,5 +1,28 @@
 Revision history for Doit.
 
+0.028_56 2026-04-13
+	- features
+	  - new command info_run
+	  - move command and file_atomic_write: new option show_diff
+	  - file_atomic_write: calling close() in callback is now
+            harmless
+	  - ln_nsf: warning if an overwrite would happen
+	  - Doit::Brew with new command without_brew
+	  - Doit::Deb
+	    - new command deb_upgradeable_packages
+	    - new command deb_add_repository
+	    - adapt deb_install_key with modern Debian
+	  - on Windows, prefer STDERR over CON:
+	- fixes
+	   - some improvements for sudo communication socket
+	   - do_ssh_connect does not fail anymore in perl oneliners
+	   - add random component in sudo socket path
+	- documentation
+	  - explain how file_atomic_write works in dry-run mode
+	- tests
+	  - github actions: replace actions/checkout by taiki-e/checkout-action
+	  - various CI fixes/improvements
+
 0.028_55 2025-05-04
 	- fixes
 	  - sudo: terminal needs to be reset after start of sudo worker
