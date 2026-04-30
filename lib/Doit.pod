@@ -159,9 +159,13 @@ quiet=>1 >> option.
     $doit->ln_nsf($oldfile, $newfile);
 
 Make sure that I<$newfile> is a symlink pointing to I<$oldfile>,
-possibly replacing an existing symlink. Implemented by running the
-system's C<ln -nsf>. See L<ln(1)> for more details and L</symlink> for
-an alternative.
+possibly replacing an existing symlink. Implemented using Perl's
+built-in C<symlink> and C<rename> functions, which is equivalent to
+running C<ln -nsf> but does not depend on the system's C<ln> supporting
+the C<-n> option. If the environment variable
+C<DOIT__USE_LN_NSF_SYSTEM> is set to a true value, then the system's
+C<ln -nsf> command is used instead. See L</symlink> for an alternative
+that does not replace an existing symlink.
 
 =head3 make_path
 
@@ -854,6 +858,11 @@ variable.
 May be set to a true value to enable command and connection tracing.
 
     DOIT_TRACE=1 some_doit_script.pl
+
+=item C<DOIT__USE_LN_NSF_SYSTEM>
+
+If set to a true value, the L</ln_nsf> command uses the system's
+C<ln -nsf> command instead of the default pure-Perl implementation.
 
 =item C<TERM>
 

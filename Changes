@@ -1,5 +1,11 @@
 Revision history for Doit.
 
+unreleased
+	- features
+	  - ln_nsf: switch default implementation from system ln -nsf
+	    to Perl implementation, as not all ln implementations
+	    support the -n option
+
 0.028_56 2026-04-13
 	- features
 	  - new command info_run

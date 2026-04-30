@@ -1694,10 +1694,10 @@ use warnings;
     }
 
     BEGIN {
-	if ($ENV{DOIT__USE_LN_NSF_PERL}) {
-	    *_ln_nsf = \&_ln_nsf_perl;
-	} else {
+	if ($ENV{DOIT__USE_LN_NSF_SYSTEM}) {
 	    *_ln_nsf = \&_ln_nsf_system;
+	} else {
+	    *_ln_nsf = \&_ln_nsf_perl;
 	}
     }
 }
