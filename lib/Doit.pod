@@ -119,6 +119,10 @@ Make sure that the permission of the listed files is set to I<$mode>
 files could be changed. If C<quiet> is set to a true value, then no
 logging is done. See L<perlfunc/chmod> for more details.
 
+An experimental extension which allows changed the file mode using
+symbolic or ls modes can be found here:
+L<https://github.com/eserte/Doit-Experiments/blob/master/lib/DoitX/Chmod.pm>.
+
 =head3 chown
 
     $doit->chown($user, $group, $file ...);
