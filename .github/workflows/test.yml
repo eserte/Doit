@@ -159,10 +159,11 @@ jobs:
       matrix:
         include:
           - osvers: '13.5'
-          - osvers: '14.3'
+          - osvers: '14.4'
+          - osvers: '15.0'
     steps:
     - uses: taiki-e/checkout-action@v1
-    - uses: cross-platform-actions/action@v0.29.0
+    - uses: cross-platform-actions/action@v1.2.0
       env:
         DOIT_TEST_WITH_SUDO: 1
       with:
