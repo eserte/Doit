@@ -161,6 +161,10 @@ jobs:
           - osvers: '13.5'
           - osvers: '14.4'
           - osvers: '15.0'
+    defaults:
+      run:
+        # cpa.sh is cross-platform-actions/action "magic"
+        shell: 'cpa.sh {0}'
     steps:
     - uses: taiki-e/checkout-action@v1
     - uses: cross-platform-actions/action@v1.2.0
@@ -169,17 +173,22 @@ jobs:
       with:
         operating_system: freebsd
         version: '${{ matrix.osvers }}'
-        run: |
-          echo "::group::pkg install, Build.PL and Build"
-          sudo pkg update
-          sudo pkg install -y perl5
-          perl Build.PL
-          ./Build
-          echo "::endgroup::"
-          ./Build test
-          echo "::group::test with more dependencies"
-          sudo pkg install -y git p5-Config-IniFiles p5-Capture-Tiny p5-libwww p5-IPC-Run p5-Net-OpenSSH p5-Devel-Hide
-          ./Build test
+        environment_variables: 'DOIT_TEST_WITH_SUDO'
+    - name: pkg install
+      run: |
+        sudo pkg update
+        sudo pkg install -y perl5
+    - name: Build.PL and Build
+      run: |
+        perl Build.PL
+        ./Build
+    - name: Test
+      run: |
+        ./Build test
+    - name: Test with more dependencies
+      run: |
+        sudo pkg install -y git p5-Config-IniFiles p5-Capture-Tiny p5-libwww p5-IPC-Run p5-Net-OpenSSH p5-Devel-Hide
+        ./Build test
 
   coverage:
     name: Test coverage
