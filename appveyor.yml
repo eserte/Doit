@@ -29,5 +29,7 @@ install:
 build_script:
   - set HARNESS_OPTIONS=c:j4
   - if     %perl%==cygwinperl       c:\cygwin\bin\sh -c "PATH=/usr/bin:/bin; perl Build.PL && perl Build && perl Build test"
-  - if not %perl%==cygwinperl     ( perl Build.PL && perl Build && perl Build test )
-  - if     %perl%==strawberryperl ( perl Build install && perl Build test_installed && perl Build dist_install_and_test )
+  - if     %perl%==activeperl     ( perl Build.PL && perl Build && perl Build test )
+  - if     %perl%==strawberryperl ( perl Build.PL && perl Build && perl Build install && perl Build test_installed )
+## skip the following to speed up the test, it's already done in the GitHub workflow
+#  - if     %perl%==strawberryperl ( perl Build dist_install_and_test )
