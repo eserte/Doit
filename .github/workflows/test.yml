@@ -103,6 +103,7 @@ jobs:
           - image: perl:5.38.0-slim-bookworm
           - image: perl:5.40.0-slim-bookworm
           - image: perl:5.42.0-slim-bookworm
+          - image: perl:5.44.0-slim-trixie
           ## use debian:* images only if there's no suitable perl:* image
           #- image: debian:bookworm
           - image: debian:trixie
