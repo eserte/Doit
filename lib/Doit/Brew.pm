@@ -19,7 +19,7 @@ our $VERSION = '0.016';
 use Doit::Log;
 
 sub new { bless {}, shift }
-sub functions { qw(brew_install_packages brew_missing_packages can_brew brew_get_cellar brew_without) }
+sub functions { qw(brew_install_packages brew_missing_packages can_brew brew_get_cellar brew_without brew_with) }
 
 sub can_brew {
     my($self) = @_;
@@ -79,6 +79,52 @@ sub brew_get_cellar {
 
     warning "Can't find homebrew cellar, expect homebrew-related things to fail.";
     return undef;
+}
+
+sub brew_with {
+    my($self, @args) = @_;
+
+    my %options; if (@args && ref $args[0] eq 'HASH') { %options = %{ shift @args } }
+    my $quiet = delete $options{quiet};
+    error "Unhandled options: " . join(" ", %options) if %options;
+
+    my $code = shift @args;
+
+    error "Too many arguments to brew_with() call" if @args;
+
+    my @brew_prefix_candidates = (
+        '/home/linuxbrew/.linuxbrew',  # Linux
+        '/opt/homebrew',               # macOS Apple Silicon
+        '/usr/local',                  # macOS Intel
+    );
+
+    my $brew_prefix;
+    for my $candidate (@brew_prefix_candidates) {
+	if (-x "$candidate/bin/brew") {
+	    $brew_prefix = $candidate;
+	    last;
+	}
+    }
+
+    if (!defined $brew_prefix) {
+	error "Cannot find a homebrew installation";
+    }
+
+    my $brew_bin = "$brew_prefix/bin";
+
+    my $new_path = join ':', $brew_bin, grep { $_ ne $brew_bin } split(/:/, ($ENV{PATH} || ''));
+
+    local %ENV = %ENV;
+
+    {
+	local *Doit::Log::info = $quiet ? sub {} : \&Doit::Log::info;
+	$self->setenv(PATH => $new_path);
+	$self->setenv(HOMEBREW_PREFIX    => $brew_prefix);
+	$self->setenv(HOMEBREW_CELLAR    => "$brew_prefix/Cellar")    if -d "$brew_prefix/Cellar";
+	$self->setenv(HOMEBREW_REPOSITORY => $brew_prefix)            if -d "$brew_prefix/.git" || -d "$brew_prefix/Library";
+    }
+
+    $code->();
 }
 
 sub brew_without {

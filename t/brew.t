@@ -74,6 +74,25 @@ $d->brew_without({quiet=>1},
 			 or diag "path is $ENV{PATH}";
 		     ok !defined $ENV{HOMEBREW_CELLAR}, 'a homebrew-specific environment variable is unset (quiet)';
 		     info "This info should appear!";
+
+		     $d->brew_with(sub {
+				       ok $d->which('brew'), 'brew command found again within brew_with after brew_without';
+				       ok defined $ENV{HOMEBREW_PREFIX}, 'HOMEBREW_PREFIX is set within brew_with';
+				   });
+
+		     ok !$d->which('brew'), 'brew command not found again after brew_with block ended';
 		 });
+
+$d->brew_with(sub {
+		  ok $d->which('brew'), 'brew command found within brew_with';
+		  ok defined $ENV{HOMEBREW_PREFIX}, 'HOMEBREW_PREFIX is set within brew_with';
+		  ok defined $ENV{HOMEBREW_CELLAR}, 'HOMEBREW_CELLAR is set within brew_with' if -d ($ENV{HOMEBREW_PREFIX}||'')."/Cellar";
+	      });
+
+$d->brew_with({quiet=>1},
+	      sub {
+		  ok $d->which('brew'), 'brew command found within brew_with (quiet)';
+		  ok defined $ENV{HOMEBREW_PREFIX}, 'HOMEBREW_PREFIX is set within brew_with (quiet)';
+	      });
 
 __END__
