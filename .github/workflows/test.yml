@@ -28,6 +28,8 @@ jobs:
             test_without_sudo: true
           - config_name: ubuntu-24.04
             os: ubuntu-24.04
+          - config_name: ubuntu-26.04
+            os: ubuntu-26.04
           - config_name: macos-14
             os: macos-14
             # XXX Recently started to hang
@@ -99,7 +101,7 @@ jobs:
           - image: perl:5.16.3-buster
           - image: perl:5.18.4-buster
           - image: perl:5.22.4-stretch
-          - image: perl:5.36.0-slim-bullseye
+          - image: perl:5.36.0-buster
           - image: perl:5.38.0-slim-bookworm
           - image: perl:5.40.0-slim-bookworm
           - image: perl:5.42.0-slim-bookworm
