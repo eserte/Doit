@@ -29,4 +29,13 @@ my $doit = Doit->init;
     is $ENV{TEST_SETENV}, 1, 'value was changed (from previously non-existent)';
 }
 
+{
+    my $dryrun_doit = $doit->{Doit}->dryrunner;
+    local $ENV{TEST_SETENV} = 0;
+    is $dryrun_doit->setenv(TEST_SETENV => 1), 1;
+    is $ENV{TEST_SETENV}, 0, 'value is still unchanged in dry-run mode';
+    $dryrun_doit->unsetenv('TEST_SETENV');
+    is $ENV{TEST_SETENV}, 0, 'value is still there after an unsetenv in dry-run mode';
+}
+
 __END__
