@@ -61,9 +61,14 @@ sub brew_get_cellar {
     return $ENV{HOMEBREW_CELLAR}          if defined $ENV{HOMEBREW_CELLAR} && -d $ENV{HOMEBREW_CELLAR};
     return "$ENV{HOMEBREW_PREFIX}/Cellar" if defined $ENV{HOMEBREW_PREFIX} && -d "$ENV{HOMEBREW_PREFIX}/Cellar";
 
-    # Heuristics depending on architcture
+    # Heuristics depending on architcture and OS
     chomp(my $arch = eval { $self->info_qx({quiet => 1}, qw(uname -m)) });
-    my @cellar_candidates = ($arch eq 'arm64' ? ('/opt/homebrew/Cellar', '/usr/local/Cellar') : ('/usr/local/Cellar', '/opt/homebrew/Cellar'));
+    my @cellar_candidates;
+    if ($^O eq 'linux') {
+        @cellar_candidates = '/home/linuxbrew/.linuxbrew/Cellar';
+    } else {
+	@cellar_candidates = ($arch eq 'arm64' ? ('/opt/homebrew/Cellar', '/usr/local/Cellar') : ('/usr/local/Cellar', '/opt/homebrew/Cellar'));
+    }
     for my $cellar_candidate (@cellar_candidates) {
 	return $cellar_candidate  if -d $cellar_candidate;
     }
