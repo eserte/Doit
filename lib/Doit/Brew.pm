@@ -14,12 +14,12 @@ package Doit::Brew; # Convention: all commands here should be prefixed with 'bre
 
 use strict;
 use warnings;
-our $VERSION = '0.016';
+our $VERSION = '0.017';
 
 use Doit::Log;
 
 sub new { bless {}, shift }
-sub functions { qw(brew_install_packages brew_missing_packages can_brew brew_get_cellar brew_without brew_with) }
+sub functions { qw(brew_install_packages brew_missing_packages can_brew brew_get_directory brew_get_cellar brew_get_caskroom brew_without brew_with) }
 
 sub can_brew {
     my($self) = @_;
@@ -37,16 +37,19 @@ sub brew_install_packages {
 
 {
     my $cached_cellar;
+    my $cached_caskroom;
 
     sub brew_missing_packages {
 	my($self, @packages) = @_;
 
-	$cached_cellar ||= $self->brew_get_cellar;
+	$cached_cellar   ||= $self->brew_get_cellar;
+	$cached_caskroom ||= $self->brew_get_caskroom;
 
 	my @missing_packages;
 	for my $package (@packages) {
 	    my $formula_name = $package =~ m{.*/(.+)$} ? $1 : $package;
-	    if (!defined $cached_cellar || !-d "$cached_cellar/$formula_name") {
+	    if (!((defined $cached_cellar && -d "$cached_cellar/$formula_name") ||
+		  (defined $cached_caskroom && -d "$cached_caskroom/$formula_name"))) {
 		push @missing_packages, $package;
 	    }
 	}
@@ -54,36 +57,47 @@ sub brew_install_packages {
     }
 }
 
-sub brew_get_cellar {
-    my($self) = @_;
+sub brew_get_directory {
+    my($self, $directory) = @_;
 
     # First try environment variables (fastest, no external command called)
-    return $ENV{HOMEBREW_CELLAR}          if defined $ENV{HOMEBREW_CELLAR} && -d $ENV{HOMEBREW_CELLAR};
-    return "$ENV{HOMEBREW_PREFIX}/Cellar" if defined $ENV{HOMEBREW_PREFIX} && -d "$ENV{HOMEBREW_PREFIX}/Cellar";
+    my $env_var = "HOMEBREW_" . uc($directory);
+    return $ENV{$env_var}                     if defined $ENV{$env_var} && -d $ENV{$env_var};
+    return "$ENV{HOMEBREW_PREFIX}/$directory" if defined $ENV{HOMEBREW_PREFIX} && -d "$ENV{HOMEBREW_PREFIX}/$directory";
 
     # Heuristics depending on architcture and OS
     chomp(my $arch = eval { $self->info_qx({quiet => 1}, qw(uname -m)) });
-    my @cellar_candidates;
+    my @subdir_candidates;
     if ($^O eq 'linux') {
-        @cellar_candidates = '/home/linuxbrew/.linuxbrew/Cellar';
+        @subdir_candidates = "/home/linuxbrew/.linuxbrew/$directory";
     } else {
-	@cellar_candidates = ($arch eq 'arm64' ? ('/opt/homebrew/Cellar', '/usr/local/Cellar') : ('/usr/local/Cellar', '/opt/homebrew/Cellar'));
+	@subdir_candidates = ($arch eq 'arm64' ? ("/opt/homebrew/$directory", "/usr/local/$directory") : ("/usr/local/$directory", "/opt/homebrew/$directory"));
     }
-    for my $cellar_candidate (@cellar_candidates) {
-	return $cellar_candidate  if -d $cellar_candidate;
+    for my $subdir_candidate (@subdir_candidates) {
+	return $subdir_candidate  if -d $subdir_candidate;
     }
 
     # use brew config (maybe slow?)
     for my $line (split /\n/, eval { $self->info_qx({quiet=>1}, 'brew', 'config') }) {
 	if ($line =~ /^\s*HOMEBREW_PREFIX:\s*(.*)/) {
-	    my $cellar = "$1/Cellar";
-	    return $cellar if -d $cellar;
+	    my $fullpath = "$1/$directory";
+	    return $fullpath if -d $fullpath;
 	    last;
 	}
     }
 
-    warning "Can't find homebrew cellar, expect homebrew-related things to fail.";
+    warning "Can't find homebrew $directory, expect homebrew-related things to fail.";
     return undef;
+}
+
+sub brew_get_cellar {
+    my($self) = @_;
+    $self->brew_get_directory('Cellar');
+}
+
+sub brew_get_caskroom {
+    my($self) = @_;
+    $self->brew_get_directory('Caskroom');
 }
 
 sub brew_with {
