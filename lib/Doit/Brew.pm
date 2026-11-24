@@ -14,7 +14,7 @@ package Doit::Brew; # Convention: all commands here should be prefixed with 'bre
 
 use strict;
 use warnings;
-our $VERSION = '0.017';
+our $VERSION = '0.018';
 
 use Doit::Log;
 
@@ -136,11 +136,12 @@ sub brew_with {
     local %ENV = %ENV;
 
     {
+	my $env_runner = $self->{Doit}->runner; # always effective, even in dry-run mode
 	local *Doit::Log::info = $quiet ? sub {} : \&Doit::Log::info;
-	$self->setenv(PATH => $new_path);
-	$self->setenv(HOMEBREW_PREFIX    => $brew_prefix);
-	$self->setenv(HOMEBREW_CELLAR    => "$brew_prefix/Cellar")    if -d "$brew_prefix/Cellar";
-	$self->setenv(HOMEBREW_REPOSITORY => $brew_prefix)            if -d "$brew_prefix/.git" || -d "$brew_prefix/Library";
+	$env_runner->setenv(PATH => $new_path);
+	$env_runner->setenv(HOMEBREW_PREFIX    => $brew_prefix);
+	$env_runner->setenv(HOMEBREW_CELLAR    => "$brew_prefix/Cellar")    if -d "$brew_prefix/Cellar";
+	$env_runner->setenv(HOMEBREW_REPOSITORY => $brew_prefix)            if -d "$brew_prefix/.git" || -d "$brew_prefix/Library";
     }
 
     $code->();
@@ -176,10 +177,11 @@ sub brew_without {
     local %ENV = %ENV;
 
     {
+	my $env_runner = $self->{Doit}->runner; # always effective, even in dry-run mode
 	# XXX hack: setenv+unsetenv do not have a quiet options, so make info() temporarily silent
 	local *Doit::Log::info = $quiet ? sub {} : \&Doit::Log::info;
-	$self->setenv(PATH => $new_path);
-	$self->unsetenv($_) for qw(
+	$env_runner->setenv(PATH => $new_path);
+	$env_runner->unsetenv($_) for qw(
 	    HOMEBREW_PREFIX
 	    HOMEBREW_CELLAR
 	    HOMEBREW_REPOSITORY
